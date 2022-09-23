@@ -125,6 +125,12 @@ func ParsePdef(r io.Reader) (*Pdef, error) {
 					if curState, curName = stateEnum, rest[0]; !identRe.MatchString(curName) {
 						return nil, fmt.Errorf("line %d: invalid enum name %q", curLine, curName)
 					}
+					if _, exists := pdef.Struct[curName]; exists {
+						return nil, fmt.Errorf("line %d: invalid enum name %q: struct already defined", curLine, curName)
+					}
+					if _, exists := pdef.Enum[curName]; exists {
+						return nil, fmt.Errorf("line %d: invalid enum name %q: enum already defined", curLine, curName)
+					}
 					pdef.Enum[curName] = []string{}
 				default:
 					return nil, fmt.Errorf("line %d: unexpected token %q after enum name", curLine, rest[1])
@@ -156,6 +162,12 @@ func ParsePdef(r io.Reader) (*Pdef, error) {
 				case 1:
 					if curState, curName = stateStruct, rest[0]; !identRe.MatchString(curName) {
 						return nil, fmt.Errorf("line %d: invalid struct name %q", curLine, curName)
+					}
+					if _, exists := pdef.Struct[curName]; exists {
+						return nil, fmt.Errorf("line %d: invalid struct name %q: struct already defined", curLine, curName)
+					}
+					if _, exists := pdef.Enum[curName]; exists {
+						return nil, fmt.Errorf("line %d: invalid struct name %q: enum already defined", curLine, curName)
 					}
 					pdef.Struct[curName] = []Field{}
 				default:
