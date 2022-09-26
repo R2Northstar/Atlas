@@ -18,6 +18,41 @@ type Pdef struct {
 	Struct map[string][]Field  `json:"struct"`
 }
 
+func (p Pdef) TypeSize(t TypeInfo) int {
+	switch {
+	case t.Int != nil:
+		return 4 // int32le
+	case t.Bool != nil:
+		return 1 // byte
+	case t.Float != nil:
+		return 4 // float32le
+	case t.String != nil:
+		return t.String.Length // char[]
+	case t.Array != nil:
+		return t.Array.Length * p.TypeSize(t.Array.Type)
+	case t.MappedArray != nil:
+		if v, ok := p.Enum[t.MappedArray.Enum]; !ok {
+			panic("undefined enum in pdef")
+		} else {
+			return len(v) * p.TypeSize(t.MappedArray.Type)
+		}
+	case t.Enum != nil:
+		return 4 // uint8
+	case t.Struct != nil:
+		if fs, ok := p.Struct[t.Struct.Name]; !ok {
+			panic("undefined struct in pdef")
+		} else {
+			var n int
+			for _, f := range fs {
+				n += p.TypeSize(f.Type)
+			}
+			return n
+		}
+	default:
+		panic("internal unimplemented pdef type")
+	}
+}
+
 // Field is a pdef entry.
 type Field struct {
 	Name string   `json:"name"`
@@ -48,14 +83,14 @@ type TypeInfoString struct {
 
 // TypeInfoArray is used for a fixed-length array.
 type TypeInfoArray struct {
-	Type   *TypeInfo `json:"type"`
-	Length int       `json:"length"`
+	Type   TypeInfo `json:"type"`
+	Length int      `json:"length"`
 }
 
 // TypeInfoArray is used for a fixed-length array mapping from an enum.
 type TypeInfoMappedArray struct {
-	Type *TypeInfo `json:"type"`
-	Enum string    `json:"enum"`
+	Type TypeInfo `json:"type"`
+	Enum string   `json:"enum"`
 }
 
 // TypeInfoEnum refers to a defined enum.
@@ -257,7 +292,7 @@ func ParsePdef(r io.Reader) (*Pdef, error) {
 						} else {
 							field.Name = m2[1]
 							field.Type.Array = &TypeInfoArray{
-								Type:   &typeinfo,
+								Type:   typeinfo,
 								Length: n,
 							}
 						}
@@ -265,7 +300,7 @@ func ParsePdef(r io.Reader) (*Pdef, error) {
 						if _, ok := pdef.Enum[m2[3]]; ok {
 							field.Name = m2[1]
 							field.Type.MappedArray = &TypeInfoMappedArray{
-								Type: &typeinfo,
+								Type: typeinfo,
 								Enum: m2[3],
 							}
 						} else {
