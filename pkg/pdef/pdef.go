@@ -37,7 +37,7 @@ func (p Pdef) TypeSize(t TypeInfo) int {
 			return len(v) * p.TypeSize(t.MappedArray.Type)
 		}
 	case t.Enum != nil:
-		return 4 // uint8
+		return 1 // uint8
 	case t.Struct != nil:
 		if fs, ok := p.Struct[t.Struct.Name]; !ok {
 			panic("undefined struct in pdef")
