@@ -97,6 +97,8 @@ func (c *Client) getUserInfo(retry bool, ctx context.Context, uid ...int) ([]Use
 	}
 
 	req.Header.Set("AuthToken", sid)
+	req.Header.Set("X-Origin-Platform", "UnknownOS")
+	req.Header.Set("Referrer", "https://www.origin.com/")
 
 	resp, err := c.do(req)
 	if err != nil {
