@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync/atomic"
 )
 
 var (
@@ -21,77 +20,29 @@ var (
 	ErrAuthRequired    = errors.New("origin authentication required")
 )
 
-type SIDStore interface {
-	GetSID(ctx context.Context) (string, error)
-	SetSID(ctx context.Context, sid string) error
-}
+// Base is the base path for the Origin API.
+var Base = "https://api1.origin.com"
 
-type MemorySIDStore struct {
-	SID atomic.Pointer[string]
-}
-
-var _ SIDStore = (*MemorySIDStore)(nil)
-
-func (s *MemorySIDStore) GetSID(ctx context.Context) (string, error) {
-	if v := s.SID.Load(); v != nil {
-		return *v, nil
-	}
-	return "", nil
-}
-
-func (s *MemorySIDStore) SetSID(ctx context.Context, sid string) error {
-	s.SID.Store(&sid)
-	return nil
-}
-
-type Client struct {
-	Endpoint  string
-	Username  string
-	Password  string
-	SIDStore  SIDStore
-	Transport http.Transport
-}
-
-func (c *Client) endpoint() string {
-	if c.Endpoint != "" {
-		return strings.TrimRight(c.Endpoint, "/")
-	}
-	return "https://api1.origin.com"
-}
-
-func (c *Client) do(req *http.Request) (*http.Response, error) {
-	return (&http.Client{
-		Transport: &c.Transport,
-		Jar:       nil,
-	}).Do(req)
-}
-
-func (c *Client) Login(ctx context.Context) error {
+// Login logs into an Origin account and returns the SID.
+func Login(ctx context.Context, username, password string) (string, error) {
 	panic("not implemented")
 }
 
+// UserInfo contains information about an Origin account.
 type UserInfo struct {
 	UserID    int
 	PersonaID string
 	EAID      string
 }
 
-func (c *Client) GetUserInfo(ctx context.Context, uid ...int) ([]UserInfo, error) {
-	return c.getUserInfo(true, ctx, uid...)
-}
-
-func (c *Client) getUserInfo(retry bool, ctx context.Context, uid ...int) ([]UserInfo, error) {
+// GetUserInfo gets information about Origin accounts by their Origin UserID.
+func GetUserInfo(ctx context.Context, sid string, uid ...int) ([]UserInfo, error) {
 	uids := make([]string, len(uid))
 	for _, x := range uid {
 		uids = append(uids, strconv.Itoa(x))
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.endpoint()+"/atom/users?userIds="+strings.Join(uids, ","), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	sid, err := c.SIDStore.GetSID(ctx)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, Base+"/atom/users?userIds="+strings.Join(uids, ","), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +51,7 @@ func (c *Client) getUserInfo(retry bool, ctx context.Context, uid ...int) ([]Use
 	req.Header.Set("X-Origin-Platform", "UnknownOS")
 	req.Header.Set("Referrer", "https://www.origin.com/")
 
-	resp, err := c.do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
