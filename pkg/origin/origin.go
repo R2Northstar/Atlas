@@ -31,6 +31,8 @@ type UserInfo struct {
 }
 
 // GetUserInfo gets information about Origin accounts by their Origin UserID.
+//
+// If errors.Is(err, ErrAuthRequired), you need a new NucleusToken.
 func GetUserInfo(ctx context.Context, token NucleusToken, uid ...int) ([]UserInfo, error) {
 	uids := make([]string, len(uid))
 	for _, x := range uid {

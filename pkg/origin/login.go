@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -18,6 +19,8 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
+
+var ErrInvalidLogin = errors.New("invalid credentials")
 
 type SID string
 type NucleusToken string
@@ -316,6 +319,29 @@ func login2(ctx context.Context, c *http.Client, r1 *http.Request) (*http.Reques
 
 	m := login2re.FindSubmatch(buf)
 	if m == nil {
+		if doc, err := html.Parse(bytes.NewReader(buf)); err == nil {
+			if n := cascadia.Query(doc, cascadia.MustCompile(`#errorCode[value]`)); n != nil {
+				for _, a := range n.Attr {
+					// based on origin login js
+					if a.Namespace == "" && strings.EqualFold(a.Key, "value") {
+						switch errCode := a.Val; errCode {
+						case "10001": // try offline auth
+							return nil, fmt.Errorf("submit login form: ea auth error %s: why the fuck does origin think we're offline", errCode)
+						case "10002": // credentials
+							return nil, fmt.Errorf("submit login form: ea auth error %s: %w", errCode, ErrInvalidLogin)
+						case "10003": // general error
+							return nil, fmt.Errorf("submit login form: ea auth error %s: login error", errCode)
+						case "10004": // wtf
+							return nil, fmt.Errorf("submit login form: ea auth error %s: idk wtf this is", errCode)
+						case "":
+							// no error, but this shouldn't happen
+						default:
+							return nil, fmt.Errorf("submit login form: ea auth error %s", errCode)
+						}
+					}
+				}
+			}
+		}
 		return nil, fmt.Errorf("submit login form: could not find JS redirect URL")
 	}
 
@@ -376,6 +402,8 @@ func login3(_ context.Context, c *http.Client, r2 *http.Request) (string, error)
 
 // GetNucleusToken generates a Nucleus SID/AuthToken from the active session.
 // Note that this token generally lasts ~4h.
+//
+// If errors.Is(err, ErrAuthRequired), you need a new SID.
 func GetNucleusToken(ctx context.Context, sid SID) (NucleusToken, error) {
 	jar, _ := cookiejar.New(nil)
 

@@ -75,12 +75,14 @@ func main() {
 		fmt.Printf("SID=%s\n", sid)
 	}
 
-	token, err := origin.GetNucleusToken(ctx, sid)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "origin: error: %v\n", err)
-		fail = true
-	} else {
-		fmt.Printf("NucleusToken=%s\n", token)
+	if !fail {
+		token, err := origin.GetNucleusToken(ctx, sid)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "origin: error: %v\n", err)
+			fail = true
+		} else {
+			fmt.Printf("NucleusToken=%s\n", token)
+		}
 	}
 
 	if opt.HAR != "" {
