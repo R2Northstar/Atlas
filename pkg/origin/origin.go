@@ -23,11 +23,6 @@ var (
 // Base is the base path for the Origin API.
 var Base = "https://api1.origin.com"
 
-// Login logs into an Origin account and returns the SID.
-func Login(ctx context.Context, username, password string) (string, error) {
-	panic("not implemented")
-}
-
 // UserInfo contains information about an Origin account.
 type UserInfo struct {
 	UserID    int
