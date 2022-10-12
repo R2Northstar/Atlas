@@ -5,12 +5,20 @@ package origin
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync/atomic"
+)
+
+var (
+	ErrInvalidResponse = errors.New("invalid origin api response")
+	ErrOrigin          = errors.New("origin api error")
+	ErrAuthRequired    = errors.New("origin authentication required")
 )
 
 type SIDStore interface {
@@ -96,41 +104,66 @@ func (c *Client) getUserInfo(retry bool, ctx context.Context, uid ...int) ([]Use
 	}
 	defer resp.Body.Close()
 
-	if needAuth, err := checkResponse(resp); err != nil {
-		if retry && needAuth {
-			if err := c.Login(ctx); err != nil {
-				return nil, err
-			}
-			return c.getUserInfo(false, ctx, uid...)
-		}
+	buf, root, err := checkResponseXML(resp)
+	if err != nil {
 		return nil, err
 	}
-	return parseUserInfo(resp.Body)
+	return parseUserInfo(buf, root)
 }
 
-func checkResponse(resp *http.Response) (bool, error) {
-	// TODO: return true and err for auth required
-	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("response status %q", resp.Status)
+func checkResponseXML(resp *http.Response) ([]byte, xml.Name, error) {
+	var root xml.Name
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return buf, root, err
 	}
-	return false, nil
+	if mt, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type")); mt != "application/xml" && mt != "text/xml" {
+		if resp.StatusCode != http.StatusOK {
+			return buf, root, fmt.Errorf("%w: response status %d (%s)", ErrOrigin, resp.StatusCode, resp.Status)
+		}
+		return buf, root, fmt.Errorf("%w: expected xml, got %q", ErrOrigin, mt)
+	}
+	if err := xml.Unmarshal(buf, &root); err != nil {
+		return buf, root, fmt.Errorf("%w: invalid xml: %v", ErrInvalidResponse, err)
+	}
+	if root.Local == "error" {
+		var obj struct {
+			Code    int `xml:"code,attr"`
+			Failure []struct {
+				Field string `xml:"field,attr"`
+				Cause string `xml:"cause,attr"`
+				Value string `xml:"value,attr"`
+			} `xml:"failure"`
+		}
+		if err := xml.Unmarshal(buf, &obj); err != nil {
+			return buf, root, fmt.Errorf("%w: response %#q (unmarshal: %v)", ErrOrigin, string(buf), err)
+		}
+		for _, f := range obj.Failure {
+			if f.Cause == "invalid_token" {
+				return buf, root, fmt.Errorf("%w: invalid token", ErrAuthRequired)
+			}
+		}
+		if len(obj.Failure) == 1 {
+			return buf, root, fmt.Errorf("%w: error %d: %s (%s) %q", ErrOrigin, obj.Code, obj.Failure[0].Cause, obj.Failure[0].Field, obj.Failure[0].Value)
+		}
+		return buf, root, fmt.Errorf("%w: error %d: response %#q", ErrOrigin, obj.Code, string(buf))
+	}
+	return buf, root, nil
 }
 
-func parseUserInfo(r io.Reader) ([]UserInfo, error) {
+func parseUserInfo(buf []byte, root xml.Name) ([]UserInfo, error) {
 	var obj struct {
-		XMLName xml.Name `xml:"users"`
-		User    []struct {
+		User []struct {
 			UserID    string `xml:"userId"`
 			PersonaID string `xml:"personaId"`
 			EAID      string `xml:"EAID"`
 		} `xml:"user"`
 	}
-	buf, err := io.ReadAll(r)
-	if err != nil {
-		return nil, err
+	if root.Local != "users" {
+		return nil, fmt.Errorf("%w: unexpected %s response", ErrInvalidResponse, root.Local)
 	}
 	if err := xml.Unmarshal(buf, &obj); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: invalid xml: %v", ErrInvalidResponse, err)
 	}
 	res := make([]UserInfo, len(obj.User))
 	for i, x := range obj.User {
