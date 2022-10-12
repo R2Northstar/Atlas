@@ -65,13 +65,22 @@ func main() {
 	}
 
 	var fail bool
+	ctx := context.Background()
 
-	code, err := origin.Login(context.Background(), pflag.Arg(0), pflag.Arg(1))
+	sid, err := origin.Login(ctx, pflag.Arg(0), pflag.Arg(1))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "origin: error: %v\n", err)
 		fail = true
 	} else {
-		fmt.Println(code)
+		fmt.Printf("SID=%s\n", sid)
+	}
+
+	token, err := origin.GetNucleusToken(ctx, sid)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "origin: error: %v\n", err)
+		fail = true
+	} else {
+		fmt.Printf("NucleusToken=%s\n", token)
 	}
 
 	if opt.HAR != "" {

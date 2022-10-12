@@ -19,8 +19,11 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// Login logs into an Origin account and returns the token.
-func Login(ctx context.Context, email, password string) (string, error) {
+type SID string
+type NucleusToken string
+
+// Login logs into an Origin account and returns the SID cookie.
+func Login(ctx context.Context, email, password string) (SID, error) {
 	jar, _ := cookiejar.New(nil)
 
 	c := &http.Client{
@@ -54,11 +57,21 @@ func Login(ctx context.Context, email, password string) (string, error) {
 		return "", err
 	}
 
-	token, err := login3(ctx, c, r2)
+	_, err = login3(ctx, c, r2)
 	if err != nil {
 		return "", err
 	}
-	return token, nil
+
+	for _, ck := range c.Jar.Cookies(&url.URL{
+		Scheme: "https",
+		Host:   "accounts.ea.com",
+		Path:   "/connect",
+	}) {
+		if ck.Name == "sid" {
+			return SID(ck.Value), nil
+		}
+	}
+	return "", fmt.Errorf("missing sid cookie")
 }
 
 // login0 initializes the login flow.
@@ -332,6 +345,21 @@ func login3(_ context.Context, c *http.Client, r2 *http.Request) (string, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		if host, _, _ := strings.Cut(resp.Request.URL.Host, ":"); strings.ToLower(host) == "accounts.ea.com" {
+			buf, _ := io.ReadAll(resp.Body)
+			var obj struct {
+				ErrorCode   string      `json:"error_code"`
+				Error       string      `json:"error"`
+				ErrorNumber json.Number `json:"error_number"`
+			}
+			if obj.ErrorCode == "login_required" {
+				return "", fmt.Errorf("get nucleus token: %w: wants us to login, but we just did that", ErrOrigin)
+			}
+			if err := json.Unmarshal(buf, &obj); err == nil && obj.Error != "" {
+				return "", fmt.Errorf("get nucleus token: %w: error %s: %s (%q)", ErrOrigin, obj.ErrorNumber, obj.ErrorCode, obj.Error)
+			}
+			return "", fmt.Errorf("get nucleus token: request %q: response status %d (%s)", resp.Request.URL.String(), resp.StatusCode, resp.Status)
+		}
 		return "", fmt.Errorf("finish login flow: request %q: response status %d (%s)", resp.Request.URL.String(), resp.StatusCode, resp.Status)
 	}
 
@@ -344,6 +372,74 @@ func login3(_ context.Context, c *http.Client, r2 *http.Request) (string, error)
 	_, _ = io.Copy(io.Discard, resp.Body)
 
 	return code, nil
+}
+
+// GetNucleusToken generates a Nucleus SID/AuthToken from the active session.
+// Note that this token generally lasts ~4h.
+func GetNucleusToken(ctx context.Context, sid SID) (NucleusToken, error) {
+	jar, _ := cookiejar.New(nil)
+
+	c := &http.Client{
+		Transport: http.DefaultClient.Transport,
+		Jar:       jar,
+	}
+
+	c.Jar.SetCookies(&url.URL{
+		Scheme: "https",
+		Host:   "accounts.ea.com",
+		Path:   "/connect",
+	}, []*http.Cookie{{
+		Name:   "sid",
+		Value:  string(sid),
+		Secure: true,
+	}})
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none&release_type=prod", nil)
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Referrer", "https://www.origin.com/")
+	req.Header.Set("Origin", "https://www.origin.com/")
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("get nucleus token: %w", err)
+	}
+	defer resp.Body.Close()
+
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("get nucleus token: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var obj struct {
+			ErrorCode   string      `json:"error_code"`
+			Error       string      `json:"error"`
+			ErrorNumber json.Number `json:"error_number"`
+		}
+		if obj.ErrorCode == "login_required" {
+			return "", fmt.Errorf("get nucleus token: %w: login required", ErrAuthRequired)
+		}
+		if err := json.Unmarshal(buf, &obj); err == nil && obj.Error != "" {
+			return "", fmt.Errorf("get nucleus token: %w: error %s: %s (%q)", ErrOrigin, obj.ErrorNumber, obj.ErrorCode, obj.Error)
+		}
+		return "", fmt.Errorf("get nucleus token: request %q: response status %d (%s)", resp.Request.URL.String(), resp.StatusCode, resp.Status)
+	}
+
+	var obj struct {
+		AccessToken string      `json:"access_token"`
+		TokenType   string      `json:"token_type"`
+		ExpiresIn   json.Number `json:"expires_in"`
+	}
+	if err := json.Unmarshal(buf, &obj); err != nil {
+		return "", fmt.Errorf("get nucleus token: %w", err)
+	}
+	if obj.AccessToken == "" {
+		return "", fmt.Errorf("get nucleus token: invalid response %q", string(buf))
+	}
+	return NucleusToken(obj.AccessToken), nil
 }
 
 // generateCID generates a login nonce using the algorithm in the Origin login

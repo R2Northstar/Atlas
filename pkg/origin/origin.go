@@ -31,7 +31,7 @@ type UserInfo struct {
 }
 
 // GetUserInfo gets information about Origin accounts by their Origin UserID.
-func GetUserInfo(ctx context.Context, sid string, uid ...int) ([]UserInfo, error) {
+func GetUserInfo(ctx context.Context, token NucleusToken, uid ...int) ([]UserInfo, error) {
 	uids := make([]string, len(uid))
 	for _, x := range uid {
 		uids = append(uids, strconv.Itoa(x))
@@ -42,7 +42,7 @@ func GetUserInfo(ctx context.Context, sid string, uid ...int) ([]UserInfo, error
 		return nil, err
 	}
 
-	req.Header.Set("AuthToken", sid)
+	req.Header.Set("AuthToken", string(token))
 	req.Header.Set("X-Origin-Platform", "UnknownOS")
 	req.Header.Set("Referrer", "https://www.origin.com/")
 
