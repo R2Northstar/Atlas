@@ -20,6 +20,7 @@ import (
 
 type Handler struct {
 	PdataStorage PdataStorage
+	NotFound     http.Handler
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -29,10 +30,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(r.URL.Path, "/player/"):
 		// TODO: rate limit
 		h.handlePlayer(w, r)
-		return
 	default:
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-		return
+		if h.NotFound == nil {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		} else {
+			h.NotFound.ServeHTTP(w, r)
+		}
 	}
 }
 
