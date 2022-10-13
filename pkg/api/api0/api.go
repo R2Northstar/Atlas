@@ -8,6 +8,7 @@
 //   - Some rate limits (no longer necessary due to increased performance and better caching) have been removed.
 //   - More HTTP methods and features are supported (e.g., HEAD, OPTIONS, Content-Encoding).
 //   - Website split into a separate handler (set Handler.NotFound to http.HandlerFunc(web.ServeHTTP) for identical behaviour).
+//   - /accounts/write_persistence returns a error message for easier debugging.
 package api0
 
 import (
@@ -36,6 +37,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Server", "Atlas")
 
 	switch r.URL.Path {
+	case "/accounts/write_persistence":
+		h.handleAccountsWritePersistence(w, r)
+	case "/accounts/get_username":
+		h.handleAccountsGetUsername(w, r)
+	case "/accounts/lookup_uid":
+		h.handleAccountsLookupUID(w, r)
 	default:
 		if strings.HasPrefix(r.URL.Path, "/player/") {
 			// TODO: rate limit
