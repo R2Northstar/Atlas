@@ -98,7 +98,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 			respJSON(w, http.StatusInternalServerError, map[string]any{
 				"success": false,
 				"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-				"msg":     fmt.Sprintf("%s: failed to read pdata hash from storage", ErrorCode_INTERNAL_SERVER_ERROR),
+				"msg":     fmt.Sprintf("%s: failed to read pdata hash from storage", ErrorCode_INTERNAL_SERVER_ERROR.Message()),
 			})
 			return
 		}
@@ -123,7 +123,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 		respJSON(w, http.StatusInternalServerError, map[string]any{
 			"success": false,
 			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     fmt.Sprintf("%s: failed to read pdata hash from storage", ErrorCode_INTERNAL_SERVER_ERROR),
+			"msg":     fmt.Sprintf("%s: failed to read pdata hash from storage", ErrorCode_INTERNAL_SERVER_ERROR.Message()),
 		})
 		return
 	}
@@ -148,7 +148,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 		respJSON(w, http.StatusInternalServerError, map[string]any{
 			"success": false,
 			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     fmt.Sprintf("%s: failed to parse pdata from storage", ErrorCode_INTERNAL_SERVER_ERROR),
+			"msg":     fmt.Sprintf("%s: failed to parse pdata from storage", ErrorCode_INTERNAL_SERVER_ERROR.Message()),
 		})
 		return
 	}
@@ -163,7 +163,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 		respJSON(w, http.StatusInternalServerError, map[string]any{
 			"success": false,
 			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     fmt.Sprintf("%s: failed to encode pdata as json", ErrorCode_INTERNAL_SERVER_ERROR),
+			"msg":     fmt.Sprintf("%s: failed to encode pdata as json", ErrorCode_INTERNAL_SERVER_ERROR.Message()),
 		})
 		return
 	}

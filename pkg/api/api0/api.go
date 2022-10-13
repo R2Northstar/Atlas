@@ -19,19 +19,25 @@ import (
 	"strings"
 )
 
+// Handler serves requests for the original master server API.
 type Handler struct {
+	// PdataStorage stores player data. It must be non-nil.
 	PdataStorage PdataStorage
-	NotFound     http.Handler
+
+	// NotFound handles requests not handled by this Handler.
+	NotFound http.Handler
 }
 
+// ServeHTTP routes requests to Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Server", "Atlas")
 
-	switch {
-	case strings.HasPrefix(r.URL.Path, "/player/"):
-		// TODO: rate limit
-		h.handlePlayer(w, r)
+	switch r.URL.Path {
 	default:
+		if strings.HasPrefix(r.URL.Path, "/player/") {
+			// TODO: rate limit
+			h.handlePlayer(w, r)
+		}
 		if h.NotFound == nil {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		} else {
@@ -40,6 +46,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// respJSON writes the JSON encoding of obj with the provided response status.
 func respJSON(w http.ResponseWriter, status int, obj any) {
 	buf, err := json.Marshal(obj)
 	if err != nil {
@@ -51,6 +58,8 @@ func respJSON(w http.ResponseWriter, status int, obj any) {
 	w.Write(buf)
 }
 
+// respMaybeCompress writes buf with the provided response status, compressing
+// it with gzip if the client supports it and the result is smaller.
 func respMaybeCompress(w http.ResponseWriter, r *http.Request, status int, buf []byte) {
 	for _, e := range strings.Split(r.Header.Get("Accept-Encoding"), ",") {
 		if t, _, _ := strings.Cut(e, ";"); strings.TrimSpace(t) == "gzip" {
