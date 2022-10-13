@@ -14,6 +14,8 @@ package api0
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -33,6 +35,11 @@ type Handler struct {
 
 	// NotFound handles requests not handled by this Handler.
 	NotFound http.Handler
+
+	// InsecureDevNoCheckPlayerAuth is an option you shouldn't use since it
+	// makes the server trust that clients are who they say they are. Blame
+	// @BobTheBob9 for this option even existing in the first place.
+	InsecureDevNoCheckPlayerAuth bool
 }
 
 // ServeHTTP routes requests to Handler.
@@ -42,6 +49,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/client/mainmenupromos":
 		h.handleMainMenuPromos(w, r)
+	case "/client/auth_with_self":
+		h.handleClientAuthWithSelf(w, r)
 	case "/accounts/write_persistence":
 		h.handleAccountsWritePersistence(w, r)
 	case "/accounts/get_username":
@@ -104,4 +113,29 @@ func respMaybeCompress(w http.ResponseWriter, r *http.Request, status int, buf [
 	if r.Method != http.MethodHead {
 		w.Write(buf)
 	}
+}
+
+// cryptoRandHex gets a string of random hex digits with length n.
+func cryptoRandHex(n int) (string, error) {
+	b := make([]byte, (n+1)/2) // round up
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b)[:n], nil
+}
+
+// marshalJSONBytesAsArray marshals b as an array of numbers (rather than the
+// default of base64).
+func marshalJSONBytesAsArray(b []byte) json.RawMessage {
+	var e bytes.Buffer
+	e.Grow(2 + len(b)*3)
+	e.WriteByte('[')
+	for i, c := range b {
+		if i != 0 {
+			e.WriteByte(',')
+		}
+		e.WriteString(strconv.FormatUint(uint64(c), 10))
+	}
+	e.WriteByte(']')
+	return json.RawMessage(e.Bytes())
 }
