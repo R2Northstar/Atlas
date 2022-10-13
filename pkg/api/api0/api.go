@@ -20,6 +20,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/rs/zerolog/hlog"
+	"golang.org/x/mod/semver"
 )
 
 // Handler serves requests for the original master server API.
@@ -40,6 +43,11 @@ type Handler struct {
 	// makes the server trust that clients are who they say they are. Blame
 	// @BobTheBob9 for this option even existing in the first place.
 	InsecureDevNoCheckPlayerAuth bool
+
+	// MinimumLauncherVersion restricts authentication and server registration
+	// to clients with at least this version, which must be valid semver. +dev
+	// versions are always allowed.
+	MinimumLauncherVersion string
 }
 
 // ServeHTTP routes requests to Handler.
@@ -69,6 +77,39 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.NotFound.ServeHTTP(w, r)
 		}
 	}
+}
+
+// checkLauncherVersion checks if the r was made by NorthstarLauncher and if it
+// is at least MinimumLauncherVersion.
+func (h *Handler) checkLauncherVersion(r *http.Request) bool {
+	rver, _, _ := strings.Cut(r.Header.Get("User-Agent"), " ")
+	if x := strings.TrimPrefix(rver, "R2Northstar/"); rver != x {
+		if x[0] != 'v' {
+			rver = "v" + x
+		} else {
+			rver = x
+		}
+	} else {
+		return false // deny: not R2Northstar
+	}
+
+	mver := h.MinimumLauncherVersion
+	if mver != "" {
+		if mver[0] != 'v' {
+			mver = "v" + mver
+		}
+	} else {
+		return true // allow: no minimum version
+	}
+	if !semver.IsValid(mver) {
+		hlog.FromRequest(r).Warn().Msgf("not checking invalid minimum version %q", mver)
+		return true // allow: invalid minimum version
+	}
+
+	if strings.HasSuffix(rver, "+dev") {
+		return true // allow: dev versions
+	}
+	return semver.Compare(rver, mver) >= 0
 }
 
 // respJSON writes the JSON encoding of obj with the provided response status.

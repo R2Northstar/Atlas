@@ -75,7 +75,13 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// TODO: version gate
+	if !h.checkLauncherVersion(r) {
+		respJSON(w, r, http.StatusBadRequest, map[string]any{
+			"success": false,
+			"error":   ErrorCode_UNSUPPORTED_VERSION,
+		})
+		return
+	}
 
 	uidQ := r.URL.Query().Get("id")
 	if uidQ == "" {

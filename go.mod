@@ -7,6 +7,7 @@ require (
 	github.com/cardigann/harhar v0.0.0-20161005032312-acb91b7a8682
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/pflag v1.0.5
+	golang.org/x/mod v0.5.1
 	golang.org/x/net v0.0.0-20221012135044-0b7e1fb9d458
 )
 
