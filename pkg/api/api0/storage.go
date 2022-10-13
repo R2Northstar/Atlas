@@ -8,11 +8,12 @@ import (
 
 // Account contains information about a registered account.
 type Account struct {
-	// UID is the player's Origin UID.
-	UID uint64 // required, unique
+	// UID is the player's Origin UID. It is required and unique.
+	UID uint64
 
-	// Username is the player's last known in-game username (their EAID).
-	Username string // optional (but will usually be there)
+	// Username is the player's last known in-game username (their EAID). It is
+	// optional and case insensitive.
+	Username string
 
 	// AuthIP is the IP used for the current auth session.
 	AuthIP netip.Addr
