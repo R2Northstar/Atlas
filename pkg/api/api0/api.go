@@ -7,6 +7,7 @@
 //   - Error messages have been improved. Enum values remain the same for compatibility.
 //   - Some rate limits (no longer necessary due to increased performance and better caching) have been removed.
 //   - More HTTP methods and features are supported (e.g., HEAD, OPTIONS, Content-Encoding).
+//   - Website split into a separate handler (set Handler.NotFound to http.HandlerFunc(web.ServeHTTP) for identical behaviour).
 package api0
 
 import (
