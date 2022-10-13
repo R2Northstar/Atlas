@@ -21,6 +21,9 @@ import (
 
 // Handler serves requests for the original master server API.
 type Handler struct {
+	// AccountStorage stores accounts. It must be non-nil.
+	AccountStorage AccountStorage
+
 	// PdataStorage stores player data. It must be non-nil.
 	PdataStorage PdataStorage
 
