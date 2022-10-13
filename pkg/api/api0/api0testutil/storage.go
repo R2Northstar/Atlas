@@ -25,6 +25,18 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 		pdata1SHA := sha256.Sum256(pdata1)
 		pdata2SHA := sha256.Sum256(pdata2)
 
+		t.Run("HashForNonexistentUser1", func(t *testing.T) {
+			hash, exists, err := s.GetPdataHash(user1)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if exists {
+				t.Fatalf("exists should be false")
+			}
+			if hash != zeroSHA {
+				t.Fatalf("should not return hash")
+			}
+		})
 		t.Run("GetForNonexistentUser1", func(t *testing.T) {
 			for _, tc := range []struct {
 				Name string
@@ -50,6 +62,18 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 		t.Run("PutUser1Pdata1", func(t *testing.T) {
 			if err := s.SetPdata(user1, pdata1); err != nil {
 				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+		t.Run("HashForExistingUser1Pdata1", func(t *testing.T) {
+			hash, exists, err := s.GetPdataHash(user1)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !exists {
+				t.Fatalf("exists should be true")
+			}
+			if hash != pdata1SHA {
+				t.Fatalf("should return correct hash")
 			}
 		})
 		t.Run("GetForExistingUser1", func(t *testing.T) {
@@ -90,6 +114,18 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 		t.Run("PutUser1Pdata2", func(t *testing.T) {
 			if err := s.SetPdata(user1, pdata2); err != nil {
 				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+		t.Run("HashForExistingUser1Pdata2", func(t *testing.T) {
+			hash, exists, err := s.GetPdataHash(user1)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !exists {
+				t.Fatalf("exists should be true")
+			}
+			if hash != pdata2SHA {
+				t.Fatalf("should return correct hash")
 			}
 		})
 		t.Run("GetForExistingUser2", func(t *testing.T) {
@@ -170,32 +206,44 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 				}
 				randSched()
 
-				if buf, exists, err := s.GetPdataCached(uid, data1sha); err != nil || !exists || buf != nil {
+				if hash, exists, err := s.GetPdataHash(uid); err != nil || !exists || hash != data1sha {
 					fail.Store(4)
 					return
 				}
 				randSched()
 
-				if buf, exists, err := s.GetPdataCached(uid, data2sha); err != nil || !exists || !bytes.Equal(buf, data1) {
+				if buf, exists, err := s.GetPdataCached(uid, data1sha); err != nil || !exists || buf != nil {
 					fail.Store(5)
 					return
 				}
 				randSched()
 
-				if err := s.SetPdata(uid, data2); err != nil {
+				if buf, exists, err := s.GetPdataCached(uid, data2sha); err != nil || !exists || !bytes.Equal(buf, data1) {
 					fail.Store(6)
 					return
 				}
 				randSched()
 
-				if buf, exists, err := s.GetPdataCached(uid, data2sha); err != nil || !exists || buf != nil {
+				if err := s.SetPdata(uid, data2); err != nil {
 					fail.Store(7)
 					return
 				}
 				randSched()
 
-				if buf, exists, err := s.GetPdataCached(uid, data1sha); err != nil || !exists || !bytes.Equal(buf, data2) {
+				if hash, exists, err := s.GetPdataHash(uid); err != nil || !exists || hash != data2sha {
 					fail.Store(8)
+					return
+				}
+				randSched()
+
+				if buf, exists, err := s.GetPdataCached(uid, data2sha); err != nil || !exists || buf != nil {
+					fail.Store(9)
+					return
+				}
+				randSched()
+
+				if buf, exists, err := s.GetPdataCached(uid, data1sha); err != nil || !exists || !bytes.Equal(buf, data2) {
+					fail.Store(10)
 					return
 				}
 				randSched()

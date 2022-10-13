@@ -27,6 +27,14 @@ func NewPdataStore(compress bool) *PdataStore {
 	}
 }
 
+func (m *PdataStore) GetPdataHash(uid uint64) ([sha256.Size]byte, bool, error) {
+	v, ok := m.pdata.Load(uid)
+	if !ok {
+		return [sha256.Size]byte{}, ok, nil
+	}
+	return v.(pdataStoreEntry).Hash, ok, nil
+}
+
 func (m *PdataStore) GetPdataCached(uid uint64, sha [sha256.Size]byte) ([]byte, bool, error) {
 	v, ok := m.pdata.Load(uid)
 	if !ok {
