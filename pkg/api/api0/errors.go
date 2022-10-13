@@ -19,6 +19,10 @@ const (
 	ErrorCode_DUPLICATE_SERVER           ErrorCode = "DUPLICATE_SERVER"           // A server with this port already exists for your IP address
 )
 
+const (
+	ErrorCode_INTERNAL_SERVER_ERROR ErrorCode = "INTERNAL_SERVER_ERROR"
+)
+
 // Message returns the default message for error code n.
 func (n ErrorCode) Message() string {
 	switch n {
@@ -46,6 +50,8 @@ func (n ErrorCode) Message() string {
 		return "The version you are using is no longer supported"
 	case ErrorCode_DUPLICATE_SERVER:
 		return "A server with this port already exists for your IP address"
+	case ErrorCode_INTERNAL_SERVER_ERROR:
+		return "Internal server error"
 	default:
 		return string(n)
 	}
