@@ -1,1 +1,2 @@
-pkg/pdata/*.go  linguist-generated=true
+pkg/pdata/persistent_player_data_version_231.go      linguist-generated=true
+pkg/pdata/persistent_player_data_version_231_test.go linguist-generated=true
