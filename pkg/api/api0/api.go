@@ -28,6 +28,9 @@ type Handler struct {
 	// PdataStorage stores player data. It must be non-nil.
 	PdataStorage PdataStorage
 
+	// MainMenuPromos gets the main menu promos to return for a request.
+	MainMenuPromos func(*http.Request) MainMenuPromos
+
 	// NotFound handles requests not handled by this Handler.
 	NotFound http.Handler
 }
@@ -37,6 +40,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Server", "Atlas")
 
 	switch r.URL.Path {
+	case "/client/mainmenupromos":
+		h.handleMainMenuPromos(w, r)
 	case "/accounts/write_persistence":
 		h.handleAccountsWritePersistence(w, r)
 	case "/accounts/get_username":
