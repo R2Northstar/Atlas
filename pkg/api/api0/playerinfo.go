@@ -122,7 +122,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Uint64("uid", uid).
-			Msgf("failed to read pdata hash from storage")
+			Msgf("failed to read pdata from storage")
 		respJSON(w, r, http.StatusInternalServerError, map[string]any{
 			"success": false,
 			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
