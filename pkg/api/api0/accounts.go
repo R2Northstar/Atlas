@@ -199,7 +199,7 @@ func (h *Handler) handleAccountsLookupUID(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Pragma", "no-cache")
 
 	if r.Method == http.MethodOptions {
-		w.Header().Set("Allow", "OPTIONS, GET")
+		w.Header().Set("Allow", "OPTIONS, HEAD, GET")
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -255,7 +255,7 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Pragma", "no-cache")
 
 	if r.Method == http.MethodOptions {
-		w.Header().Set("Allow", "OPTIONS, GET")
+		w.Header().Set("Allow", "OPTIONS, HEAD, GET")
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
