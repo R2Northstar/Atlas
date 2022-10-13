@@ -47,7 +47,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // respJSON writes the JSON encoding of obj with the provided response status.
-func respJSON(w http.ResponseWriter, status int, obj any) {
+func respJSON(w http.ResponseWriter, r *http.Request, status int, obj any) {
+	if r.Method == http.MethodHead {
+		w.WriteHeader(status)
+		return
+	}
 	buf, err := json.Marshal(obj)
 	if err != nil {
 		panic(err)
@@ -80,5 +84,7 @@ func respMaybeCompress(w http.ResponseWriter, r *http.Request, status int, buf [
 	}
 	w.Header().Set("Content-Length", strconv.Itoa(len(buf)))
 	w.WriteHeader(status)
-	w.Write(buf)
+	if r.Method != http.MethodHead {
+		w.Write(buf)
+	}
 }

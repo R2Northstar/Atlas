@@ -81,7 +81,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 
 	uid, err := strconv.ParseUint(r.URL.Query().Get("id"), 10, 64)
 	if err != nil {
-		respJSON(w, http.StatusNotFound, map[string]any{
+		respJSON(w, r, http.StatusNotFound, map[string]any{
 			"success": false,
 			"error":   ErrorCode_PLAYER_NOT_FOUND,
 		})
@@ -96,18 +96,11 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 				Err(err).
 				Uint64("uid", uid).
 				Msgf("failed to read pdata hash from storage")
-			respJSON(w, http.StatusInternalServerError, map[string]any{
-				"success": false,
-				"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-				"msg":     fmt.Sprintf("%s: failed to read pdata hash from storage", ErrorCode_INTERNAL_SERVER_ERROR.Message()),
-			})
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		if !exists {
-			respJSON(w, http.StatusNotFound, map[string]any{
-				"success": false,
-				"error":   ErrorCode_PLAYER_NOT_FOUND,
-			})
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		w.Header().Set("ETag", `W/"`+hex.EncodeToString(hash[:])+`"`)
@@ -121,7 +114,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to read pdata hash from storage")
-		respJSON(w, http.StatusInternalServerError, map[string]any{
+		respJSON(w, r, http.StatusInternalServerError, map[string]any{
 			"success": false,
 			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
 			"msg":     fmt.Sprintf("%s: failed to read pdata hash from storage", ErrorCode_INTERNAL_SERVER_ERROR.Message()),
@@ -129,7 +122,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		respJSON(w, http.StatusNotFound, map[string]any{
+		respJSON(w, r, http.StatusNotFound, map[string]any{
 			"success": false,
 			"error":   ErrorCode_PLAYER_NOT_FOUND,
 		})
@@ -146,7 +139,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 			Uint64("uid", uid).
 			Str("pdata_sha256", hex.EncodeToString(hash[:])).
 			Msgf("failed to parse pdata from storage")
-		respJSON(w, http.StatusInternalServerError, map[string]any{
+		respJSON(w, r, http.StatusInternalServerError, map[string]any{
 			"success": false,
 			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
 			"msg":     fmt.Sprintf("%s: failed to parse pdata from storage", ErrorCode_INTERNAL_SERVER_ERROR.Message()),
@@ -161,7 +154,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 			Uint64("uid", uid).
 			Str("pdata_sha256", hex.EncodeToString(hash[:])).
 			Msgf("failed to encode pdata as json")
-		respJSON(w, http.StatusInternalServerError, map[string]any{
+		respJSON(w, r, http.StatusInternalServerError, map[string]any{
 			"success": false,
 			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
 			"msg":     fmt.Sprintf("%s: failed to encode pdata as json", ErrorCode_INTERNAL_SERVER_ERROR.Message()),
