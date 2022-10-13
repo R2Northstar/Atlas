@@ -64,7 +64,7 @@ func must(err error) {
 }
 func putString(b []byte, x string) error {
 	s := []byte(x)
-	if len(s) > len(s) {
+	if len(s) > len(b) {
 		return fmt.Errorf("string length %d too long for field length %d", len(s), len(b))
 	}
 	for i, c := range s {

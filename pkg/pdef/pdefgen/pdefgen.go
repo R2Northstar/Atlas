@@ -129,7 +129,7 @@ func main() {
 
 	pln(&buf, `func putString(b []byte, x string) error {`)
 	pln(&buf, `s := []byte(x)`)
-	pln(&buf, `if len(s) > len(s) {`)
+	pln(&buf, `if len(s) > len(b) {`)
 	pln(&buf, `return fmt.Errorf(%#v, len(s), len(b))`, `string length %d too long for field length %d`)
 	pln(&buf, `}`)
 	pln(&buf, `for i, c := range s {`)
