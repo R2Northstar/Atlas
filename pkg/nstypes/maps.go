@@ -1,5 +1,7 @@
 package nstypes
 
+import "strconv"
+
 type Map string
 
 const (
@@ -89,7 +91,7 @@ func Maps() []Map {
 
 // GoString gets the map in Go syntax.
 func (m Map) GoString() string {
-	return "Map(" + string(m) + ")"
+	return "Map(" + strconv.Quote(string(m)) + ")"
 }
 
 // SourceString gets the raw map name.

@@ -1,5 +1,7 @@
 package nstypes
 
+import "strconv"
+
 type Playlist string
 
 const (
@@ -96,7 +98,7 @@ func Playlists() []Playlist {
 
 // GoString gets the map in Go syntax.
 func (p Playlist) GoString() string {
-	return "Playlist(" + string(p) + ")"
+	return "Playlist(" + strconv.Quote(string(p)) + ")"
 }
 
 // SourceString gets the raw playlist name.
