@@ -4,6 +4,7 @@ package web
 import (
 	"embed"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -35,6 +36,17 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if u, ok := Redirects[strings.TrimSuffix(r.URL.Path, "/")]; ok {
 		http.Redirect(w, r, u, http.StatusTemporaryRedirect)
 		return
+	}
+
+	// rewrite /favicon.ico -> /assets/favicon.ico
+	if r.URL.Path == "/favicon.ico" {
+		r2 := new(http.Request)
+		*r2 = *r
+		r2.URL = new(url.URL)
+		*r2.URL = *r.URL
+		r2.URL.Path = "/assets/favicon.ico"
+		r2.URL.RawPath = r2.URL.Path
+		r = r2
 	}
 
 	// this handles range requests, etags, time, etc
