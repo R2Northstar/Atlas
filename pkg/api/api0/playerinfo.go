@@ -75,6 +75,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodOptions {
 		w.Header().Set("Allow", "OPTIONS, GET, HEAD")
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
