@@ -83,6 +83,18 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		return
 	}
 
+	if len(pd.ExtraData) > 512 { // arbitrary limit
+		hlog.FromRequest(r).Warn().
+			Err(err).
+			Msgf("pdata with too much trailing junk rejected")
+		respJSON(w, r, http.StatusBadRequest, map[string]any{
+			"success": false,
+			"error":   ErrorCode_BAD_REQUEST,
+			"msg":     ErrorCode_BAD_REQUEST.Messagef("invalid pdata"),
+		})
+		return
+	}
+
 	uidQ := r.URL.Query().Get("id")
 	if uidQ == "" {
 		respJSON(w, r, http.StatusBadRequest, map[string]any{
