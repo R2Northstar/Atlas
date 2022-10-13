@@ -93,171 +93,171 @@ func putEnum(b []byte, x uint8) {
 }
 
 type Pdata struct {
-	InitializedVersion               int32                                             `pdef:"initializedVersion"`
-	AnnouncementVersionSeen          int32                                             `pdef:"announcementVersionSeen"`
-	Xp                               int32                                             `pdef:"xp"`
-	PreviousXP                       int32                                             `pdef:"previousXP"`
-	Credits                          int32                                             `pdef:"credits"`
-	Xp_match                         [20]int32                                         `pdef:"xp_match"`
-	Xp_count                         [20]int32                                         `pdef:"xp_count"`
-	NetWorth                         int32                                             `pdef:"netWorth"`
-	MatchWin                         bool                                              `pdef:"matchWin"`
-	MatchScoreEvent                  bool                                              `pdef:"matchScoreEvent"`
-	MatchComplete                    bool                                              `pdef:"matchComplete"`
-	MatchSquadBonus                  bool                                              `pdef:"matchSquadBonus"`
-	ShowGameSummary                  bool                                              `pdef:"showGameSummary"`
-	RegenShowNew                     bool                                              `pdef:"regenShowNew"`
-	SpawnAsTitan                     bool                                              `pdef:"spawnAsTitan"`
-	HaveSeenCustomCoop               bool                                              `pdef:"haveSeenCustomCoop"`
-	FactionGiftsFixed                bool                                              `pdef:"factionGiftsFixed"`
-	IsACheater                       bool                                              `pdef:"isACheater"`
-	SpendDoubleColiseumTickets       bool                                              `pdef:"spendDoubleColiseumTickets"`
-	PrivateMatchState                int32                                             `pdef:"privateMatchState"`
-	PlaylistShuffle_seed             int32                                             `pdef:"playlistShuffle_seed"`
-	PlaylistShuffle_seedFlip         bool                                              `pdef:"playlistShuffle_seedFlip"`
-	PlaylistShuffle_curIndex         int32                                             `pdef:"playlistShuffle_curIndex"`
-	LastFDTitanRef                   string                                            `pdef:"lastFDTitanRef"`
-	LastFDDifficulty                 int32                                             `pdef:"lastFDDifficulty"`
-	UltimateEdition                  bool                                              `pdef:"ultimateEdition"`
-	RandomColiseumUnlocks            int32                                             `pdef:"randomColiseumUnlocks"`
-	RandomPlayerLevelUnlocks         int32                                             `pdef:"randomPlayerLevelUnlocks"`
-	RandomTitanLevelUnlocks          [TitanClassesCount]int32                          `pdef:"randomTitanLevelUnlocks"`
-	RandomWeaponLevelUnlocks         [LoadoutWeaponsAndAbilitiesCount]int32            `pdef:"randomWeaponLevelUnlocks"`
-	RandomFactionLevelUnlocks        [FactionCount]int32                               `pdef:"randomFactionLevelUnlocks"`
-	DoubleXP                         int32                                             `pdef:"doubleXP"`
-	ColiseumTickets                  int32                                             `pdef:"coliseumTickets"`
-	ColiseumWinStreak                int32                                             `pdef:"coliseumWinStreak"`
-	ColiseumBestStreak               int32                                             `pdef:"coliseumBestStreak"`
-	ColiseumTotalWins                int32                                             `pdef:"coliseumTotalWins"`
-	ColiseumTotalLosses              int32                                             `pdef:"coliseumTotalLosses"`
-	RecentUnlocks                    [10]RecentUnlock                                  `pdef:"recentUnlocks"`
-	HasBeenIntroducedToComms         bool                                              `pdef:"hasBeenIntroducedToComms"`
-	LastCommsUseDate                 int32                                             `pdef:"lastCommsUseDate"`
-	NumTimesUsedComms                int32                                             `pdef:"numTimesUsedComms"`
-	Custom_emoji_initialized         bool                                              `pdef:"custom_emoji_initialized"`
-	Custom_emoji                     [4]int32                                          `pdef:"custom_emoji"`
-	BurnmeterSlot                    int32                                             `pdef:"burnmeterSlot"`
-	Pve                              PveData                                           `pdef:"pve"`
-	FactionChoice                    Faction                                           `pdef:"factionChoice"`
-	EnemyFaction                     Faction                                           `pdef:"enemyFaction"`
-	PersistentRewards                [32]bool                                          `pdef:"persistentRewards"`
-	ConsumableRewards                [32]int32                                         `pdef:"consumableRewards"`
-	PilotSpawnLoadout                SpawnLoadout                                      `pdef:"pilotSpawnLoadout"`
-	TitanSpawnLoadout                SpawnLoadout                                      `pdef:"titanSpawnLoadout"`
-	ActivePilotLoadout               PilotLoadout                                      `pdef:"activePilotLoadout"`
-	ActiveTitanLoadout               TitanLoadout                                      `pdef:"activeTitanLoadout"`
-	ActiveTitanLoadoutIndex          int32                                             `pdef:"activeTitanLoadoutIndex"`
-	PilotLoadouts                    [10]PilotLoadout                                  `pdef:"pilotLoadouts"`
-	TitanLoadouts                    [10]TitanLoadout                                  `pdef:"titanLoadouts"`
-	PinTrackedEntitlements           [OwnedEntitlementsCount]bool                      `pdef:"pinTrackedEntitlements"`
-	NewPinTrackedEntitlements        [OwnedEntitlementsCount]bool                      `pdef:"newPinTrackedEntitlements"`
-	ActiveBCID                       int32                                             `pdef:"activeBCID"`
-	ActiveCallingCardIndex           int32                                             `pdef:"activeCallingCardIndex"`
-	ActiveCallsignIconIndex          int32                                             `pdef:"activeCallsignIconIndex"`
-	ActiveCallsignIconStyleIndex     int32                                             `pdef:"activeCallsignIconStyleIndex"`
-	Gen                              int32                                             `pdef:"gen"`
-	FactionXP                        [FactionCount]int32                               `pdef:"factionXP"`
-	PreviousFactionXP                [FactionCount]int32                               `pdef:"previousFactionXP"`
-	TitanXP                          [TitanClassesCount]int32                          `pdef:"titanXP"`
-	PreviousTitanXP                  [TitanClassesCount]int32                          `pdef:"previousTitanXP"`
-	FdTitanXP                        [TitanClassesCount]int32                          `pdef:"fdTitanXP"`
-	FdPreviousTitanXP                [TitanClassesCount]int32                          `pdef:"fdPreviousTitanXP"`
-	TitanFDUnlockPoints              [TitanClassesCount]int32                          `pdef:"titanFDUnlockPoints"`
-	PreviousFDUnlockPoints           [TitanClassesCount]int32                          `pdef:"previousFDUnlockPoints"`
-	Fd_match                         [20]int32                                         `pdef:"fd_match"`
-	Fd_count                         [20]int32                                         `pdef:"fd_count"`
-	TitanClassLockState              [TitanClassesCount]int32                          `pdef:"titanClassLockState"`
-	FdTutorialBits                   int32                                             `pdef:"fdTutorialBits"`
-	FdPlaylistBits                   int32                                             `pdef:"fdPlaylistBits"`
-	GameStats                        SGameStats                                        `pdef:"gameStats"`
-	MapStats                         [MapsCount]SMapStats                              `pdef:"mapStats"`
-	TimeStats                        SHoursPlayed                                      `pdef:"timeStats"`
-	DistanceStats                    SMilesTraveled                                    `pdef:"distanceStats"`
-	WeaponStats                      [LoadoutWeaponsAndAbilitiesCount]SWeaponStats     `pdef:"weaponStats"`
-	WeaponKillStats                  [LoadoutWeaponsAndAbilitiesCount]SWeaponKillStats `pdef:"weaponKillStats"`
-	KillStats                        SKillStats                                        `pdef:"killStats"`
-	DeathStats                       SDeathStats                                       `pdef:"deathStats"`
-	MiscStats                        SMiscStats                                        `pdef:"miscStats"`
-	FdStats                          SFDStats                                          `pdef:"fdStats"`
-	TitanStats                       [TitanClassesCount]STitanStats                    `pdef:"titanStats"`
-	Kdratio_lifetime                 float32                                           `pdef:"kdratio_lifetime"`
-	Kdratio_lifetime_pvp             float32                                           `pdef:"kdratio_lifetime_pvp"`
-	Kdratio_match                    [10]float32                                       `pdef:"kdratio_match"`
-	Kdratiopvp_match                 [10]float32                                       `pdef:"kdratiopvp_match"`
-	WinStreak                        int32                                             `pdef:"winStreak"`
-	HighestWinStreakEver             int32                                             `pdef:"highestWinStreakEver"`
-	WinStreakIsDraws                 bool                                              `pdef:"winStreakIsDraws"`
-	WinLossHistory                   [10]int32                                         `pdef:"winLossHistory"`
-	WinLossHistorySize               int32                                             `pdef:"winLossHistorySize"`
-	MostProjectilesCollectedInVortex int32                                             `pdef:"mostProjectilesCollectedInVortex"`
-	BlackMarketItemsBought           int32                                             `pdef:"blackMarketItemsBought"`
-	RespawnKillInfected              bool                                              `pdef:"respawnKillInfected"`
-	PilotWeapons                     [35]WeaponMain                                    `pdef:"pilotWeapons"`
-	PilotOffhands                    [35]WeaponOffhand                                 `pdef:"pilotOffhands"`
-	TitanWeapons                     [15]WeaponMain                                    `pdef:"titanWeapons"`
-	TitanOffhands                    [30]WeaponOffhand                                 `pdef:"titanOffhands"`
-	TitanChassis                     [12]TitanMain                                     `pdef:"titanChassis"`
-	HasSeenStore                     bool                                              `pdef:"hasSeenStore"`
-	NewPilotSkins                    [5]int32                                          `pdef:"newPilotSkins"`
-	UnlockedPilotSkins               [5]int32                                          `pdef:"unlockedPilotSkins"`
-	NewPrimePilotSkins               int32                                             `pdef:"newPrimePilotSkins"`
-	UnlockedPrimePilotSkins          int32                                             `pdef:"unlockedPrimePilotSkins"`
-	NewPilotWeapons                  [2]int32                                          `pdef:"newPilotWeapons"`
-	UnlockedPilotWeapons             [2]int32                                          `pdef:"unlockedPilotWeapons"`
-	NewPilotOffhands                 [2]int32                                          `pdef:"newPilotOffhands"`
-	UnlockedPilotOffhands            [2]int32                                          `pdef:"unlockedPilotOffhands"`
-	NewPilotPassives                 int32                                             `pdef:"newPilotPassives"`
-	UnlockedPilotPassives            int32                                             `pdef:"unlockedPilotPassives"`
-	NewTitanOffhands                 [2]int32                                          `pdef:"newTitanOffhands"`
-	UnlockedTitanOffhands            [2]int32                                          `pdef:"unlockedTitanOffhands"`
-	NewTitanPassives                 int32                                             `pdef:"newTitanPassives"`
-	UnlockedTitanPassives            int32                                             `pdef:"unlockedTitanPassives"`
-	NewTitanChassis                  int32                                             `pdef:"newTitanChassis"`
-	UnlockedTitanChassis             int32                                             `pdef:"unlockedTitanChassis"`
-	NewPrimeTitans                   int32                                             `pdef:"newPrimeTitans"`
-	UnlockedPrimeTitans              int32                                             `pdef:"unlockedPrimeTitans"`
-	NewPilotSuits                    int32                                             `pdef:"newPilotSuits"`
-	UnlockedPilotSuits               int32                                             `pdef:"unlockedPilotSuits"`
-	NewPilotExecutions               int32                                             `pdef:"newPilotExecutions"`
-	UnlockedPilotExecutions          int32                                             `pdef:"unlockedPilotExecutions"`
-	UnlockedFeatures                 [2]int32                                          `pdef:"unlockedFeatures"`
-	NewFeatures                      [2]int32                                          `pdef:"newFeatures"`
-	UnlockedBoosts                   int32                                             `pdef:"unlockedBoosts"`
-	NewBoosts                        int32                                             `pdef:"newBoosts"`
-	UnlockedFactions                 int32                                             `pdef:"unlockedFactions"`
-	NewFactions                      int32                                             `pdef:"newFactions"`
-	UnlockedCallingCards             [16]int32                                         `pdef:"unlockedCallingCards"`
-	NewCallingCards                  [16]int32                                         `pdef:"newCallingCards"`
-	UnlockedCallsignIcons            [7]int32                                          `pdef:"unlockedCallsignIcons"`
-	NewCallsignIcons                 [7]int32                                          `pdef:"newCallsignIcons"`
-	UnlockedCommsIcons               [5]int32                                          `pdef:"unlockedCommsIcons"`
-	NewCommsIcons                    [5]int32                                          `pdef:"newCommsIcons"`
-	NewTitanExecutions               int32                                             `pdef:"newTitanExecutions"`
-	UnlockedTitanExecutions          int32                                             `pdef:"unlockedTitanExecutions"`
-	Challenges                       [ChallengeCount]EChallenge                        `pdef:"challenges"`
-	Dailychallenges                  [DailychallengeCount]EChallenge                   `pdef:"dailychallenges"`
-	ActiveDailyChallenges            [9]ActiveDailyChallenge                           `pdef:"activeDailyChallenges"`
-	TrackedChallenges                [3]int32                                          `pdef:"trackedChallenges"`
-	EOGTrackedChallenges             [3]int32                                          `pdef:"EOGTrackedChallenges"`
-	TrackedChallengeRefs             [3]string                                         `pdef:"trackedChallengeRefs"`
-	EOGTrackedChallengeRefs          [3]string                                         `pdef:"EOGTrackedChallengeRefs"`
-	DailyChallengeDayIndex           int32                                             `pdef:"dailyChallengeDayIndex"`
-	NewDailyChallenges               bool                                              `pdef:"newDailyChallenges"`
-	IsPostGameScoreboardValid        bool                                              `pdef:"isPostGameScoreboardValid"`
-	PostGameData                     EPostGameData                                     `pdef:"postGameData"`
-	IsFDPostGameScoreboardValid      bool                                              `pdef:"isFDPostGameScoreboardValid"`
-	PostGameDataFD                   EFDPostGameData                                   `pdef:"postGameDataFD"`
-	PreviousGooserProgress           int32                                             `pdef:"previousGooserProgress"`
-	MapHistory                       [24]int32                                         `pdef:"mapHistory"`
-	ModeHistory                      [10]int32                                         `pdef:"modeHistory"`
-	LastPlaylist                     string                                            `pdef:"lastPlaylist"`
-	LastDailyMatchVictory            int32                                             `pdef:"lastDailyMatchVictory"`
-	LastTimePlayed                   int32                                             `pdef:"lastTimePlayed"`
-	LastTimeLoggedIn                 int32                                             `pdef:"lastTimeLoggedIn"`
-	AbandonCountForMode              [GameModesCount]int32                             `pdef:"abandonCountForMode"`
-	LastAbandonedMode                GameModes                                         `pdef:"lastAbandonedMode"`
-	LastAbandonTime                  int32                                             `pdef:"lastAbandonTime"`
-	Ranked                           Struct_ranked                                     `pdef:"ranked"`
+	InitializedVersion               int32                                            `pdef:"initializedVersion"`
+	AnnouncementVersionSeen          int32                                            `pdef:"announcementVersionSeen"`
+	Xp                               int32                                            `pdef:"xp"`
+	PreviousXP                       int32                                            `pdef:"previousXP"`
+	Credits                          int32                                            `pdef:"credits"`
+	Xp_match                         [20]int32                                        `pdef:"xp_match"`
+	Xp_count                         [20]int32                                        `pdef:"xp_count"`
+	NetWorth                         int32                                            `pdef:"netWorth"`
+	MatchWin                         bool                                             `pdef:"matchWin"`
+	MatchScoreEvent                  bool                                             `pdef:"matchScoreEvent"`
+	MatchComplete                    bool                                             `pdef:"matchComplete"`
+	MatchSquadBonus                  bool                                             `pdef:"matchSquadBonus"`
+	ShowGameSummary                  bool                                             `pdef:"showGameSummary"`
+	RegenShowNew                     bool                                             `pdef:"regenShowNew"`
+	SpawnAsTitan                     bool                                             `pdef:"spawnAsTitan"`
+	HaveSeenCustomCoop               bool                                             `pdef:"haveSeenCustomCoop"`
+	FactionGiftsFixed                bool                                             `pdef:"factionGiftsFixed"`
+	IsACheater                       bool                                             `pdef:"isACheater"`
+	SpendDoubleColiseumTickets       bool                                             `pdef:"spendDoubleColiseumTickets"`
+	PrivateMatchState                int32                                            `pdef:"privateMatchState"`
+	PlaylistShuffle_seed             int32                                            `pdef:"playlistShuffle_seed"`
+	PlaylistShuffle_seedFlip         bool                                             `pdef:"playlistShuffle_seedFlip"`
+	PlaylistShuffle_curIndex         int32                                            `pdef:"playlistShuffle_curIndex"`
+	LastFDTitanRef                   string                                           `pdef:"lastFDTitanRef"`
+	LastFDDifficulty                 int32                                            `pdef:"lastFDDifficulty"`
+	UltimateEdition                  bool                                             `pdef:"ultimateEdition"`
+	RandomColiseumUnlocks            int32                                            `pdef:"randomColiseumUnlocks"`
+	RandomPlayerLevelUnlocks         int32                                            `pdef:"randomPlayerLevelUnlocks"`
+	RandomTitanLevelUnlocks          [TitanClassesCount]int32                         `pdef:"randomTitanLevelUnlocks"`
+	RandomWeaponLevelUnlocks         [LoadoutWeaponsAndAbilitiesCount]int32           `pdef:"randomWeaponLevelUnlocks"`
+	RandomFactionLevelUnlocks        [FactionCount]int32                              `pdef:"randomFactionLevelUnlocks"`
+	DoubleXP                         int32                                            `pdef:"doubleXP"`
+	ColiseumTickets                  int32                                            `pdef:"coliseumTickets"`
+	ColiseumWinStreak                int32                                            `pdef:"coliseumWinStreak"`
+	ColiseumBestStreak               int32                                            `pdef:"coliseumBestStreak"`
+	ColiseumTotalWins                int32                                            `pdef:"coliseumTotalWins"`
+	ColiseumTotalLosses              int32                                            `pdef:"coliseumTotalLosses"`
+	RecentUnlocks                    [10]RecentUnlock                                 `pdef:"recentUnlocks"`
+	HasBeenIntroducedToComms         bool                                             `pdef:"hasBeenIntroducedToComms"`
+	LastCommsUseDate                 int32                                            `pdef:"lastCommsUseDate"`
+	NumTimesUsedComms                int32                                            `pdef:"numTimesUsedComms"`
+	Custom_emoji_initialized         bool                                             `pdef:"custom_emoji_initialized"`
+	Custom_emoji                     [4]int32                                         `pdef:"custom_emoji"`
+	BurnmeterSlot                    int32                                            `pdef:"burnmeterSlot"`
+	Pve                              PveData                                          `pdef:"pve"`
+	FactionChoice                    Faction                                          `pdef:"factionChoice"`
+	EnemyFaction                     Faction                                          `pdef:"enemyFaction"`
+	PersistentRewards                [32]bool                                         `pdef:"persistentRewards"`
+	ConsumableRewards                [32]int32                                        `pdef:"consumableRewards"`
+	PilotSpawnLoadout                SpawnLoadout                                     `pdef:"pilotSpawnLoadout"`
+	TitanSpawnLoadout                SpawnLoadout                                     `pdef:"titanSpawnLoadout"`
+	ActivePilotLoadout               PilotLoadout                                     `pdef:"activePilotLoadout"`
+	ActiveTitanLoadout               TitanLoadout                                     `pdef:"activeTitanLoadout"`
+	ActiveTitanLoadoutIndex          int32                                            `pdef:"activeTitanLoadoutIndex"`
+	PilotLoadouts                    [10]PilotLoadout                                 `pdef:"pilotLoadouts"`
+	TitanLoadouts                    [10]TitanLoadout                                 `pdef:"titanLoadouts"`
+	PinTrackedEntitlements           [OwnedEntitlementsCount]bool                     `pdef:"pinTrackedEntitlements"`
+	NewPinTrackedEntitlements        [OwnedEntitlementsCount]bool                     `pdef:"newPinTrackedEntitlements"`
+	ActiveBCID                       int32                                            `pdef:"activeBCID"`
+	ActiveCallingCardIndex           int32                                            `pdef:"activeCallingCardIndex"`
+	ActiveCallsignIconIndex          int32                                            `pdef:"activeCallsignIconIndex"`
+	ActiveCallsignIconStyleIndex     int32                                            `pdef:"activeCallsignIconStyleIndex"`
+	Gen                              int32                                            `pdef:"gen"`
+	FactionXP                        [FactionCount]int32                              `pdef:"factionXP"`
+	PreviousFactionXP                [FactionCount]int32                              `pdef:"previousFactionXP"`
+	TitanXP                          [TitanClassesCount]int32                         `pdef:"titanXP"`
+	PreviousTitanXP                  [TitanClassesCount]int32                         `pdef:"previousTitanXP"`
+	FdTitanXP                        [TitanClassesCount]int32                         `pdef:"fdTitanXP"`
+	FdPreviousTitanXP                [TitanClassesCount]int32                         `pdef:"fdPreviousTitanXP"`
+	TitanFDUnlockPoints              [TitanClassesCount]int32                         `pdef:"titanFDUnlockPoints"`
+	PreviousFDUnlockPoints           [TitanClassesCount]int32                         `pdef:"previousFDUnlockPoints"`
+	Fd_match                         [20]int32                                        `pdef:"fd_match"`
+	Fd_count                         [20]int32                                        `pdef:"fd_count"`
+	TitanClassLockState              [TitanClassesCount]int32                         `pdef:"titanClassLockState"`
+	FdTutorialBits                   int32                                            `pdef:"fdTutorialBits"`
+	FdPlaylistBits                   int32                                            `pdef:"fdPlaylistBits"`
+	GameStats                        GameStats                                        `pdef:"gameStats"`
+	MapStats                         [MapsCount]MapStats                              `pdef:"mapStats"`
+	TimeStats                        HoursPlayed                                      `pdef:"timeStats"`
+	DistanceStats                    MilesTraveled                                    `pdef:"distanceStats"`
+	WeaponStats                      [LoadoutWeaponsAndAbilitiesCount]WeaponStats     `pdef:"weaponStats"`
+	WeaponKillStats                  [LoadoutWeaponsAndAbilitiesCount]WeaponKillStats `pdef:"weaponKillStats"`
+	KillStats                        KillStats                                        `pdef:"killStats"`
+	DeathStats                       DeathStats                                       `pdef:"deathStats"`
+	MiscStats                        MiscStats                                        `pdef:"miscStats"`
+	FdStats                          FDStats                                          `pdef:"fdStats"`
+	TitanStats                       [TitanClassesCount]TitanStats                    `pdef:"titanStats"`
+	Kdratio_lifetime                 float32                                          `pdef:"kdratio_lifetime"`
+	Kdratio_lifetime_pvp             float32                                          `pdef:"kdratio_lifetime_pvp"`
+	Kdratio_match                    [10]float32                                      `pdef:"kdratio_match"`
+	Kdratiopvp_match                 [10]float32                                      `pdef:"kdratiopvp_match"`
+	WinStreak                        int32                                            `pdef:"winStreak"`
+	HighestWinStreakEver             int32                                            `pdef:"highestWinStreakEver"`
+	WinStreakIsDraws                 bool                                             `pdef:"winStreakIsDraws"`
+	WinLossHistory                   [10]int32                                        `pdef:"winLossHistory"`
+	WinLossHistorySize               int32                                            `pdef:"winLossHistorySize"`
+	MostProjectilesCollectedInVortex int32                                            `pdef:"mostProjectilesCollectedInVortex"`
+	BlackMarketItemsBought           int32                                            `pdef:"blackMarketItemsBought"`
+	RespawnKillInfected              bool                                             `pdef:"respawnKillInfected"`
+	PilotWeapons                     [35]WeaponMain                                   `pdef:"pilotWeapons"`
+	PilotOffhands                    [35]WeaponOffhand                                `pdef:"pilotOffhands"`
+	TitanWeapons                     [15]WeaponMain                                   `pdef:"titanWeapons"`
+	TitanOffhands                    [30]WeaponOffhand                                `pdef:"titanOffhands"`
+	TitanChassis                     [12]TitanMain                                    `pdef:"titanChassis"`
+	HasSeenStore                     bool                                             `pdef:"hasSeenStore"`
+	NewPilotSkins                    [5]int32                                         `pdef:"newPilotSkins"`
+	UnlockedPilotSkins               [5]int32                                         `pdef:"unlockedPilotSkins"`
+	NewPrimePilotSkins               int32                                            `pdef:"newPrimePilotSkins"`
+	UnlockedPrimePilotSkins          int32                                            `pdef:"unlockedPrimePilotSkins"`
+	NewPilotWeapons                  [2]int32                                         `pdef:"newPilotWeapons"`
+	UnlockedPilotWeapons             [2]int32                                         `pdef:"unlockedPilotWeapons"`
+	NewPilotOffhands                 [2]int32                                         `pdef:"newPilotOffhands"`
+	UnlockedPilotOffhands            [2]int32                                         `pdef:"unlockedPilotOffhands"`
+	NewPilotPassives                 int32                                            `pdef:"newPilotPassives"`
+	UnlockedPilotPassives            int32                                            `pdef:"unlockedPilotPassives"`
+	NewTitanOffhands                 [2]int32                                         `pdef:"newTitanOffhands"`
+	UnlockedTitanOffhands            [2]int32                                         `pdef:"unlockedTitanOffhands"`
+	NewTitanPassives                 int32                                            `pdef:"newTitanPassives"`
+	UnlockedTitanPassives            int32                                            `pdef:"unlockedTitanPassives"`
+	NewTitanChassis                  int32                                            `pdef:"newTitanChassis"`
+	UnlockedTitanChassis             int32                                            `pdef:"unlockedTitanChassis"`
+	NewPrimeTitans                   int32                                            `pdef:"newPrimeTitans"`
+	UnlockedPrimeTitans              int32                                            `pdef:"unlockedPrimeTitans"`
+	NewPilotSuits                    int32                                            `pdef:"newPilotSuits"`
+	UnlockedPilotSuits               int32                                            `pdef:"unlockedPilotSuits"`
+	NewPilotExecutions               int32                                            `pdef:"newPilotExecutions"`
+	UnlockedPilotExecutions          int32                                            `pdef:"unlockedPilotExecutions"`
+	UnlockedFeatures                 [2]int32                                         `pdef:"unlockedFeatures"`
+	NewFeatures                      [2]int32                                         `pdef:"newFeatures"`
+	UnlockedBoosts                   int32                                            `pdef:"unlockedBoosts"`
+	NewBoosts                        int32                                            `pdef:"newBoosts"`
+	UnlockedFactions                 int32                                            `pdef:"unlockedFactions"`
+	NewFactions                      int32                                            `pdef:"newFactions"`
+	UnlockedCallingCards             [16]int32                                        `pdef:"unlockedCallingCards"`
+	NewCallingCards                  [16]int32                                        `pdef:"newCallingCards"`
+	UnlockedCallsignIcons            [7]int32                                         `pdef:"unlockedCallsignIcons"`
+	NewCallsignIcons                 [7]int32                                         `pdef:"newCallsignIcons"`
+	UnlockedCommsIcons               [5]int32                                         `pdef:"unlockedCommsIcons"`
+	NewCommsIcons                    [5]int32                                         `pdef:"newCommsIcons"`
+	NewTitanExecutions               int32                                            `pdef:"newTitanExecutions"`
+	UnlockedTitanExecutions          int32                                            `pdef:"unlockedTitanExecutions"`
+	Challenges                       [ChallengeCount]EChallenge                       `pdef:"challenges"`
+	Dailychallenges                  [DailychallengeCount]EChallenge                  `pdef:"dailychallenges"`
+	ActiveDailyChallenges            [9]ActiveDailyChallenge                          `pdef:"activeDailyChallenges"`
+	TrackedChallenges                [3]int32                                         `pdef:"trackedChallenges"`
+	EOGTrackedChallenges             [3]int32                                         `pdef:"EOGTrackedChallenges"`
+	TrackedChallengeRefs             [3]string                                        `pdef:"trackedChallengeRefs"`
+	EOGTrackedChallengeRefs          [3]string                                        `pdef:"EOGTrackedChallengeRefs"`
+	DailyChallengeDayIndex           int32                                            `pdef:"dailyChallengeDayIndex"`
+	NewDailyChallenges               bool                                             `pdef:"newDailyChallenges"`
+	IsPostGameScoreboardValid        bool                                             `pdef:"isPostGameScoreboardValid"`
+	PostGameData                     EPostGameData                                    `pdef:"postGameData"`
+	IsFDPostGameScoreboardValid      bool                                             `pdef:"isFDPostGameScoreboardValid"`
+	PostGameDataFD                   EFDPostGameData                                  `pdef:"postGameDataFD"`
+	PreviousGooserProgress           int32                                            `pdef:"previousGooserProgress"`
+	MapHistory                       [24]int32                                        `pdef:"mapHistory"`
+	ModeHistory                      [10]int32                                        `pdef:"modeHistory"`
+	LastPlaylist                     string                                           `pdef:"lastPlaylist"`
+	LastDailyMatchVictory            int32                                            `pdef:"lastDailyMatchVictory"`
+	LastTimePlayed                   int32                                            `pdef:"lastTimePlayed"`
+	LastTimeLoggedIn                 int32                                            `pdef:"lastTimeLoggedIn"`
+	AbandonCountForMode              [GameModesCount]int32                            `pdef:"abandonCountForMode"`
+	LastAbandonedMode                GameModes                                        `pdef:"lastAbandonedMode"`
+	LastAbandonTime                  int32                                            `pdef:"lastAbandonTime"`
+	Ranked                           Struct_ranked                                    `pdef:"ranked"`
 	ExtraData                        []byte
 }
 
@@ -7029,7 +7029,7 @@ func (v RecentUnlock) MarshalJSONFilter(filter func(path ...string) bool) ([]byt
 	return pdataMarshalJSONStruct(v, filter)
 }
 
-type SDeathStats struct {
+type DeathStats struct {
 	Total         int32                    `pdef:"total"`
 	TotalPVP      int32                    `pdef:"totalPVP"`
 	AsPilot       int32                    `pdef:"asPilot"`
@@ -7043,12 +7043,12 @@ type SDeathStats struct {
 	WhileEjecting int32                    `pdef:"whileEjecting"`
 }
 
-var _ encoding.BinaryUnmarshaler = (*SDeathStats)(nil)
-var _ encoding.BinaryMarshaler = SDeathStats{}
-var _ json.Unmarshaler = (*SDeathStats)(nil)
-var _ json.Marshaler = SDeathStats{}
+var _ encoding.BinaryUnmarshaler = (*DeathStats)(nil)
+var _ encoding.BinaryMarshaler = DeathStats{}
+var _ json.Unmarshaler = (*DeathStats)(nil)
+var _ json.Marshaler = DeathStats{}
 
-func (v *SDeathStats) UnmarshalBinary(b []byte) error {
+func (v *DeathStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 116 {
 		return fmt.Errorf("decode %q (v%d): %w: expected %d bytes, got %d", "sDeathStats", Version, ErrInvalidSize, 116, len(b))
 	}
@@ -7083,7 +7083,7 @@ func (v *SDeathStats) UnmarshalBinary(b []byte) error {
 	v.WhileEjecting = getInt(b[112:116])
 	return nil
 }
-func (v SDeathStats) MarshalBinary() ([]byte, error) {
+func (v DeathStats) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 116)
 	putInt(b[0:4], v.Total)
 	putInt(b[4:8], v.TotalPVP)
@@ -7116,17 +7116,17 @@ func (v SDeathStats) MarshalBinary() ([]byte, error) {
 	putInt(b[112:116], v.WhileEjecting)
 	return b, nil
 }
-func (v *SDeathStats) UnmarshalJSON(b []byte) error {
+func (v *DeathStats) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("not implemented")
 }
-func (v SDeathStats) MarshalJSON() ([]byte, error) {
+func (v DeathStats) MarshalJSON() ([]byte, error) {
 	return v.MarshalJSONFilter(nil)
 }
-func (v SDeathStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+func (v DeathStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
 	return pdataMarshalJSONStruct(v, filter)
 }
 
-type SFDStats struct {
+type FDStats struct {
 	ArcMinesPlaced      int32 `pdef:"arcMinesPlaced"`
 	TurretsPlaced       int32 `pdef:"turretsPlaced"`
 	Rodeos              int32 `pdef:"rodeos"`
@@ -7143,12 +7143,12 @@ type SFDStats struct {
 	HighestTitanFDLevel int32 `pdef:"highestTitanFDLevel"`
 }
 
-var _ encoding.BinaryUnmarshaler = (*SFDStats)(nil)
-var _ encoding.BinaryMarshaler = SFDStats{}
-var _ json.Unmarshaler = (*SFDStats)(nil)
-var _ json.Marshaler = SFDStats{}
+var _ encoding.BinaryUnmarshaler = (*FDStats)(nil)
+var _ encoding.BinaryMarshaler = FDStats{}
+var _ json.Unmarshaler = (*FDStats)(nil)
+var _ json.Marshaler = FDStats{}
 
-func (v *SFDStats) UnmarshalBinary(b []byte) error {
+func (v *FDStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 56 {
 		return fmt.Errorf("decode %q (v%d): %w: expected %d bytes, got %d", "sFDStats", Version, ErrInvalidSize, 56, len(b))
 	}
@@ -7168,7 +7168,7 @@ func (v *SFDStats) UnmarshalBinary(b []byte) error {
 	v.HighestTitanFDLevel = getInt(b[52:56])
 	return nil
 }
-func (v SFDStats) MarshalBinary() ([]byte, error) {
+func (v FDStats) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 56)
 	putInt(b[0:4], v.ArcMinesPlaced)
 	putInt(b[4:8], v.TurretsPlaced)
@@ -7186,17 +7186,17 @@ func (v SFDStats) MarshalBinary() ([]byte, error) {
 	putInt(b[52:56], v.HighestTitanFDLevel)
 	return b, nil
 }
-func (v *SFDStats) UnmarshalJSON(b []byte) error {
+func (v *FDStats) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("not implemented")
 }
-func (v SFDStats) MarshalJSON() ([]byte, error) {
+func (v FDStats) MarshalJSON() ([]byte, error) {
 	return v.MarshalJSONFilter(nil)
 }
-func (v SFDStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+func (v FDStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
 	return pdataMarshalJSONStruct(v, filter)
 }
 
-type SGameStats struct {
+type GameStats struct {
 	ModesPlayed                         [GameModesCount]int32 `pdef:"modesPlayed"`
 	PreviousModesPlayed                 [GameModesCount]int32 `pdef:"previousModesPlayed"`
 	ModesWon                            [GameModesCount]int32 `pdef:"modesWon"`
@@ -7213,12 +7213,12 @@ type SGameStats struct {
 	TimesScored100AttritionPoints_total int32                 `pdef:"timesScored100AttritionPoints_total"`
 }
 
-var _ encoding.BinaryUnmarshaler = (*SGameStats)(nil)
-var _ encoding.BinaryMarshaler = SGameStats{}
-var _ json.Unmarshaler = (*SGameStats)(nil)
-var _ json.Marshaler = SGameStats{}
+var _ encoding.BinaryUnmarshaler = (*GameStats)(nil)
+var _ encoding.BinaryMarshaler = GameStats{}
+var _ json.Unmarshaler = (*GameStats)(nil)
+var _ json.Marshaler = GameStats{}
 
-func (v *SGameStats) UnmarshalBinary(b []byte) error {
+func (v *GameStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 368 {
 		return fmt.Errorf("decode %q (v%d): %w: expected %d bytes, got %d", "sGameStats", Version, ErrInvalidSize, 368, len(b))
 	}
@@ -7316,7 +7316,7 @@ func (v *SGameStats) UnmarshalBinary(b []byte) error {
 	v.TimesScored100AttritionPoints_total = getInt(b[364:368])
 	return nil
 }
-func (v SGameStats) MarshalBinary() ([]byte, error) {
+func (v GameStats) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 368)
 	putInt(b[0:4], v.ModesPlayed[0])
 	putInt(b[4:8], v.ModesPlayed[1])
@@ -7412,17 +7412,17 @@ func (v SGameStats) MarshalBinary() ([]byte, error) {
 	putInt(b[364:368], v.TimesScored100AttritionPoints_total)
 	return b, nil
 }
-func (v *SGameStats) UnmarshalJSON(b []byte) error {
+func (v *GameStats) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("not implemented")
 }
-func (v SGameStats) MarshalJSON() ([]byte, error) {
+func (v GameStats) MarshalJSON() ([]byte, error) {
 	return v.MarshalJSONFilter(nil)
 }
-func (v SGameStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+func (v GameStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
 	return pdataMarshalJSONStruct(v, filter)
 }
 
-type SHoursPlayed struct {
+type HoursPlayed struct {
 	Total        float32                    `pdef:"total"`
 	AsTitan      [TitanClassesCount]float32 `pdef:"asTitan"`
 	AsPilot      float32                    `pdef:"asPilot"`
@@ -7433,12 +7433,12 @@ type SHoursPlayed struct {
 	InAir        float32                    `pdef:"inAir"`
 }
 
-var _ encoding.BinaryUnmarshaler = (*SHoursPlayed)(nil)
-var _ encoding.BinaryMarshaler = SHoursPlayed{}
-var _ json.Unmarshaler = (*SHoursPlayed)(nil)
-var _ json.Marshaler = SHoursPlayed{}
+var _ encoding.BinaryUnmarshaler = (*HoursPlayed)(nil)
+var _ encoding.BinaryMarshaler = HoursPlayed{}
+var _ json.Unmarshaler = (*HoursPlayed)(nil)
+var _ json.Marshaler = HoursPlayed{}
 
-func (v *SHoursPlayed) UnmarshalBinary(b []byte) error {
+func (v *HoursPlayed) UnmarshalBinary(b []byte) error {
 	if len(b) != 56 {
 		return fmt.Errorf("decode %q (v%d): %w: expected %d bytes, got %d", "sHoursPlayed", Version, ErrInvalidSize, 56, len(b))
 	}
@@ -7458,7 +7458,7 @@ func (v *SHoursPlayed) UnmarshalBinary(b []byte) error {
 	v.InAir = getFloat(b[52:56])
 	return nil
 }
-func (v SHoursPlayed) MarshalBinary() ([]byte, error) {
+func (v HoursPlayed) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 56)
 	putFloat(b[0:4], v.Total)
 	putFloat(b[4:8], v.AsTitan[0])
@@ -7476,17 +7476,17 @@ func (v SHoursPlayed) MarshalBinary() ([]byte, error) {
 	putFloat(b[52:56], v.InAir)
 	return b, nil
 }
-func (v *SHoursPlayed) UnmarshalJSON(b []byte) error {
+func (v *HoursPlayed) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("not implemented")
 }
-func (v SHoursPlayed) MarshalJSON() ([]byte, error) {
+func (v HoursPlayed) MarshalJSON() ([]byte, error) {
 	return v.MarshalJSONFilter(nil)
 }
-func (v SHoursPlayed) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+func (v HoursPlayed) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
 	return pdataMarshalJSONStruct(v, filter)
 }
 
-type SKillStats struct {
+type KillStats struct {
 	Total                                 int32                      `pdef:"total"`
 	TotalWhileUsingBurnCard               int32                      `pdef:"totalWhileUsingBurnCard"`
 	TitansWhileTitanBCActive              int32                      `pdef:"titansWhileTitanBCActive"`
@@ -7568,12 +7568,12 @@ type SKillStats struct {
 	PilotKillsWithAmpedWallActive         int32                      `pdef:"pilotKillsWithAmpedWallActive"`
 }
 
-var _ encoding.BinaryUnmarshaler = (*SKillStats)(nil)
-var _ encoding.BinaryMarshaler = SKillStats{}
-var _ json.Unmarshaler = (*SKillStats)(nil)
-var _ json.Marshaler = SKillStats{}
+var _ encoding.BinaryUnmarshaler = (*KillStats)(nil)
+var _ encoding.BinaryMarshaler = KillStats{}
+var _ json.Unmarshaler = (*KillStats)(nil)
+var _ json.Marshaler = KillStats{}
 
-func (v *SKillStats) UnmarshalBinary(b []byte) error {
+func (v *KillStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 412 {
 		return fmt.Errorf("decode %q (v%d): %w: expected %d bytes, got %d", "sKillStats", Version, ErrInvalidSize, 412, len(b))
 	}
@@ -7682,7 +7682,7 @@ func (v *SKillStats) UnmarshalBinary(b []byte) error {
 	v.PilotKillsWithAmpedWallActive = getInt(b[408:412])
 	return nil
 }
-func (v SKillStats) MarshalBinary() ([]byte, error) {
+func (v KillStats) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 412)
 	putInt(b[0:4], v.Total)
 	putInt(b[4:8], v.TotalWhileUsingBurnCard)
@@ -7789,17 +7789,17 @@ func (v SKillStats) MarshalBinary() ([]byte, error) {
 	putInt(b[408:412], v.PilotKillsWithAmpedWallActive)
 	return b, nil
 }
-func (v *SKillStats) UnmarshalJSON(b []byte) error {
+func (v *KillStats) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("not implemented")
 }
-func (v SKillStats) MarshalJSON() ([]byte, error) {
+func (v KillStats) MarshalJSON() ([]byte, error) {
 	return v.MarshalJSONFilter(nil)
 }
-func (v SKillStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+func (v KillStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
 	return pdataMarshalJSONStruct(v, filter)
 }
 
-type SMapStats struct {
+type MapStats struct {
 	GamesJoined                         [GameModesCount]int32   `pdef:"gamesJoined"`
 	GamesCompleted                      [GameModesCount]int32   `pdef:"gamesCompleted"`
 	GamesWon                            [GameModesCount]int32   `pdef:"gamesWon"`
@@ -7813,12 +7813,12 @@ type SMapStats struct {
 	PerfectMatchesByDifficulty          [5]int32                `pdef:"perfectMatchesByDifficulty"`
 }
 
-var _ encoding.BinaryUnmarshaler = (*SMapStats)(nil)
-var _ encoding.BinaryMarshaler = SMapStats{}
-var _ json.Unmarshaler = (*SMapStats)(nil)
-var _ json.Marshaler = SMapStats{}
+var _ encoding.BinaryUnmarshaler = (*MapStats)(nil)
+var _ encoding.BinaryMarshaler = MapStats{}
+var _ json.Unmarshaler = (*MapStats)(nil)
+var _ json.Marshaler = MapStats{}
 
-func (v *SMapStats) UnmarshalBinary(b []byte) error {
+func (v *MapStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 456 {
 		return fmt.Errorf("decode %q (v%d): %w: expected %d bytes, got %d", "sMapStats", Version, ErrInvalidSize, 456, len(b))
 	}
@@ -7938,7 +7938,7 @@ func (v *SMapStats) UnmarshalBinary(b []byte) error {
 	v.PerfectMatchesByDifficulty[4] = getInt(b[452:456])
 	return nil
 }
-func (v SMapStats) MarshalBinary() ([]byte, error) {
+func (v MapStats) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 456)
 	putInt(b[0:4], v.GamesJoined[0])
 	putInt(b[4:8], v.GamesJoined[1])
@@ -8056,17 +8056,17 @@ func (v SMapStats) MarshalBinary() ([]byte, error) {
 	putInt(b[452:456], v.PerfectMatchesByDifficulty[4])
 	return b, nil
 }
-func (v *SMapStats) UnmarshalJSON(b []byte) error {
+func (v *MapStats) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("not implemented")
 }
-func (v SMapStats) MarshalJSON() ([]byte, error) {
+func (v MapStats) MarshalJSON() ([]byte, error) {
 	return v.MarshalJSONFilter(nil)
 }
-func (v SMapStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+func (v MapStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
 	return pdataMarshalJSONStruct(v, filter)
 }
 
-type SMilesTraveled struct {
+type MilesTraveled struct {
 	Total           float32                    `pdef:"total"`
 	AsTitan         [TitanClassesCount]float32 `pdef:"asTitan"`
 	AsPilot         float32                    `pdef:"asPilot"`
@@ -8078,12 +8078,12 @@ type SMilesTraveled struct {
 	OnEnemyTitan    float32                    `pdef:"onEnemyTitan"`
 }
 
-var _ encoding.BinaryUnmarshaler = (*SMilesTraveled)(nil)
-var _ encoding.BinaryMarshaler = SMilesTraveled{}
-var _ json.Unmarshaler = (*SMilesTraveled)(nil)
-var _ json.Marshaler = SMilesTraveled{}
+var _ encoding.BinaryUnmarshaler = (*MilesTraveled)(nil)
+var _ encoding.BinaryMarshaler = MilesTraveled{}
+var _ json.Unmarshaler = (*MilesTraveled)(nil)
+var _ json.Marshaler = MilesTraveled{}
 
-func (v *SMilesTraveled) UnmarshalBinary(b []byte) error {
+func (v *MilesTraveled) UnmarshalBinary(b []byte) error {
 	if len(b) != 60 {
 		return fmt.Errorf("decode %q (v%d): %w: expected %d bytes, got %d", "sMilesTraveled", Version, ErrInvalidSize, 60, len(b))
 	}
@@ -8104,7 +8104,7 @@ func (v *SMilesTraveled) UnmarshalBinary(b []byte) error {
 	v.OnEnemyTitan = getFloat(b[56:60])
 	return nil
 }
-func (v SMilesTraveled) MarshalBinary() ([]byte, error) {
+func (v MilesTraveled) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 60)
 	putFloat(b[0:4], v.Total)
 	putFloat(b[4:8], v.AsTitan[0])
@@ -8123,17 +8123,17 @@ func (v SMilesTraveled) MarshalBinary() ([]byte, error) {
 	putFloat(b[56:60], v.OnEnemyTitan)
 	return b, nil
 }
-func (v *SMilesTraveled) UnmarshalJSON(b []byte) error {
+func (v *MilesTraveled) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("not implemented")
 }
-func (v SMilesTraveled) MarshalJSON() ([]byte, error) {
+func (v MilesTraveled) MarshalJSON() ([]byte, error) {
 	return v.MarshalJSONFilter(nil)
 }
-func (v SMilesTraveled) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+func (v MilesTraveled) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
 	return pdataMarshalJSONStruct(v, filter)
 }
 
-type SMiscStats struct {
+type MiscStats struct {
 	TitanFalls                    int32            `pdef:"titanFalls"`
 	TitanFallsFirst               int32            `pdef:"titanFallsFirst"`
 	TitanEmbarks                  int32            `pdef:"titanEmbarks"`
@@ -8163,12 +8163,12 @@ type SMiscStats struct {
 	RegenForgedCertificationsUsed int32            `pdef:"regenForgedCertificationsUsed"`
 }
 
-var _ encoding.BinaryUnmarshaler = (*SMiscStats)(nil)
-var _ encoding.BinaryMarshaler = SMiscStats{}
-var _ json.Unmarshaler = (*SMiscStats)(nil)
-var _ json.Marshaler = SMiscStats{}
+var _ encoding.BinaryUnmarshaler = (*MiscStats)(nil)
+var _ encoding.BinaryMarshaler = MiscStats{}
+var _ json.Unmarshaler = (*MiscStats)(nil)
+var _ json.Marshaler = MiscStats{}
 
-func (v *SMiscStats) UnmarshalBinary(b []byte) error {
+func (v *MiscStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 204 {
 		return fmt.Errorf("decode %q (v%d): %w: expected %d bytes, got %d", "sMiscStats", Version, ErrInvalidSize, 204, len(b))
 	}
@@ -8225,7 +8225,7 @@ func (v *SMiscStats) UnmarshalBinary(b []byte) error {
 	v.RegenForgedCertificationsUsed = getInt(b[200:204])
 	return nil
 }
-func (v SMiscStats) MarshalBinary() ([]byte, error) {
+func (v MiscStats) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 204)
 	putInt(b[0:4], v.TitanFalls)
 	putInt(b[4:8], v.TitanFallsFirst)
@@ -8280,17 +8280,17 @@ func (v SMiscStats) MarshalBinary() ([]byte, error) {
 	putInt(b[200:204], v.RegenForgedCertificationsUsed)
 	return b, nil
 }
-func (v *SMiscStats) UnmarshalJSON(b []byte) error {
+func (v *MiscStats) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("not implemented")
 }
-func (v SMiscStats) MarshalJSON() ([]byte, error) {
+func (v MiscStats) MarshalJSON() ([]byte, error) {
 	return v.MarshalJSONFilter(nil)
 }
-func (v SMiscStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+func (v MiscStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
 	return pdataMarshalJSONStruct(v, filter)
 }
 
-type STitanStats struct {
+type TitanStats struct {
 	Pilots                     int32    `pdef:"pilots"`
 	TitansTotal                int32    `pdef:"titansTotal"`
 	Ejections                  int32    `pdef:"ejections"`
@@ -8304,12 +8304,12 @@ type STitanStats struct {
 	PerfectMatchesByDifficulty [5]int32 `pdef:"perfectMatchesByDifficulty"`
 }
 
-var _ encoding.BinaryUnmarshaler = (*STitanStats)(nil)
-var _ encoding.BinaryMarshaler = STitanStats{}
-var _ json.Unmarshaler = (*STitanStats)(nil)
-var _ json.Marshaler = STitanStats{}
+var _ encoding.BinaryUnmarshaler = (*TitanStats)(nil)
+var _ encoding.BinaryMarshaler = TitanStats{}
+var _ json.Unmarshaler = (*TitanStats)(nil)
+var _ json.Marshaler = TitanStats{}
 
-func (v *STitanStats) UnmarshalBinary(b []byte) error {
+func (v *TitanStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 76 {
 		return fmt.Errorf("decode %q (v%d): %w: expected %d bytes, got %d", "sTitanStats", Version, ErrInvalidSize, 76, len(b))
 	}
@@ -8334,7 +8334,7 @@ func (v *STitanStats) UnmarshalBinary(b []byte) error {
 	v.PerfectMatchesByDifficulty[4] = getInt(b[72:76])
 	return nil
 }
-func (v STitanStats) MarshalBinary() ([]byte, error) {
+func (v TitanStats) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 76)
 	putInt(b[0:4], v.Pilots)
 	putInt(b[4:8], v.TitansTotal)
@@ -8357,17 +8357,17 @@ func (v STitanStats) MarshalBinary() ([]byte, error) {
 	putInt(b[72:76], v.PerfectMatchesByDifficulty[4])
 	return b, nil
 }
-func (v *STitanStats) UnmarshalJSON(b []byte) error {
+func (v *TitanStats) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("not implemented")
 }
-func (v STitanStats) MarshalJSON() ([]byte, error) {
+func (v TitanStats) MarshalJSON() ([]byte, error) {
 	return v.MarshalJSONFilter(nil)
 }
-func (v STitanStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+func (v TitanStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
 	return pdataMarshalJSONStruct(v, filter)
 }
 
-type SWeaponKillStats struct {
+type WeaponKillStats struct {
 	Total           int32                    `pdef:"total"`
 	Pilots          int32                    `pdef:"pilots"`
 	Ejecting_pilots int32                    `pdef:"ejecting_pilots"`
@@ -8382,12 +8382,12 @@ type SWeaponKillStats struct {
 	KillingSprees   int32                    `pdef:"killingSprees"`
 }
 
-var _ encoding.BinaryUnmarshaler = (*SWeaponKillStats)(nil)
-var _ encoding.BinaryMarshaler = SWeaponKillStats{}
-var _ json.Unmarshaler = (*SWeaponKillStats)(nil)
-var _ json.Marshaler = SWeaponKillStats{}
+var _ encoding.BinaryUnmarshaler = (*WeaponKillStats)(nil)
+var _ encoding.BinaryMarshaler = WeaponKillStats{}
+var _ json.Unmarshaler = (*WeaponKillStats)(nil)
+var _ json.Marshaler = WeaponKillStats{}
 
-func (v *SWeaponKillStats) UnmarshalBinary(b []byte) error {
+func (v *WeaponKillStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 96 {
 		return fmt.Errorf("decode %q (v%d): %w: expected %d bytes, got %d", "sWeaponKillStats", Version, ErrInvalidSize, 96, len(b))
 	}
@@ -8417,7 +8417,7 @@ func (v *SWeaponKillStats) UnmarshalBinary(b []byte) error {
 	v.KillingSprees = getInt(b[92:96])
 	return nil
 }
-func (v SWeaponKillStats) MarshalBinary() ([]byte, error) {
+func (v WeaponKillStats) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 96)
 	putInt(b[0:4], v.Total)
 	putInt(b[4:8], v.Pilots)
@@ -8445,17 +8445,17 @@ func (v SWeaponKillStats) MarshalBinary() ([]byte, error) {
 	putInt(b[92:96], v.KillingSprees)
 	return b, nil
 }
-func (v *SWeaponKillStats) UnmarshalJSON(b []byte) error {
+func (v *WeaponKillStats) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("not implemented")
 }
-func (v SWeaponKillStats) MarshalJSON() ([]byte, error) {
+func (v WeaponKillStats) MarshalJSON() ([]byte, error) {
 	return v.MarshalJSONFilter(nil)
 }
-func (v SWeaponKillStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+func (v WeaponKillStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
 	return pdataMarshalJSONStruct(v, filter)
 }
 
-type SWeaponStats struct {
+type WeaponStats struct {
 	HoursUsed     float32 `pdef:"hoursUsed"`
 	HoursEquipped float32 `pdef:"hoursEquipped"`
 	ShotsFired    int32   `pdef:"shotsFired"`
@@ -8465,12 +8465,12 @@ type SWeaponStats struct {
 	TitanDamage   int32   `pdef:"titanDamage"`
 }
 
-var _ encoding.BinaryUnmarshaler = (*SWeaponStats)(nil)
-var _ encoding.BinaryMarshaler = SWeaponStats{}
-var _ json.Unmarshaler = (*SWeaponStats)(nil)
-var _ json.Marshaler = SWeaponStats{}
+var _ encoding.BinaryUnmarshaler = (*WeaponStats)(nil)
+var _ encoding.BinaryMarshaler = WeaponStats{}
+var _ json.Unmarshaler = (*WeaponStats)(nil)
+var _ json.Marshaler = WeaponStats{}
 
-func (v *SWeaponStats) UnmarshalBinary(b []byte) error {
+func (v *WeaponStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 28 {
 		return fmt.Errorf("decode %q (v%d): %w: expected %d bytes, got %d", "sWeaponStats", Version, ErrInvalidSize, 28, len(b))
 	}
@@ -8483,7 +8483,7 @@ func (v *SWeaponStats) UnmarshalBinary(b []byte) error {
 	v.TitanDamage = getInt(b[24:28])
 	return nil
 }
-func (v SWeaponStats) MarshalBinary() ([]byte, error) {
+func (v WeaponStats) MarshalBinary() ([]byte, error) {
 	b := make([]byte, 28)
 	putFloat(b[0:4], v.HoursUsed)
 	putFloat(b[4:8], v.HoursEquipped)
@@ -8494,13 +8494,13 @@ func (v SWeaponStats) MarshalBinary() ([]byte, error) {
 	putInt(b[24:28], v.TitanDamage)
 	return b, nil
 }
-func (v *SWeaponStats) UnmarshalJSON(b []byte) error {
+func (v *WeaponStats) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("not implemented")
 }
-func (v SWeaponStats) MarshalJSON() ([]byte, error) {
+func (v WeaponStats) MarshalJSON() ([]byte, error) {
 	return v.MarshalJSONFilter(nil)
 }
-func (v SWeaponStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+func (v WeaponStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
 	return pdataMarshalJSONStruct(v, filter)
 }
 
@@ -8896,20 +8896,20 @@ func (v TitanMain) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, 
 }
 
 type WeaponMain struct {
-	WeaponStats              SWeaponStats     `pdef:"weaponStats"`
-	WeaponKillStats          SWeaponKillStats `pdef:"weaponKillStats"`
-	WeaponXP                 int32            `pdef:"weaponXP"`
-	PreviousWeaponXP         int32            `pdef:"previousWeaponXP"`
-	ProScreenKills           int32            `pdef:"proScreenKills"`
-	PreviousProScreenKills   int32            `pdef:"previousProScreenKills"`
-	NewMods                  int32            `pdef:"newMods"`
-	UnlockedMods             int32            `pdef:"unlockedMods"`
-	NewWeaponSkins           [5]int32         `pdef:"newWeaponSkins"`
-	UnlockedWeaponSkins      [5]int32         `pdef:"unlockedWeaponSkins"`
-	NewPrimeWeaponSkins      [6]int32         `pdef:"newPrimeWeaponSkins"`
-	UnlockedPrimeWeaponSkins [6]int32         `pdef:"unlockedPrimeWeaponSkins"`
-	NewFeatures              int32            `pdef:"newFeatures"`
-	UnlockedFeatures         int32            `pdef:"unlockedFeatures"`
+	WeaponStats              WeaponStats     `pdef:"weaponStats"`
+	WeaponKillStats          WeaponKillStats `pdef:"weaponKillStats"`
+	WeaponXP                 int32           `pdef:"weaponXP"`
+	PreviousWeaponXP         int32           `pdef:"previousWeaponXP"`
+	ProScreenKills           int32           `pdef:"proScreenKills"`
+	PreviousProScreenKills   int32           `pdef:"previousProScreenKills"`
+	NewMods                  int32           `pdef:"newMods"`
+	UnlockedMods             int32           `pdef:"unlockedMods"`
+	NewWeaponSkins           [5]int32        `pdef:"newWeaponSkins"`
+	UnlockedWeaponSkins      [5]int32        `pdef:"unlockedWeaponSkins"`
+	NewPrimeWeaponSkins      [6]int32        `pdef:"newPrimeWeaponSkins"`
+	UnlockedPrimeWeaponSkins [6]int32        `pdef:"unlockedPrimeWeaponSkins"`
+	NewFeatures              int32           `pdef:"newFeatures"`
+	UnlockedFeatures         int32           `pdef:"unlockedFeatures"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*WeaponMain)(nil)
@@ -9014,8 +9014,8 @@ func (v WeaponMain) MarshalJSONFilter(filter func(path ...string) bool) ([]byte,
 }
 
 type WeaponOffhand struct {
-	WeaponStats     SWeaponStats     `pdef:"weaponStats"`
-	WeaponKillStats SWeaponKillStats `pdef:"weaponKillStats"`
+	WeaponStats     WeaponStats     `pdef:"weaponStats"`
+	WeaponKillStats WeaponKillStats `pdef:"weaponKillStats"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*WeaponOffhand)(nil)

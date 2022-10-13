@@ -691,6 +691,9 @@ func mangleEnumValue(name, value string) string {
 
 func mangle(ident string, upper bool) string {
 	x := []rune(ident)
+	if len(x) > 2 && x[0] == 's' && unicode.IsUpper(x[1]) {
+		x = x[1:] // remove the s/e prefix for struct/enum names
+	}
 	if upper {
 		x[0] = unicode.ToUpper(x[0])
 	}
