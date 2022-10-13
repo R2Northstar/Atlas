@@ -309,6 +309,6 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 	respJSON(w, r, http.StatusOK, map[string]any{
 		"success": true,
 		"uid":     strconv.FormatUint(uid, 10),
-		"matches": []string{acct.Username},
+		"matches": []string{acct.Username}, // yes, this may be an empty string if we don't know what it is
 	})
 }
