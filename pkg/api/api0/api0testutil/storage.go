@@ -5,13 +5,317 @@ import (
 	"crypto/sha256"
 	"math"
 	"math/rand"
+	"net/netip"
+	"reflect"
 	"runtime"
+	"sort"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/pg9182/atlas/pkg/api/api0"
 )
+
+// TestAccountStorage tests whether an EMPTY account storage instance implements
+// the interface correctly.
+func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
+	// test basic functionality
+	{
+		uid0 := uint64(999999)
+		uid1 := uint64(math.MaxUint64)
+		act0 := &api0.Account{
+			UID:      uid0,
+			Username: "act0",
+		}
+		act1 := &api0.Account{
+			UID:      uid1,
+			Username: "act1",
+		}
+		t.Run("GetNonexistent", func(t *testing.T) {
+			acct, err := s.GetAccount(uid0)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if acct != nil {
+				t.Fatalf("account should be nil")
+			}
+		})
+		t.Run("GetNonexistentMax", func(t *testing.T) {
+			acct, err := s.GetAccount(uid1)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if acct != nil {
+				t.Fatalf("account should be nil")
+			}
+		})
+		t.Run("SaveNew", func(t *testing.T) {
+			if err := s.SaveAccount(act0); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+		t.Run("SaveNewMax", func(t *testing.T) {
+			if err := s.SaveAccount(act1); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+		t.Run("Get", func(t *testing.T) {
+			acct, err := s.GetAccount(uid0)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if acct == nil {
+				t.Fatalf("account should not be nil")
+			}
+			if acct == act0 {
+				t.Fatalf("must copy the data")
+			}
+			if !reflect.DeepEqual(*act0, *acct) {
+				t.Fatalf("incorrect account data")
+			}
+		})
+		t.Run("Update", func(t *testing.T) {
+			act0.Username = "act1"
+			if err := s.SaveAccount(act0); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			acct, err := s.GetAccount(uid0)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if acct == nil {
+				t.Fatalf("account should not be nil")
+			}
+			if acct == act0 {
+				t.Fatalf("must copy the data")
+			}
+			if !reflect.DeepEqual(*act0, *acct) {
+				t.Fatalf("incorrect account data")
+			}
+		})
+		t.Run("GetLeakage", func(t *testing.T) {
+			acct1, err := s.GetAccount(uid0)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if acct1 == nil {
+				t.Fatalf("account should not be nil")
+			}
+			acct2, err := s.GetAccount(uid0)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if acct2 == nil {
+				t.Fatalf("account should not be nil")
+			}
+			acct1.Username = "test"
+			if acct2.Username == acct1.Username {
+				t.Fatalf("account leaks internal pointers")
+			}
+		})
+		t.Run("GetUIDsNonexistent", func(t *testing.T) {
+			u, err := s.GetUIDsByUsername("act0")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(u) != 0 {
+				t.Fatalf("uids should be empty")
+			}
+		})
+		t.Run("GetUIDsEmpty", func(t *testing.T) {
+			u, err := s.GetUIDsByUsername("act0")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(u) != 0 {
+				t.Fatalf("uids should be empty")
+			}
+		})
+		t.Run("GetUIDs", func(t *testing.T) {
+			u, err := s.GetUIDsByUsername("act1")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			sort.Slice(u, func(i, j int) bool {
+				return u[i] < u[j]
+			})
+			if !reflect.DeepEqual(u, []uint64{act0.UID, act1.UID}) {
+				t.Fatalf("uids should contain all matches")
+			}
+		})
+		t.Run("UpdateClearUsername", func(t *testing.T) {
+			act0.Username = ""
+			if err := s.SaveAccount(act0); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			acct, err := s.GetAccount(uid0)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if acct == nil {
+				t.Fatalf("account should not be nil")
+			}
+			if !reflect.DeepEqual(*act0, *acct) {
+				t.Fatalf("incorrect account data")
+			}
+		})
+		t.Run("GetUIDsEmpty", func(t *testing.T) {
+			u, err := s.GetUIDsByUsername("")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(u) != 0 {
+				t.Fatalf("uids should be empty")
+			}
+		})
+	}
+
+	// test that it still functions properly with large numbers of users and
+	// randomly ordered concurrent writers
+	t.Run("Stress", func(t *testing.T) {
+		const (
+			concurrency = 32
+			users       = 16384
+		)
+		var wg sync.WaitGroup
+		var fail atomic.Int32
+		sem := make(chan struct{}, concurrency)
+		for uid := uint64(0); uid < users; uid++ {
+			wg.Add(1)
+			sem <- struct{}{}
+			go func(uid uint64) {
+				defer wg.Done()
+				defer func() { <-sem }()
+
+				// base account
+				uacct := &api0.Account{
+					UID: uid,
+				}
+
+				// ensure the account doesn't exist
+				if acct, err := s.GetAccount(uid); err != nil || acct != nil {
+					fail.Store(1)
+					return
+				}
+				randSched()
+
+				// create the account
+				if err := s.SaveAccount(uacct); err != nil {
+					fail.Store(2)
+					return
+				}
+				randSched()
+
+				// ensure the account is saved
+				if acct, err := s.GetAccount(uid); err != nil || acct == nil || !reflect.DeepEqual(*acct, *uacct) {
+					fail.Store(3)
+					return
+				}
+				randSched()
+
+				// simulate auth
+				uacct.Username = "user" + strconv.Itoa(rand.Intn(users/8)) // generate a username with overlap
+				uacct.AuthIP = netip.MustParseAddr("127.0.0.1")
+				uacct.AuthToken = "dummy"
+				uacct.AuthTokenExpiry = time.Now().Add(time.Minute * 30)
+				uacct.LastServerID = "self"
+
+				// update the account
+				if err := s.SaveAccount(uacct); err != nil {
+					fail.Store(4)
+					return
+				}
+				randSched()
+
+				// ensure the account is up-to-date
+				if acct, err := s.GetAccount(uid); err != nil || acct == nil || !reflect.DeepEqual(*acct, *uacct) {
+					fail.Store(5)
+					return
+				}
+				randSched()
+
+				// ensure the uid is found for the username
+				if uids, err := s.GetUIDsByUsername(uacct.Username); err != nil {
+					fail.Store(6)
+					return
+				} else {
+					var found bool
+					for _, u := range uids {
+						if u == uacct.UID {
+							found = true
+							break
+						}
+					}
+					if !found {
+						fail.Store(7)
+						return
+					}
+				}
+				randSched()
+
+				// generate a new username
+				oldu := uacct.Username
+				uacct.Username = "user" + strconv.Itoa(rand.Intn(users/8)) + "new"
+
+				// update the account
+				if err := s.SaveAccount(uacct); err != nil {
+					fail.Store(8)
+					return
+				}
+				randSched()
+
+				// ensure the old username is not returned for the uid
+				if uids, err := s.GetUIDsByUsername(oldu); err != nil {
+					fail.Store(9)
+					return
+				} else {
+					var found bool
+					for _, u := range uids {
+						if u == uacct.UID {
+							found = true
+							break
+						}
+					}
+					if found {
+						fail.Store(10)
+						return
+					}
+				}
+				randSched()
+
+				// ensure the new username is returned for the uid
+				if uids, err := s.GetUIDsByUsername(uacct.Username); err != nil {
+					fail.Store(11)
+					return
+				} else {
+					var found bool
+					for _, u := range uids {
+						if u == uacct.UID {
+							found = true
+							break
+						}
+					}
+					if !found {
+						fail.Store(7)
+						return
+					}
+				}
+
+				// ensure the entire account is up-to-date
+				if acct, err := s.GetAccount(uid); err != nil || acct == nil || !reflect.DeepEqual(*acct, *uacct) {
+					fail.Store(12)
+					return
+				}
+				randSched()
+			}(uid)
+		}
+		if wg.Wait(); fail.Load() != 0 {
+			t.Fatalf("fail (last %d)", fail.Load())
+		}
+	})
+}
 
 // TestPdataStorage tests whether an EMPTY pdata storage instance implements the
 // interface correctly.
