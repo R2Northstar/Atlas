@@ -2,6 +2,7 @@ package pdata
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"testing"
 )
@@ -37,6 +38,12 @@ func TestPdataRoundtrip(t *testing.T) {
 			}
 			if !bytes.Equal(rbuf, ebuf) {
 				t.Errorf("internal round-trip failed: re-marshaled unmarshaled data encoded by marshal does not match")
+			}
+
+			if buf, err := d2.MarshalJSON(); err != nil {
+				t.Errorf("failed to marshal as JSON: %v", err)
+			} else if err = json.Unmarshal(buf, new(map[string]interface{})); err != nil {
+				t.Errorf("bad json marshal result: %v", err)
 			}
 		})
 	}

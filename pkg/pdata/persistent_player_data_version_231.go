@@ -14,11 +14,14 @@ import (
 	_ "embed"
 	"encoding"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"math"
+	"reflect"
 	"strconv"
+	"strings"
 )
 
 const Version int32 = 231
@@ -90,176 +93,178 @@ func putEnum(b []byte, x uint8) {
 }
 
 type Pdata struct {
-	InitializedVersion               int32                                             `json:"initializedVersion"`
-	AnnouncementVersionSeen          int32                                             `json:"announcementVersionSeen"`
-	Xp                               int32                                             `json:"xp"`
-	PreviousXP                       int32                                             `json:"previousXP"`
-	Credits                          int32                                             `json:"credits"`
-	Xp_match                         [20]int32                                         `json:"xp_match"`
-	Xp_count                         [20]int32                                         `json:"xp_count"`
-	NetWorth                         int32                                             `json:"netWorth"`
-	MatchWin                         bool                                              `json:"matchWin"`
-	MatchScoreEvent                  bool                                              `json:"matchScoreEvent"`
-	MatchComplete                    bool                                              `json:"matchComplete"`
-	MatchSquadBonus                  bool                                              `json:"matchSquadBonus"`
-	ShowGameSummary                  bool                                              `json:"showGameSummary"`
-	RegenShowNew                     bool                                              `json:"regenShowNew"`
-	SpawnAsTitan                     bool                                              `json:"spawnAsTitan"`
-	HaveSeenCustomCoop               bool                                              `json:"haveSeenCustomCoop"`
-	FactionGiftsFixed                bool                                              `json:"factionGiftsFixed"`
-	IsACheater                       bool                                              `json:"isACheater"`
-	SpendDoubleColiseumTickets       bool                                              `json:"spendDoubleColiseumTickets"`
-	PrivateMatchState                int32                                             `json:"privateMatchState"`
-	PlaylistShuffle_seed             int32                                             `json:"playlistShuffle_seed"`
-	PlaylistShuffle_seedFlip         bool                                              `json:"playlistShuffle_seedFlip"`
-	PlaylistShuffle_curIndex         int32                                             `json:"playlistShuffle_curIndex"`
-	LastFDTitanRef                   string                                            `json:"lastFDTitanRef"`
-	LastFDDifficulty                 int32                                             `json:"lastFDDifficulty"`
-	UltimateEdition                  bool                                              `json:"ultimateEdition"`
-	RandomColiseumUnlocks            int32                                             `json:"randomColiseumUnlocks"`
-	RandomPlayerLevelUnlocks         int32                                             `json:"randomPlayerLevelUnlocks"`
-	RandomTitanLevelUnlocks          [TitanClassesCount]int32                          `json:"randomTitanLevelUnlocks"`
-	RandomWeaponLevelUnlocks         [LoadoutWeaponsAndAbilitiesCount]int32            `json:"randomWeaponLevelUnlocks"`
-	RandomFactionLevelUnlocks        [FactionCount]int32                               `json:"randomFactionLevelUnlocks"`
-	DoubleXP                         int32                                             `json:"doubleXP"`
-	ColiseumTickets                  int32                                             `json:"coliseumTickets"`
-	ColiseumWinStreak                int32                                             `json:"coliseumWinStreak"`
-	ColiseumBestStreak               int32                                             `json:"coliseumBestStreak"`
-	ColiseumTotalWins                int32                                             `json:"coliseumTotalWins"`
-	ColiseumTotalLosses              int32                                             `json:"coliseumTotalLosses"`
-	RecentUnlocks                    [10]RecentUnlock                                  `json:"recentUnlocks"`
-	HasBeenIntroducedToComms         bool                                              `json:"hasBeenIntroducedToComms"`
-	LastCommsUseDate                 int32                                             `json:"lastCommsUseDate"`
-	NumTimesUsedComms                int32                                             `json:"numTimesUsedComms"`
-	Custom_emoji_initialized         bool                                              `json:"custom_emoji_initialized"`
-	Custom_emoji                     [4]int32                                          `json:"custom_emoji"`
-	BurnmeterSlot                    int32                                             `json:"burnmeterSlot"`
-	Pve                              PveData                                           `json:"pve"`
-	FactionChoice                    Faction                                           `json:"factionChoice"`
-	EnemyFaction                     Faction                                           `json:"enemyFaction"`
-	PersistentRewards                [32]bool                                          `json:"persistentRewards"`
-	ConsumableRewards                [32]int32                                         `json:"consumableRewards"`
-	PilotSpawnLoadout                SpawnLoadout                                      `json:"pilotSpawnLoadout"`
-	TitanSpawnLoadout                SpawnLoadout                                      `json:"titanSpawnLoadout"`
-	ActivePilotLoadout               PilotLoadout                                      `json:"activePilotLoadout"`
-	ActiveTitanLoadout               TitanLoadout                                      `json:"activeTitanLoadout"`
-	ActiveTitanLoadoutIndex          int32                                             `json:"activeTitanLoadoutIndex"`
-	PilotLoadouts                    [10]PilotLoadout                                  `json:"pilotLoadouts"`
-	TitanLoadouts                    [10]TitanLoadout                                  `json:"titanLoadouts"`
-	PinTrackedEntitlements           [OwnedEntitlementsCount]bool                      `json:"pinTrackedEntitlements"`
-	NewPinTrackedEntitlements        [OwnedEntitlementsCount]bool                      `json:"newPinTrackedEntitlements"`
-	ActiveBCID                       int32                                             `json:"activeBCID"`
-	ActiveCallingCardIndex           int32                                             `json:"activeCallingCardIndex"`
-	ActiveCallsignIconIndex          int32                                             `json:"activeCallsignIconIndex"`
-	ActiveCallsignIconStyleIndex     int32                                             `json:"activeCallsignIconStyleIndex"`
-	Gen                              int32                                             `json:"gen"`
-	FactionXP                        [FactionCount]int32                               `json:"factionXP"`
-	PreviousFactionXP                [FactionCount]int32                               `json:"previousFactionXP"`
-	TitanXP                          [TitanClassesCount]int32                          `json:"titanXP"`
-	PreviousTitanXP                  [TitanClassesCount]int32                          `json:"previousTitanXP"`
-	FdTitanXP                        [TitanClassesCount]int32                          `json:"fdTitanXP"`
-	FdPreviousTitanXP                [TitanClassesCount]int32                          `json:"fdPreviousTitanXP"`
-	TitanFDUnlockPoints              [TitanClassesCount]int32                          `json:"titanFDUnlockPoints"`
-	PreviousFDUnlockPoints           [TitanClassesCount]int32                          `json:"previousFDUnlockPoints"`
-	Fd_match                         [20]int32                                         `json:"fd_match"`
-	Fd_count                         [20]int32                                         `json:"fd_count"`
-	TitanClassLockState              [TitanClassesCount]int32                          `json:"titanClassLockState"`
-	FdTutorialBits                   int32                                             `json:"fdTutorialBits"`
-	FdPlaylistBits                   int32                                             `json:"fdPlaylistBits"`
-	GameStats                        SGameStats                                        `json:"gameStats"`
-	MapStats                         [MapsCount]SMapStats                              `json:"mapStats"`
-	TimeStats                        SHoursPlayed                                      `json:"timeStats"`
-	DistanceStats                    SMilesTraveled                                    `json:"distanceStats"`
-	WeaponStats                      [LoadoutWeaponsAndAbilitiesCount]SWeaponStats     `json:"weaponStats"`
-	WeaponKillStats                  [LoadoutWeaponsAndAbilitiesCount]SWeaponKillStats `json:"weaponKillStats"`
-	KillStats                        SKillStats                                        `json:"killStats"`
-	DeathStats                       SDeathStats                                       `json:"deathStats"`
-	MiscStats                        SMiscStats                                        `json:"miscStats"`
-	FdStats                          SFDStats                                          `json:"fdStats"`
-	TitanStats                       [TitanClassesCount]STitanStats                    `json:"titanStats"`
-	Kdratio_lifetime                 float32                                           `json:"kdratio_lifetime"`
-	Kdratio_lifetime_pvp             float32                                           `json:"kdratio_lifetime_pvp"`
-	Kdratio_match                    [10]float32                                       `json:"kdratio_match"`
-	Kdratiopvp_match                 [10]float32                                       `json:"kdratiopvp_match"`
-	WinStreak                        int32                                             `json:"winStreak"`
-	HighestWinStreakEver             int32                                             `json:"highestWinStreakEver"`
-	WinStreakIsDraws                 bool                                              `json:"winStreakIsDraws"`
-	WinLossHistory                   [10]int32                                         `json:"winLossHistory"`
-	WinLossHistorySize               int32                                             `json:"winLossHistorySize"`
-	MostProjectilesCollectedInVortex int32                                             `json:"mostProjectilesCollectedInVortex"`
-	BlackMarketItemsBought           int32                                             `json:"blackMarketItemsBought"`
-	RespawnKillInfected              bool                                              `json:"respawnKillInfected"`
-	PilotWeapons                     [35]WeaponMain                                    `json:"pilotWeapons"`
-	PilotOffhands                    [35]WeaponOffhand                                 `json:"pilotOffhands"`
-	TitanWeapons                     [15]WeaponMain                                    `json:"titanWeapons"`
-	TitanOffhands                    [30]WeaponOffhand                                 `json:"titanOffhands"`
-	TitanChassis                     [12]TitanMain                                     `json:"titanChassis"`
-	HasSeenStore                     bool                                              `json:"hasSeenStore"`
-	NewPilotSkins                    [5]int32                                          `json:"newPilotSkins"`
-	UnlockedPilotSkins               [5]int32                                          `json:"unlockedPilotSkins"`
-	NewPrimePilotSkins               int32                                             `json:"newPrimePilotSkins"`
-	UnlockedPrimePilotSkins          int32                                             `json:"unlockedPrimePilotSkins"`
-	NewPilotWeapons                  [2]int32                                          `json:"newPilotWeapons"`
-	UnlockedPilotWeapons             [2]int32                                          `json:"unlockedPilotWeapons"`
-	NewPilotOffhands                 [2]int32                                          `json:"newPilotOffhands"`
-	UnlockedPilotOffhands            [2]int32                                          `json:"unlockedPilotOffhands"`
-	NewPilotPassives                 int32                                             `json:"newPilotPassives"`
-	UnlockedPilotPassives            int32                                             `json:"unlockedPilotPassives"`
-	NewTitanOffhands                 [2]int32                                          `json:"newTitanOffhands"`
-	UnlockedTitanOffhands            [2]int32                                          `json:"unlockedTitanOffhands"`
-	NewTitanPassives                 int32                                             `json:"newTitanPassives"`
-	UnlockedTitanPassives            int32                                             `json:"unlockedTitanPassives"`
-	NewTitanChassis                  int32                                             `json:"newTitanChassis"`
-	UnlockedTitanChassis             int32                                             `json:"unlockedTitanChassis"`
-	NewPrimeTitans                   int32                                             `json:"newPrimeTitans"`
-	UnlockedPrimeTitans              int32                                             `json:"unlockedPrimeTitans"`
-	NewPilotSuits                    int32                                             `json:"newPilotSuits"`
-	UnlockedPilotSuits               int32                                             `json:"unlockedPilotSuits"`
-	NewPilotExecutions               int32                                             `json:"newPilotExecutions"`
-	UnlockedPilotExecutions          int32                                             `json:"unlockedPilotExecutions"`
-	UnlockedFeatures                 [2]int32                                          `json:"unlockedFeatures"`
-	NewFeatures                      [2]int32                                          `json:"newFeatures"`
-	UnlockedBoosts                   int32                                             `json:"unlockedBoosts"`
-	NewBoosts                        int32                                             `json:"newBoosts"`
-	UnlockedFactions                 int32                                             `json:"unlockedFactions"`
-	NewFactions                      int32                                             `json:"newFactions"`
-	UnlockedCallingCards             [16]int32                                         `json:"unlockedCallingCards"`
-	NewCallingCards                  [16]int32                                         `json:"newCallingCards"`
-	UnlockedCallsignIcons            [7]int32                                          `json:"unlockedCallsignIcons"`
-	NewCallsignIcons                 [7]int32                                          `json:"newCallsignIcons"`
-	UnlockedCommsIcons               [5]int32                                          `json:"unlockedCommsIcons"`
-	NewCommsIcons                    [5]int32                                          `json:"newCommsIcons"`
-	NewTitanExecutions               int32                                             `json:"newTitanExecutions"`
-	UnlockedTitanExecutions          int32                                             `json:"unlockedTitanExecutions"`
-	Challenges                       [ChallengeCount]EChallenge                        `json:"challenges"`
-	Dailychallenges                  [DailychallengeCount]EChallenge                   `json:"dailychallenges"`
-	ActiveDailyChallenges            [9]ActiveDailyChallenge                           `json:"activeDailyChallenges"`
-	TrackedChallenges                [3]int32                                          `json:"trackedChallenges"`
-	EOGTrackedChallenges             [3]int32                                          `json:"EOGTrackedChallenges"`
-	TrackedChallengeRefs             [3]string                                         `json:"trackedChallengeRefs"`
-	EOGTrackedChallengeRefs          [3]string                                         `json:"EOGTrackedChallengeRefs"`
-	DailyChallengeDayIndex           int32                                             `json:"dailyChallengeDayIndex"`
-	NewDailyChallenges               bool                                              `json:"newDailyChallenges"`
-	IsPostGameScoreboardValid        bool                                              `json:"isPostGameScoreboardValid"`
-	PostGameData                     EPostGameData                                     `json:"postGameData"`
-	IsFDPostGameScoreboardValid      bool                                              `json:"isFDPostGameScoreboardValid"`
-	PostGameDataFD                   EFDPostGameData                                   `json:"postGameDataFD"`
-	PreviousGooserProgress           int32                                             `json:"previousGooserProgress"`
-	MapHistory                       [24]int32                                         `json:"mapHistory"`
-	ModeHistory                      [10]int32                                         `json:"modeHistory"`
-	LastPlaylist                     string                                            `json:"lastPlaylist"`
-	LastDailyMatchVictory            int32                                             `json:"lastDailyMatchVictory"`
-	LastTimePlayed                   int32                                             `json:"lastTimePlayed"`
-	LastTimeLoggedIn                 int32                                             `json:"lastTimeLoggedIn"`
-	AbandonCountForMode              [GameModesCount]int32                             `json:"abandonCountForMode"`
-	LastAbandonedMode                GameModes                                         `json:"lastAbandonedMode"`
-	LastAbandonTime                  int32                                             `json:"lastAbandonTime"`
-	Ranked                           Struct_ranked                                     `json:"ranked"`
-	ExtraData                        []byte                                            `json:"extraData,omitempty"`
+	InitializedVersion               int32                                             `pdef:"initializedVersion"`
+	AnnouncementVersionSeen          int32                                             `pdef:"announcementVersionSeen"`
+	Xp                               int32                                             `pdef:"xp"`
+	PreviousXP                       int32                                             `pdef:"previousXP"`
+	Credits                          int32                                             `pdef:"credits"`
+	Xp_match                         [20]int32                                         `pdef:"xp_match"`
+	Xp_count                         [20]int32                                         `pdef:"xp_count"`
+	NetWorth                         int32                                             `pdef:"netWorth"`
+	MatchWin                         bool                                              `pdef:"matchWin"`
+	MatchScoreEvent                  bool                                              `pdef:"matchScoreEvent"`
+	MatchComplete                    bool                                              `pdef:"matchComplete"`
+	MatchSquadBonus                  bool                                              `pdef:"matchSquadBonus"`
+	ShowGameSummary                  bool                                              `pdef:"showGameSummary"`
+	RegenShowNew                     bool                                              `pdef:"regenShowNew"`
+	SpawnAsTitan                     bool                                              `pdef:"spawnAsTitan"`
+	HaveSeenCustomCoop               bool                                              `pdef:"haveSeenCustomCoop"`
+	FactionGiftsFixed                bool                                              `pdef:"factionGiftsFixed"`
+	IsACheater                       bool                                              `pdef:"isACheater"`
+	SpendDoubleColiseumTickets       bool                                              `pdef:"spendDoubleColiseumTickets"`
+	PrivateMatchState                int32                                             `pdef:"privateMatchState"`
+	PlaylistShuffle_seed             int32                                             `pdef:"playlistShuffle_seed"`
+	PlaylistShuffle_seedFlip         bool                                              `pdef:"playlistShuffle_seedFlip"`
+	PlaylistShuffle_curIndex         int32                                             `pdef:"playlistShuffle_curIndex"`
+	LastFDTitanRef                   string                                            `pdef:"lastFDTitanRef"`
+	LastFDDifficulty                 int32                                             `pdef:"lastFDDifficulty"`
+	UltimateEdition                  bool                                              `pdef:"ultimateEdition"`
+	RandomColiseumUnlocks            int32                                             `pdef:"randomColiseumUnlocks"`
+	RandomPlayerLevelUnlocks         int32                                             `pdef:"randomPlayerLevelUnlocks"`
+	RandomTitanLevelUnlocks          [TitanClassesCount]int32                          `pdef:"randomTitanLevelUnlocks"`
+	RandomWeaponLevelUnlocks         [LoadoutWeaponsAndAbilitiesCount]int32            `pdef:"randomWeaponLevelUnlocks"`
+	RandomFactionLevelUnlocks        [FactionCount]int32                               `pdef:"randomFactionLevelUnlocks"`
+	DoubleXP                         int32                                             `pdef:"doubleXP"`
+	ColiseumTickets                  int32                                             `pdef:"coliseumTickets"`
+	ColiseumWinStreak                int32                                             `pdef:"coliseumWinStreak"`
+	ColiseumBestStreak               int32                                             `pdef:"coliseumBestStreak"`
+	ColiseumTotalWins                int32                                             `pdef:"coliseumTotalWins"`
+	ColiseumTotalLosses              int32                                             `pdef:"coliseumTotalLosses"`
+	RecentUnlocks                    [10]RecentUnlock                                  `pdef:"recentUnlocks"`
+	HasBeenIntroducedToComms         bool                                              `pdef:"hasBeenIntroducedToComms"`
+	LastCommsUseDate                 int32                                             `pdef:"lastCommsUseDate"`
+	NumTimesUsedComms                int32                                             `pdef:"numTimesUsedComms"`
+	Custom_emoji_initialized         bool                                              `pdef:"custom_emoji_initialized"`
+	Custom_emoji                     [4]int32                                          `pdef:"custom_emoji"`
+	BurnmeterSlot                    int32                                             `pdef:"burnmeterSlot"`
+	Pve                              PveData                                           `pdef:"pve"`
+	FactionChoice                    Faction                                           `pdef:"factionChoice"`
+	EnemyFaction                     Faction                                           `pdef:"enemyFaction"`
+	PersistentRewards                [32]bool                                          `pdef:"persistentRewards"`
+	ConsumableRewards                [32]int32                                         `pdef:"consumableRewards"`
+	PilotSpawnLoadout                SpawnLoadout                                      `pdef:"pilotSpawnLoadout"`
+	TitanSpawnLoadout                SpawnLoadout                                      `pdef:"titanSpawnLoadout"`
+	ActivePilotLoadout               PilotLoadout                                      `pdef:"activePilotLoadout"`
+	ActiveTitanLoadout               TitanLoadout                                      `pdef:"activeTitanLoadout"`
+	ActiveTitanLoadoutIndex          int32                                             `pdef:"activeTitanLoadoutIndex"`
+	PilotLoadouts                    [10]PilotLoadout                                  `pdef:"pilotLoadouts"`
+	TitanLoadouts                    [10]TitanLoadout                                  `pdef:"titanLoadouts"`
+	PinTrackedEntitlements           [OwnedEntitlementsCount]bool                      `pdef:"pinTrackedEntitlements"`
+	NewPinTrackedEntitlements        [OwnedEntitlementsCount]bool                      `pdef:"newPinTrackedEntitlements"`
+	ActiveBCID                       int32                                             `pdef:"activeBCID"`
+	ActiveCallingCardIndex           int32                                             `pdef:"activeCallingCardIndex"`
+	ActiveCallsignIconIndex          int32                                             `pdef:"activeCallsignIconIndex"`
+	ActiveCallsignIconStyleIndex     int32                                             `pdef:"activeCallsignIconStyleIndex"`
+	Gen                              int32                                             `pdef:"gen"`
+	FactionXP                        [FactionCount]int32                               `pdef:"factionXP"`
+	PreviousFactionXP                [FactionCount]int32                               `pdef:"previousFactionXP"`
+	TitanXP                          [TitanClassesCount]int32                          `pdef:"titanXP"`
+	PreviousTitanXP                  [TitanClassesCount]int32                          `pdef:"previousTitanXP"`
+	FdTitanXP                        [TitanClassesCount]int32                          `pdef:"fdTitanXP"`
+	FdPreviousTitanXP                [TitanClassesCount]int32                          `pdef:"fdPreviousTitanXP"`
+	TitanFDUnlockPoints              [TitanClassesCount]int32                          `pdef:"titanFDUnlockPoints"`
+	PreviousFDUnlockPoints           [TitanClassesCount]int32                          `pdef:"previousFDUnlockPoints"`
+	Fd_match                         [20]int32                                         `pdef:"fd_match"`
+	Fd_count                         [20]int32                                         `pdef:"fd_count"`
+	TitanClassLockState              [TitanClassesCount]int32                          `pdef:"titanClassLockState"`
+	FdTutorialBits                   int32                                             `pdef:"fdTutorialBits"`
+	FdPlaylistBits                   int32                                             `pdef:"fdPlaylistBits"`
+	GameStats                        SGameStats                                        `pdef:"gameStats"`
+	MapStats                         [MapsCount]SMapStats                              `pdef:"mapStats"`
+	TimeStats                        SHoursPlayed                                      `pdef:"timeStats"`
+	DistanceStats                    SMilesTraveled                                    `pdef:"distanceStats"`
+	WeaponStats                      [LoadoutWeaponsAndAbilitiesCount]SWeaponStats     `pdef:"weaponStats"`
+	WeaponKillStats                  [LoadoutWeaponsAndAbilitiesCount]SWeaponKillStats `pdef:"weaponKillStats"`
+	KillStats                        SKillStats                                        `pdef:"killStats"`
+	DeathStats                       SDeathStats                                       `pdef:"deathStats"`
+	MiscStats                        SMiscStats                                        `pdef:"miscStats"`
+	FdStats                          SFDStats                                          `pdef:"fdStats"`
+	TitanStats                       [TitanClassesCount]STitanStats                    `pdef:"titanStats"`
+	Kdratio_lifetime                 float32                                           `pdef:"kdratio_lifetime"`
+	Kdratio_lifetime_pvp             float32                                           `pdef:"kdratio_lifetime_pvp"`
+	Kdratio_match                    [10]float32                                       `pdef:"kdratio_match"`
+	Kdratiopvp_match                 [10]float32                                       `pdef:"kdratiopvp_match"`
+	WinStreak                        int32                                             `pdef:"winStreak"`
+	HighestWinStreakEver             int32                                             `pdef:"highestWinStreakEver"`
+	WinStreakIsDraws                 bool                                              `pdef:"winStreakIsDraws"`
+	WinLossHistory                   [10]int32                                         `pdef:"winLossHistory"`
+	WinLossHistorySize               int32                                             `pdef:"winLossHistorySize"`
+	MostProjectilesCollectedInVortex int32                                             `pdef:"mostProjectilesCollectedInVortex"`
+	BlackMarketItemsBought           int32                                             `pdef:"blackMarketItemsBought"`
+	RespawnKillInfected              bool                                              `pdef:"respawnKillInfected"`
+	PilotWeapons                     [35]WeaponMain                                    `pdef:"pilotWeapons"`
+	PilotOffhands                    [35]WeaponOffhand                                 `pdef:"pilotOffhands"`
+	TitanWeapons                     [15]WeaponMain                                    `pdef:"titanWeapons"`
+	TitanOffhands                    [30]WeaponOffhand                                 `pdef:"titanOffhands"`
+	TitanChassis                     [12]TitanMain                                     `pdef:"titanChassis"`
+	HasSeenStore                     bool                                              `pdef:"hasSeenStore"`
+	NewPilotSkins                    [5]int32                                          `pdef:"newPilotSkins"`
+	UnlockedPilotSkins               [5]int32                                          `pdef:"unlockedPilotSkins"`
+	NewPrimePilotSkins               int32                                             `pdef:"newPrimePilotSkins"`
+	UnlockedPrimePilotSkins          int32                                             `pdef:"unlockedPrimePilotSkins"`
+	NewPilotWeapons                  [2]int32                                          `pdef:"newPilotWeapons"`
+	UnlockedPilotWeapons             [2]int32                                          `pdef:"unlockedPilotWeapons"`
+	NewPilotOffhands                 [2]int32                                          `pdef:"newPilotOffhands"`
+	UnlockedPilotOffhands            [2]int32                                          `pdef:"unlockedPilotOffhands"`
+	NewPilotPassives                 int32                                             `pdef:"newPilotPassives"`
+	UnlockedPilotPassives            int32                                             `pdef:"unlockedPilotPassives"`
+	NewTitanOffhands                 [2]int32                                          `pdef:"newTitanOffhands"`
+	UnlockedTitanOffhands            [2]int32                                          `pdef:"unlockedTitanOffhands"`
+	NewTitanPassives                 int32                                             `pdef:"newTitanPassives"`
+	UnlockedTitanPassives            int32                                             `pdef:"unlockedTitanPassives"`
+	NewTitanChassis                  int32                                             `pdef:"newTitanChassis"`
+	UnlockedTitanChassis             int32                                             `pdef:"unlockedTitanChassis"`
+	NewPrimeTitans                   int32                                             `pdef:"newPrimeTitans"`
+	UnlockedPrimeTitans              int32                                             `pdef:"unlockedPrimeTitans"`
+	NewPilotSuits                    int32                                             `pdef:"newPilotSuits"`
+	UnlockedPilotSuits               int32                                             `pdef:"unlockedPilotSuits"`
+	NewPilotExecutions               int32                                             `pdef:"newPilotExecutions"`
+	UnlockedPilotExecutions          int32                                             `pdef:"unlockedPilotExecutions"`
+	UnlockedFeatures                 [2]int32                                          `pdef:"unlockedFeatures"`
+	NewFeatures                      [2]int32                                          `pdef:"newFeatures"`
+	UnlockedBoosts                   int32                                             `pdef:"unlockedBoosts"`
+	NewBoosts                        int32                                             `pdef:"newBoosts"`
+	UnlockedFactions                 int32                                             `pdef:"unlockedFactions"`
+	NewFactions                      int32                                             `pdef:"newFactions"`
+	UnlockedCallingCards             [16]int32                                         `pdef:"unlockedCallingCards"`
+	NewCallingCards                  [16]int32                                         `pdef:"newCallingCards"`
+	UnlockedCallsignIcons            [7]int32                                          `pdef:"unlockedCallsignIcons"`
+	NewCallsignIcons                 [7]int32                                          `pdef:"newCallsignIcons"`
+	UnlockedCommsIcons               [5]int32                                          `pdef:"unlockedCommsIcons"`
+	NewCommsIcons                    [5]int32                                          `pdef:"newCommsIcons"`
+	NewTitanExecutions               int32                                             `pdef:"newTitanExecutions"`
+	UnlockedTitanExecutions          int32                                             `pdef:"unlockedTitanExecutions"`
+	Challenges                       [ChallengeCount]EChallenge                        `pdef:"challenges"`
+	Dailychallenges                  [DailychallengeCount]EChallenge                   `pdef:"dailychallenges"`
+	ActiveDailyChallenges            [9]ActiveDailyChallenge                           `pdef:"activeDailyChallenges"`
+	TrackedChallenges                [3]int32                                          `pdef:"trackedChallenges"`
+	EOGTrackedChallenges             [3]int32                                          `pdef:"EOGTrackedChallenges"`
+	TrackedChallengeRefs             [3]string                                         `pdef:"trackedChallengeRefs"`
+	EOGTrackedChallengeRefs          [3]string                                         `pdef:"EOGTrackedChallengeRefs"`
+	DailyChallengeDayIndex           int32                                             `pdef:"dailyChallengeDayIndex"`
+	NewDailyChallenges               bool                                              `pdef:"newDailyChallenges"`
+	IsPostGameScoreboardValid        bool                                              `pdef:"isPostGameScoreboardValid"`
+	PostGameData                     EPostGameData                                     `pdef:"postGameData"`
+	IsFDPostGameScoreboardValid      bool                                              `pdef:"isFDPostGameScoreboardValid"`
+	PostGameDataFD                   EFDPostGameData                                   `pdef:"postGameDataFD"`
+	PreviousGooserProgress           int32                                             `pdef:"previousGooserProgress"`
+	MapHistory                       [24]int32                                         `pdef:"mapHistory"`
+	ModeHistory                      [10]int32                                         `pdef:"modeHistory"`
+	LastPlaylist                     string                                            `pdef:"lastPlaylist"`
+	LastDailyMatchVictory            int32                                             `pdef:"lastDailyMatchVictory"`
+	LastTimePlayed                   int32                                             `pdef:"lastTimePlayed"`
+	LastTimeLoggedIn                 int32                                             `pdef:"lastTimeLoggedIn"`
+	AbandonCountForMode              [GameModesCount]int32                             `pdef:"abandonCountForMode"`
+	LastAbandonedMode                GameModes                                         `pdef:"lastAbandonedMode"`
+	LastAbandonTime                  int32                                             `pdef:"lastAbandonTime"`
+	Ranked                           Struct_ranked                                     `pdef:"ranked"`
+	ExtraData                        []byte
 }
 
 var _ encoding.BinaryUnmarshaler = (*Pdata)(nil)
 var _ encoding.BinaryMarshaler = Pdata{}
+var _ json.Unmarshaler = (*Pdata)(nil)
+var _ json.Marshaler = Pdata{}
 
 func (v *Pdata) UnmarshalBinary(b []byte) error {
 	if len(b) < 4 {
@@ -6256,14 +6261,28 @@ func (v Pdata) MarshalBinary() ([]byte, error) {
 	b = append(b, v.ExtraData...)
 	return b, nil
 }
+func (v *Pdata) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v Pdata) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v Pdata) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	if x := v.InitializedVersion; x != Version {
+		return nil, fmt.Errorf("encode %q (v%d): %w: got %d", "pdata", Version, ErrUnsupportedVersion, x)
+	}
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type ActiveDailyChallenge struct {
-	Ref Dailychallenge `json:"ref"`
-	Day int32          `json:"day"`
+	Ref Dailychallenge `pdef:"ref"`
+	Day int32          `pdef:"day"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*ActiveDailyChallenge)(nil)
 var _ encoding.BinaryMarshaler = ActiveDailyChallenge{}
+var _ json.Unmarshaler = (*ActiveDailyChallenge)(nil)
+var _ json.Marshaler = ActiveDailyChallenge{}
 
 func (v *ActiveDailyChallenge) UnmarshalBinary(b []byte) error {
 	if len(b) != 5 {
@@ -6279,14 +6298,25 @@ func (v ActiveDailyChallenge) MarshalBinary() ([]byte, error) {
 	putInt(b[1:5], v.Day)
 	return b, nil
 }
+func (v *ActiveDailyChallenge) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v ActiveDailyChallenge) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v ActiveDailyChallenge) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type EChallenge struct {
-	Progress         float32 `json:"progress"`
-	PreviousProgress float32 `json:"previousProgress"`
+	Progress         float32 `pdef:"progress"`
+	PreviousProgress float32 `pdef:"previousProgress"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*EChallenge)(nil)
 var _ encoding.BinaryMarshaler = EChallenge{}
+var _ json.Unmarshaler = (*EChallenge)(nil)
+var _ json.Marshaler = EChallenge{}
 
 func (v *EChallenge) UnmarshalBinary(b []byte) error {
 	if len(b) != 8 {
@@ -6302,17 +6332,28 @@ func (v EChallenge) MarshalBinary() ([]byte, error) {
 	putFloat(b[4:8], v.PreviousProgress)
 	return b, nil
 }
+func (v *EChallenge) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v EChallenge) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v EChallenge) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type EFDPostGameData struct {
-	GameMode   int32                `json:"gameMode"`
-	Map        int32                `json:"map"`
-	MyIndex    int32                `json:"myIndex"`
-	NumPlayers int32                `json:"numPlayers"`
-	Players    [4]EFDPostGamePlayer `json:"players"`
+	GameMode   int32                `pdef:"gameMode"`
+	Map        int32                `pdef:"map"`
+	MyIndex    int32                `pdef:"myIndex"`
+	NumPlayers int32                `pdef:"numPlayers"`
+	Players    [4]EFDPostGamePlayer `pdef:"players"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*EFDPostGameData)(nil)
 var _ encoding.BinaryMarshaler = EFDPostGameData{}
+var _ json.Unmarshaler = (*EFDPostGameData)(nil)
+var _ json.Marshaler = EFDPostGameData{}
 
 func (v *EFDPostGameData) UnmarshalBinary(b []byte) error {
 	if len(b) != 280 {
@@ -6364,17 +6405,28 @@ func (v EFDPostGameData) MarshalBinary() ([]byte, error) {
 	}
 	return b, nil
 }
+func (v *EFDPostGameData) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v EFDPostGameData) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v EFDPostGameData) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type EFDPostGamePlayer struct {
-	Name       string  `json:"name"`
-	Xuid       string  `json:"xuid"`
-	AwardId    int32   `json:"awardId"`
-	AwardValue float32 `json:"awardValue"`
-	SuitIndex  int32   `json:"suitIndex"`
+	Name       string  `pdef:"name"`
+	Xuid       string  `pdef:"xuid"`
+	AwardId    int32   `pdef:"awardId"`
+	AwardValue float32 `pdef:"awardValue"`
+	SuitIndex  int32   `pdef:"suitIndex"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*EFDPostGamePlayer)(nil)
 var _ encoding.BinaryMarshaler = EFDPostGamePlayer{}
+var _ json.Unmarshaler = (*EFDPostGamePlayer)(nil)
+var _ json.Marshaler = EFDPostGamePlayer{}
 
 func (v *EFDPostGamePlayer) UnmarshalBinary(b []byte) error {
 	if len(b) != 66 {
@@ -6400,27 +6452,38 @@ func (v EFDPostGamePlayer) MarshalBinary() ([]byte, error) {
 	putInt(b[62:66], v.SuitIndex)
 	return b, nil
 }
+func (v *EFDPostGamePlayer) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v EFDPostGamePlayer) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v EFDPostGamePlayer) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type EPostGameData struct {
-	GameMode               int32               `json:"gameMode"`
-	Map                    int32               `json:"map"`
-	MyXuid                 string              `json:"myXuid"`
-	MyTeam                 int32               `json:"myTeam"`
-	MaxTeamSize            int32               `json:"maxTeamSize"`
-	FactionIMC             Faction             `json:"factionIMC"`
-	FactionMCOR            Faction             `json:"factionMCOR"`
-	ScoreIMC               int32               `json:"scoreIMC"`
-	ScoreMCOR              int32               `json:"scoreMCOR"`
-	Teams                  bool                `json:"teams"`
-	PrivateMatch           bool                `json:"privateMatch"`
-	Ranked                 bool                `json:"ranked"`
-	HadMatchLossProtection bool                `json:"hadMatchLossProtection"`
-	ChallengeUnlocks       [6]RecentUnlock     `json:"challengeUnlocks"`
-	Players                [16]EPostGamePlayer `json:"players"`
+	GameMode               int32               `pdef:"gameMode"`
+	Map                    int32               `pdef:"map"`
+	MyXuid                 string              `pdef:"myXuid"`
+	MyTeam                 int32               `pdef:"myTeam"`
+	MaxTeamSize            int32               `pdef:"maxTeamSize"`
+	FactionIMC             Faction             `pdef:"factionIMC"`
+	FactionMCOR            Faction             `pdef:"factionMCOR"`
+	ScoreIMC               int32               `pdef:"scoreIMC"`
+	ScoreMCOR              int32               `pdef:"scoreMCOR"`
+	Teams                  bool                `pdef:"teams"`
+	PrivateMatch           bool                `pdef:"privateMatch"`
+	Ranked                 bool                `pdef:"ranked"`
+	HadMatchLossProtection bool                `pdef:"hadMatchLossProtection"`
+	ChallengeUnlocks       [6]RecentUnlock     `pdef:"challengeUnlocks"`
+	Players                [16]EPostGamePlayer `pdef:"players"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*EPostGameData)(nil)
 var _ encoding.BinaryMarshaler = EPostGameData{}
+var _ json.Unmarshaler = (*EPostGameData)(nil)
+var _ json.Marshaler = EPostGameData{}
 
 func (v *EPostGameData) UnmarshalBinary(b []byte) error {
 	if len(b) != 1644 {
@@ -6636,22 +6699,33 @@ func (v EPostGameData) MarshalBinary() ([]byte, error) {
 	}
 	return b, nil
 }
+func (v *EPostGameData) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v EPostGameData) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v EPostGameData) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type EPostGamePlayer struct {
-	Name              string   `json:"name"`
-	Xuid              string   `json:"xuid"`
-	Level             int32    `json:"level"`
-	Gen               int32    `json:"gen"`
-	Team              int32    `json:"team"`
-	Scores            [4]int32 `json:"scores"`
-	PlayingRanked     bool     `json:"playingRanked"`
-	Rank              int32    `json:"rank"`
-	CallsignIconIndex int32    `json:"callsignIconIndex"`
-	MatchPerformance  float32  `json:"matchPerformance"`
+	Name              string   `pdef:"name"`
+	Xuid              string   `pdef:"xuid"`
+	Level             int32    `pdef:"level"`
+	Gen               int32    `pdef:"gen"`
+	Team              int32    `pdef:"team"`
+	Scores            [4]int32 `pdef:"scores"`
+	PlayingRanked     bool     `pdef:"playingRanked"`
+	Rank              int32    `pdef:"rank"`
+	CallsignIconIndex int32    `pdef:"callsignIconIndex"`
+	MatchPerformance  float32  `pdef:"matchPerformance"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*EPostGamePlayer)(nil)
 var _ encoding.BinaryMarshaler = EPostGamePlayer{}
+var _ json.Unmarshaler = (*EPostGamePlayer)(nil)
+var _ json.Marshaler = EPostGamePlayer{}
 
 func (v *EPostGamePlayer) UnmarshalBinary(b []byte) error {
 	if len(b) != 95 {
@@ -6693,40 +6767,51 @@ func (v EPostGamePlayer) MarshalBinary() ([]byte, error) {
 	putFloat(b[91:95], v.MatchPerformance)
 	return b, nil
 }
+func (v *EPostGamePlayer) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v EPostGamePlayer) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v EPostGamePlayer) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type PilotLoadout struct {
-	Name               string                     `json:"name"`
-	Suit               PilotSuit                  `json:"suit"`
-	Race               PilotRace                  `json:"race"`
-	Execution          PilotExecution             `json:"execution"`
-	Primary            LoadoutWeaponsAndAbilities `json:"primary"`
-	PrimaryAttachment  PilotMod                   `json:"primaryAttachment"`
-	PrimaryMod1        PilotMod                   `json:"primaryMod1"`
-	PrimaryMod2        PilotMod                   `json:"primaryMod2"`
-	PrimaryMod3        PilotMod                   `json:"primaryMod3"`
-	Secondary          LoadoutWeaponsAndAbilities `json:"secondary"`
-	SecondaryMod1      PilotMod                   `json:"secondaryMod1"`
-	SecondaryMod2      PilotMod                   `json:"secondaryMod2"`
-	SecondaryMod3      PilotMod                   `json:"secondaryMod3"`
-	Weapon3            LoadoutWeaponsAndAbilities `json:"weapon3"`
-	Weapon3Mod1        PilotMod                   `json:"weapon3Mod1"`
-	Weapon3Mod2        PilotMod                   `json:"weapon3Mod2"`
-	Weapon3Mod3        PilotMod                   `json:"weapon3Mod3"`
-	Ordnance           LoadoutWeaponsAndAbilities `json:"ordnance"`
-	Passive1           PilotPassive               `json:"passive1"`
-	Passive2           PilotPassive               `json:"passive2"`
-	SkinIndex          int32                      `json:"skinIndex"`
-	CamoIndex          int32                      `json:"camoIndex"`
-	PrimarySkinIndex   int32                      `json:"primarySkinIndex"`
-	PrimaryCamoIndex   int32                      `json:"primaryCamoIndex"`
-	SecondarySkinIndex int32                      `json:"secondarySkinIndex"`
-	SecondaryCamoIndex int32                      `json:"secondaryCamoIndex"`
-	Weapon3SkinIndex   int32                      `json:"weapon3SkinIndex"`
-	Weapon3CamoIndex   int32                      `json:"weapon3CamoIndex"`
+	Name               string                     `pdef:"name"`
+	Suit               PilotSuit                  `pdef:"suit"`
+	Race               PilotRace                  `pdef:"race"`
+	Execution          PilotExecution             `pdef:"execution"`
+	Primary            LoadoutWeaponsAndAbilities `pdef:"primary"`
+	PrimaryAttachment  PilotMod                   `pdef:"primaryAttachment"`
+	PrimaryMod1        PilotMod                   `pdef:"primaryMod1"`
+	PrimaryMod2        PilotMod                   `pdef:"primaryMod2"`
+	PrimaryMod3        PilotMod                   `pdef:"primaryMod3"`
+	Secondary          LoadoutWeaponsAndAbilities `pdef:"secondary"`
+	SecondaryMod1      PilotMod                   `pdef:"secondaryMod1"`
+	SecondaryMod2      PilotMod                   `pdef:"secondaryMod2"`
+	SecondaryMod3      PilotMod                   `pdef:"secondaryMod3"`
+	Weapon3            LoadoutWeaponsAndAbilities `pdef:"weapon3"`
+	Weapon3Mod1        PilotMod                   `pdef:"weapon3Mod1"`
+	Weapon3Mod2        PilotMod                   `pdef:"weapon3Mod2"`
+	Weapon3Mod3        PilotMod                   `pdef:"weapon3Mod3"`
+	Ordnance           LoadoutWeaponsAndAbilities `pdef:"ordnance"`
+	Passive1           PilotPassive               `pdef:"passive1"`
+	Passive2           PilotPassive               `pdef:"passive2"`
+	SkinIndex          int32                      `pdef:"skinIndex"`
+	CamoIndex          int32                      `pdef:"camoIndex"`
+	PrimarySkinIndex   int32                      `pdef:"primarySkinIndex"`
+	PrimaryCamoIndex   int32                      `pdef:"primaryCamoIndex"`
+	SecondarySkinIndex int32                      `pdef:"secondarySkinIndex"`
+	SecondaryCamoIndex int32                      `pdef:"secondaryCamoIndex"`
+	Weapon3SkinIndex   int32                      `pdef:"weapon3SkinIndex"`
+	Weapon3CamoIndex   int32                      `pdef:"weapon3CamoIndex"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*PilotLoadout)(nil)
 var _ encoding.BinaryMarshaler = PilotLoadout{}
+var _ json.Unmarshaler = (*PilotLoadout)(nil)
+var _ json.Marshaler = PilotLoadout{}
 
 func (v *PilotLoadout) UnmarshalBinary(b []byte) error {
 	if len(b) != 93 {
@@ -6796,17 +6881,28 @@ func (v PilotLoadout) MarshalBinary() ([]byte, error) {
 	putInt(b[89:93], v.Weapon3CamoIndex)
 	return b, nil
 }
+func (v *PilotLoadout) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v PilotLoadout) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v PilotLoadout) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type PveData struct {
-	Version               int32            `json:"version"`
-	Currency              int32            `json:"currency"`
-	CurrencyInLatestMatch int32            `json:"currencyInLatestMatch"`
-	TacticalUnlocks       [6]int32         `json:"tacticalUnlocks"`
-	FeathersForMap        [MapsCount]int32 `json:"feathersForMap"`
+	Version               int32            `pdef:"version"`
+	Currency              int32            `pdef:"currency"`
+	CurrencyInLatestMatch int32            `pdef:"currencyInLatestMatch"`
+	TacticalUnlocks       [6]int32         `pdef:"tacticalUnlocks"`
+	FeathersForMap        [MapsCount]int32 `pdef:"feathersForMap"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*PveData)(nil)
 var _ encoding.BinaryMarshaler = PveData{}
+var _ json.Unmarshaler = (*PveData)(nil)
+var _ json.Marshaler = PveData{}
 
 func (v *PveData) UnmarshalBinary(b []byte) error {
 	if len(b) != 136 {
@@ -6886,15 +6982,26 @@ func (v PveData) MarshalBinary() ([]byte, error) {
 	putInt(b[132:136], v.FeathersForMap[24])
 	return b, nil
 }
+func (v *PveData) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v PveData) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v PveData) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type RecentUnlock struct {
-	RefGuid       int32 `json:"refGuid"`
-	ParentRefGuid int32 `json:"parentRefGuid"`
-	Count         int32 `json:"count"`
+	RefGuid       int32 `pdef:"refGuid"`
+	ParentRefGuid int32 `pdef:"parentRefGuid"`
+	Count         int32 `pdef:"count"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*RecentUnlock)(nil)
 var _ encoding.BinaryMarshaler = RecentUnlock{}
+var _ json.Unmarshaler = (*RecentUnlock)(nil)
+var _ json.Marshaler = RecentUnlock{}
 
 func (v *RecentUnlock) UnmarshalBinary(b []byte) error {
 	if len(b) != 12 {
@@ -6912,23 +7019,34 @@ func (v RecentUnlock) MarshalBinary() ([]byte, error) {
 	putInt(b[8:12], v.Count)
 	return b, nil
 }
+func (v *RecentUnlock) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v RecentUnlock) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v RecentUnlock) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type SDeathStats struct {
-	Total         int32                    `json:"total"`
-	TotalPVP      int32                    `json:"totalPVP"`
-	AsPilot       int32                    `json:"asPilot"`
-	AsTitan       [TitanClassesCount]int32 `json:"asTitan"`
-	ByPilots      int32                    `json:"byPilots"`
-	BySpectres    int32                    `json:"bySpectres"`
-	ByGrunts      int32                    `json:"byGrunts"`
-	ByTitans      [TitanClassesCount]int32 `json:"byTitans"`
-	ByNPCTitans   [TitanClassesCount]int32 `json:"byNPCTitans"`
-	Suicides      int32                    `json:"suicides"`
-	WhileEjecting int32                    `json:"whileEjecting"`
+	Total         int32                    `pdef:"total"`
+	TotalPVP      int32                    `pdef:"totalPVP"`
+	AsPilot       int32                    `pdef:"asPilot"`
+	AsTitan       [TitanClassesCount]int32 `pdef:"asTitan"`
+	ByPilots      int32                    `pdef:"byPilots"`
+	BySpectres    int32                    `pdef:"bySpectres"`
+	ByGrunts      int32                    `pdef:"byGrunts"`
+	ByTitans      [TitanClassesCount]int32 `pdef:"byTitans"`
+	ByNPCTitans   [TitanClassesCount]int32 `pdef:"byNPCTitans"`
+	Suicides      int32                    `pdef:"suicides"`
+	WhileEjecting int32                    `pdef:"whileEjecting"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*SDeathStats)(nil)
 var _ encoding.BinaryMarshaler = SDeathStats{}
+var _ json.Unmarshaler = (*SDeathStats)(nil)
+var _ json.Marshaler = SDeathStats{}
 
 func (v *SDeathStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 116 {
@@ -6998,26 +7116,37 @@ func (v SDeathStats) MarshalBinary() ([]byte, error) {
 	putInt(b[112:116], v.WhileEjecting)
 	return b, nil
 }
+func (v *SDeathStats) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v SDeathStats) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v SDeathStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type SFDStats struct {
-	ArcMinesPlaced      int32 `json:"arcMinesPlaced"`
-	TurretsPlaced       int32 `json:"turretsPlaced"`
-	Rodeos              int32 `json:"rodeos"`
-	RodeoNukes          int32 `json:"rodeoNukes"`
-	ArcMineZaps         int32 `json:"arcMineZaps"`
-	TurretKills         int32 `json:"turretKills"`
-	HarvesterBoosts     int32 `json:"harvesterBoosts"`
-	WavesComplete       int32 `json:"wavesComplete"`
-	EasyWins            int32 `json:"easyWins"`
-	NormalWins          int32 `json:"normalWins"`
-	HardWins            int32 `json:"hardWins"`
-	MasterWins          int32 `json:"masterWins"`
-	InsaneWins          int32 `json:"insaneWins"`
-	HighestTitanFDLevel int32 `json:"highestTitanFDLevel"`
+	ArcMinesPlaced      int32 `pdef:"arcMinesPlaced"`
+	TurretsPlaced       int32 `pdef:"turretsPlaced"`
+	Rodeos              int32 `pdef:"rodeos"`
+	RodeoNukes          int32 `pdef:"rodeoNukes"`
+	ArcMineZaps         int32 `pdef:"arcMineZaps"`
+	TurretKills         int32 `pdef:"turretKills"`
+	HarvesterBoosts     int32 `pdef:"harvesterBoosts"`
+	WavesComplete       int32 `pdef:"wavesComplete"`
+	EasyWins            int32 `pdef:"easyWins"`
+	NormalWins          int32 `pdef:"normalWins"`
+	HardWins            int32 `pdef:"hardWins"`
+	MasterWins          int32 `pdef:"masterWins"`
+	InsaneWins          int32 `pdef:"insaneWins"`
+	HighestTitanFDLevel int32 `pdef:"highestTitanFDLevel"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*SFDStats)(nil)
 var _ encoding.BinaryMarshaler = SFDStats{}
+var _ json.Unmarshaler = (*SFDStats)(nil)
+var _ json.Marshaler = SFDStats{}
 
 func (v *SFDStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 56 {
@@ -7057,26 +7186,37 @@ func (v SFDStats) MarshalBinary() ([]byte, error) {
 	putInt(b[52:56], v.HighestTitanFDLevel)
 	return b, nil
 }
+func (v *SFDStats) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v SFDStats) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v SFDStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type SGameStats struct {
-	ModesPlayed                         [GameModesCount]int32 `json:"modesPlayed"`
-	PreviousModesPlayed                 [GameModesCount]int32 `json:"previousModesPlayed"`
-	ModesWon                            [GameModesCount]int32 `json:"modesWon"`
-	Mvp_total                           int32                 `json:"mvp_total"`
-	GamesCompletedTotal                 int32                 `json:"gamesCompletedTotal"`
-	GamesWonTotal                       int32                 `json:"gamesWonTotal"`
-	GamesWonAsIMC                       int32                 `json:"gamesWonAsIMC"`
-	GamesWonAsMilitia                   int32                 `json:"gamesWonAsMilitia"`
-	GamesCompletedAsIMC                 int32                 `json:"gamesCompletedAsIMC"`
-	GamesCompletedAsMilitia             int32                 `json:"gamesCompletedAsMilitia"`
-	PvpKills                            [GameModesCount]int32 `json:"pvpKills"`
-	TimesKillDeathRatio2to1             [GameModesCount]int32 `json:"timesKillDeathRatio2to1"`
-	TimesKillDeathRatio2to1_pvp         [GameModesCount]int32 `json:"timesKillDeathRatio2to1_pvp"`
-	TimesScored100AttritionPoints_total int32                 `json:"timesScored100AttritionPoints_total"`
+	ModesPlayed                         [GameModesCount]int32 `pdef:"modesPlayed"`
+	PreviousModesPlayed                 [GameModesCount]int32 `pdef:"previousModesPlayed"`
+	ModesWon                            [GameModesCount]int32 `pdef:"modesWon"`
+	Mvp_total                           int32                 `pdef:"mvp_total"`
+	GamesCompletedTotal                 int32                 `pdef:"gamesCompletedTotal"`
+	GamesWonTotal                       int32                 `pdef:"gamesWonTotal"`
+	GamesWonAsIMC                       int32                 `pdef:"gamesWonAsIMC"`
+	GamesWonAsMilitia                   int32                 `pdef:"gamesWonAsMilitia"`
+	GamesCompletedAsIMC                 int32                 `pdef:"gamesCompletedAsIMC"`
+	GamesCompletedAsMilitia             int32                 `pdef:"gamesCompletedAsMilitia"`
+	PvpKills                            [GameModesCount]int32 `pdef:"pvpKills"`
+	TimesKillDeathRatio2to1             [GameModesCount]int32 `pdef:"timesKillDeathRatio2to1"`
+	TimesKillDeathRatio2to1_pvp         [GameModesCount]int32 `pdef:"timesKillDeathRatio2to1_pvp"`
+	TimesScored100AttritionPoints_total int32                 `pdef:"timesScored100AttritionPoints_total"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*SGameStats)(nil)
 var _ encoding.BinaryMarshaler = SGameStats{}
+var _ json.Unmarshaler = (*SGameStats)(nil)
+var _ json.Marshaler = SGameStats{}
 
 func (v *SGameStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 368 {
@@ -7272,20 +7412,31 @@ func (v SGameStats) MarshalBinary() ([]byte, error) {
 	putInt(b[364:368], v.TimesScored100AttritionPoints_total)
 	return b, nil
 }
+func (v *SGameStats) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v SGameStats) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v SGameStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type SHoursPlayed struct {
-	Total        float32                    `json:"total"`
-	AsTitan      [TitanClassesCount]float32 `json:"asTitan"`
-	AsPilot      float32                    `json:"asPilot"`
-	AsTitanTotal float32                    `json:"asTitanTotal"`
-	Dead         float32                    `json:"dead"`
-	Wallhanging  float32                    `json:"wallhanging"`
-	Wallrunning  float32                    `json:"wallrunning"`
-	InAir        float32                    `json:"inAir"`
+	Total        float32                    `pdef:"total"`
+	AsTitan      [TitanClassesCount]float32 `pdef:"asTitan"`
+	AsPilot      float32                    `pdef:"asPilot"`
+	AsTitanTotal float32                    `pdef:"asTitanTotal"`
+	Dead         float32                    `pdef:"dead"`
+	Wallhanging  float32                    `pdef:"wallhanging"`
+	Wallrunning  float32                    `pdef:"wallrunning"`
+	InAir        float32                    `pdef:"inAir"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*SHoursPlayed)(nil)
 var _ encoding.BinaryMarshaler = SHoursPlayed{}
+var _ json.Unmarshaler = (*SHoursPlayed)(nil)
+var _ json.Marshaler = SHoursPlayed{}
 
 func (v *SHoursPlayed) UnmarshalBinary(b []byte) error {
 	if len(b) != 56 {
@@ -7325,91 +7476,102 @@ func (v SHoursPlayed) MarshalBinary() ([]byte, error) {
 	putFloat(b[52:56], v.InAir)
 	return b, nil
 }
+func (v *SHoursPlayed) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v SHoursPlayed) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v SHoursPlayed) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type SKillStats struct {
-	Total                                 int32                      `json:"total"`
-	TotalWhileUsingBurnCard               int32                      `json:"totalWhileUsingBurnCard"`
-	TitansWhileTitanBCActive              int32                      `json:"titansWhileTitanBCActive"`
-	TotalPVP                              int32                      `json:"totalPVP"`
-	Pilots                                int32                      `json:"pilots"`
-	Spectres                              int32                      `json:"spectres"`
-	Marvins                               int32                      `json:"marvins"`
-	Grunts                                int32                      `json:"grunts"`
-	TotalTitans                           int32                      `json:"totalTitans"`
-	TotalTitansWhileDoomed                int32                      `json:"totalTitansWhileDoomed"`
-	TotalPilots                           int32                      `json:"totalPilots"`
-	TotalNPC                              int32                      `json:"totalNPC"`
-	AsPilot                               int32                      `json:"asPilot"`
-	AsTitan                               [TitanClassesCount]int32   `json:"asTitan"`
-	FirstStrikes                          int32                      `json:"firstStrikes"`
-	EjectingPilots                        int32                      `json:"ejectingPilots"`
-	WhileEjecting                         int32                      `json:"whileEjecting"`
-	CloakedPilots                         int32                      `json:"cloakedPilots"`
-	WhileCloaked                          int32                      `json:"whileCloaked"`
-	WallrunningPilots                     int32                      `json:"wallrunningPilots"`
-	WhileWallrunning                      int32                      `json:"whileWallrunning"`
-	WallhangingPilots                     int32                      `json:"wallhangingPilots"`
-	WhileWallhanging                      int32                      `json:"whileWallhanging"`
-	PilotExecution                        int32                      `json:"pilotExecution"`
-	PilotExecutePilot                     int32                      `json:"pilotExecutePilot"`
-	PilotExecutePilotByType               [PilotExecutionCount]int32 `json:"pilotExecutePilotByType"`
-	PilotKickMelee                        int32                      `json:"pilotKickMelee"`
-	PilotKickMeleePilot                   int32                      `json:"pilotKickMeleePilot"`
-	TitanMelee                            int32                      `json:"titanMelee"`
-	TitanMeleePilot                       int32                      `json:"titanMeleePilot"`
-	TitanStepCrush                        int32                      `json:"titanStepCrush"`
-	TitanStepCrushPilot                   int32                      `json:"titanStepCrushPilot"`
-	TitanExocutionIon                     int32                      `json:"titanExocutionIon"`
-	TitanExocutionScorch                  int32                      `json:"titanExocutionScorch"`
-	TitanExocutionNorthstar               int32                      `json:"titanExocutionNorthstar"`
-	TitanExocutionRonin                   int32                      `json:"titanExocutionRonin"`
-	TitanExocutionTone                    int32                      `json:"titanExocutionTone"`
-	TitanExocutionLegion                  int32                      `json:"titanExocutionLegion"`
-	TitanExocutionVanguard                int32                      `json:"titanExocutionVanguard"`
-	TitanFallKill                         int32                      `json:"titanFallKill"`
-	PetTitanKillsFollowMode               int32                      `json:"petTitanKillsFollowMode"`
-	PetTitanKillsGuardMode                int32                      `json:"petTitanKillsGuardMode"`
-	Rodeo_total                           int32                      `json:"rodeo_total"`
-	Rodeo_stryder                         int32                      `json:"rodeo_stryder"`
-	Rodeo_buddy                           int32                      `json:"rodeo_buddy"`
-	Rodeo_atlas                           int32                      `json:"rodeo_atlas"`
-	Rodeo_ogre                            int32                      `json:"rodeo_ogre"`
-	Pilot_headshots_total                 int32                      `json:"pilot_headshots_total"`
-	EvacShips                             int32                      `json:"evacShips"`
-	Flyers                                int32                      `json:"flyers"`
-	NuclearCore                           int32                      `json:"nuclearCore"`
-	EvacuatingEnemies                     int32                      `json:"evacuatingEnemies"`
-	ExportTrapKills                       int32                      `json:"exportTrapKills"`
-	CoopChallenge_NukeTitan_Kills         int32                      `json:"coopChallenge_NukeTitan_Kills"`
-	CoopChallenge_MortarTitan_Kills       int32                      `json:"coopChallenge_MortarTitan_Kills"`
-	CoopChallenge_EmpTitan_Kills          int32                      `json:"coopChallenge_EmpTitan_Kills"`
-	CoopChallenge_BubbleShieldGrunt_Kills int32                      `json:"coopChallenge_BubbleShieldGrunt_Kills"`
-	CoopChallenge_CloakDrone_Kills        int32                      `json:"coopChallenge_CloakDrone_Kills"`
-	CoopChallenge_Dropship_Kills          int32                      `json:"coopChallenge_Dropship_Kills"`
-	CoopChallenge_SuicideSpectre_Kills    int32                      `json:"coopChallenge_SuicideSpectre_Kills"`
-	CoopChallenge_Turret_Kills            int32                      `json:"coopChallenge_Turret_Kills"`
-	CoopChallenge_Sniper_Kills            int32                      `json:"coopChallenge_Sniper_Kills"`
-	AmpedVortexKills                      int32                      `json:"ampedVortexKills"`
-	MeleeWhileCloaked                     int32                      `json:"meleeWhileCloaked"`
-	PilotKillsWhileUsingActiveRadarPulse  int32                      `json:"pilotKillsWhileUsingActiveRadarPulse"`
-	TitanKillsAsPilot                     int32                      `json:"titanKillsAsPilot"`
-	PilotKillsWhileStimActive             int32                      `json:"pilotKillsWhileStimActive"`
-	PilotKillsAsTitan                     int32                      `json:"pilotKillsAsTitan"`
-	TotalAssists                          int32                      `json:"totalAssists"`
-	KillingSprees                         [TitanClassesCount]int32   `json:"killingSprees"`
-	PilotKillsAsPilot                     int32                      `json:"pilotKillsAsPilot"`
-	TitanKillsAsTitan                     int32                      `json:"titanKillsAsTitan"`
-	TelefragKils                          int32                      `json:"telefragKils"`
-	GrappleKills                          int32                      `json:"grappleKills"`
-	ThroughAWallKills                     int32                      `json:"throughAWallKills"`
-	DistractedKills                       int32                      `json:"distractedKills"`
-	PilotExecutePilotWhileCloaked         int32                      `json:"pilotExecutePilotWhileCloaked"`
-	PilotKillsWithHoloPilotActive         int32                      `json:"pilotKillsWithHoloPilotActive"`
-	PilotKillsWithAmpedWallActive         int32                      `json:"pilotKillsWithAmpedWallActive"`
+	Total                                 int32                      `pdef:"total"`
+	TotalWhileUsingBurnCard               int32                      `pdef:"totalWhileUsingBurnCard"`
+	TitansWhileTitanBCActive              int32                      `pdef:"titansWhileTitanBCActive"`
+	TotalPVP                              int32                      `pdef:"totalPVP"`
+	Pilots                                int32                      `pdef:"pilots"`
+	Spectres                              int32                      `pdef:"spectres"`
+	Marvins                               int32                      `pdef:"marvins"`
+	Grunts                                int32                      `pdef:"grunts"`
+	TotalTitans                           int32                      `pdef:"totalTitans"`
+	TotalTitansWhileDoomed                int32                      `pdef:"totalTitansWhileDoomed"`
+	TotalPilots                           int32                      `pdef:"totalPilots"`
+	TotalNPC                              int32                      `pdef:"totalNPC"`
+	AsPilot                               int32                      `pdef:"asPilot"`
+	AsTitan                               [TitanClassesCount]int32   `pdef:"asTitan"`
+	FirstStrikes                          int32                      `pdef:"firstStrikes"`
+	EjectingPilots                        int32                      `pdef:"ejectingPilots"`
+	WhileEjecting                         int32                      `pdef:"whileEjecting"`
+	CloakedPilots                         int32                      `pdef:"cloakedPilots"`
+	WhileCloaked                          int32                      `pdef:"whileCloaked"`
+	WallrunningPilots                     int32                      `pdef:"wallrunningPilots"`
+	WhileWallrunning                      int32                      `pdef:"whileWallrunning"`
+	WallhangingPilots                     int32                      `pdef:"wallhangingPilots"`
+	WhileWallhanging                      int32                      `pdef:"whileWallhanging"`
+	PilotExecution                        int32                      `pdef:"pilotExecution"`
+	PilotExecutePilot                     int32                      `pdef:"pilotExecutePilot"`
+	PilotExecutePilotByType               [PilotExecutionCount]int32 `pdef:"pilotExecutePilotByType"`
+	PilotKickMelee                        int32                      `pdef:"pilotKickMelee"`
+	PilotKickMeleePilot                   int32                      `pdef:"pilotKickMeleePilot"`
+	TitanMelee                            int32                      `pdef:"titanMelee"`
+	TitanMeleePilot                       int32                      `pdef:"titanMeleePilot"`
+	TitanStepCrush                        int32                      `pdef:"titanStepCrush"`
+	TitanStepCrushPilot                   int32                      `pdef:"titanStepCrushPilot"`
+	TitanExocutionIon                     int32                      `pdef:"titanExocutionIon"`
+	TitanExocutionScorch                  int32                      `pdef:"titanExocutionScorch"`
+	TitanExocutionNorthstar               int32                      `pdef:"titanExocutionNorthstar"`
+	TitanExocutionRonin                   int32                      `pdef:"titanExocutionRonin"`
+	TitanExocutionTone                    int32                      `pdef:"titanExocutionTone"`
+	TitanExocutionLegion                  int32                      `pdef:"titanExocutionLegion"`
+	TitanExocutionVanguard                int32                      `pdef:"titanExocutionVanguard"`
+	TitanFallKill                         int32                      `pdef:"titanFallKill"`
+	PetTitanKillsFollowMode               int32                      `pdef:"petTitanKillsFollowMode"`
+	PetTitanKillsGuardMode                int32                      `pdef:"petTitanKillsGuardMode"`
+	Rodeo_total                           int32                      `pdef:"rodeo_total"`
+	Rodeo_stryder                         int32                      `pdef:"rodeo_stryder"`
+	Rodeo_buddy                           int32                      `pdef:"rodeo_buddy"`
+	Rodeo_atlas                           int32                      `pdef:"rodeo_atlas"`
+	Rodeo_ogre                            int32                      `pdef:"rodeo_ogre"`
+	Pilot_headshots_total                 int32                      `pdef:"pilot_headshots_total"`
+	EvacShips                             int32                      `pdef:"evacShips"`
+	Flyers                                int32                      `pdef:"flyers"`
+	NuclearCore                           int32                      `pdef:"nuclearCore"`
+	EvacuatingEnemies                     int32                      `pdef:"evacuatingEnemies"`
+	ExportTrapKills                       int32                      `pdef:"exportTrapKills"`
+	CoopChallenge_NukeTitan_Kills         int32                      `pdef:"coopChallenge_NukeTitan_Kills"`
+	CoopChallenge_MortarTitan_Kills       int32                      `pdef:"coopChallenge_MortarTitan_Kills"`
+	CoopChallenge_EmpTitan_Kills          int32                      `pdef:"coopChallenge_EmpTitan_Kills"`
+	CoopChallenge_BubbleShieldGrunt_Kills int32                      `pdef:"coopChallenge_BubbleShieldGrunt_Kills"`
+	CoopChallenge_CloakDrone_Kills        int32                      `pdef:"coopChallenge_CloakDrone_Kills"`
+	CoopChallenge_Dropship_Kills          int32                      `pdef:"coopChallenge_Dropship_Kills"`
+	CoopChallenge_SuicideSpectre_Kills    int32                      `pdef:"coopChallenge_SuicideSpectre_Kills"`
+	CoopChallenge_Turret_Kills            int32                      `pdef:"coopChallenge_Turret_Kills"`
+	CoopChallenge_Sniper_Kills            int32                      `pdef:"coopChallenge_Sniper_Kills"`
+	AmpedVortexKills                      int32                      `pdef:"ampedVortexKills"`
+	MeleeWhileCloaked                     int32                      `pdef:"meleeWhileCloaked"`
+	PilotKillsWhileUsingActiveRadarPulse  int32                      `pdef:"pilotKillsWhileUsingActiveRadarPulse"`
+	TitanKillsAsPilot                     int32                      `pdef:"titanKillsAsPilot"`
+	PilotKillsWhileStimActive             int32                      `pdef:"pilotKillsWhileStimActive"`
+	PilotKillsAsTitan                     int32                      `pdef:"pilotKillsAsTitan"`
+	TotalAssists                          int32                      `pdef:"totalAssists"`
+	KillingSprees                         [TitanClassesCount]int32   `pdef:"killingSprees"`
+	PilotKillsAsPilot                     int32                      `pdef:"pilotKillsAsPilot"`
+	TitanKillsAsTitan                     int32                      `pdef:"titanKillsAsTitan"`
+	TelefragKils                          int32                      `pdef:"telefragKils"`
+	GrappleKills                          int32                      `pdef:"grappleKills"`
+	ThroughAWallKills                     int32                      `pdef:"throughAWallKills"`
+	DistractedKills                       int32                      `pdef:"distractedKills"`
+	PilotExecutePilotWhileCloaked         int32                      `pdef:"pilotExecutePilotWhileCloaked"`
+	PilotKillsWithHoloPilotActive         int32                      `pdef:"pilotKillsWithHoloPilotActive"`
+	PilotKillsWithAmpedWallActive         int32                      `pdef:"pilotKillsWithAmpedWallActive"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*SKillStats)(nil)
 var _ encoding.BinaryMarshaler = SKillStats{}
+var _ json.Unmarshaler = (*SKillStats)(nil)
+var _ json.Marshaler = SKillStats{}
 
 func (v *SKillStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 412 {
@@ -7627,23 +7789,34 @@ func (v SKillStats) MarshalBinary() ([]byte, error) {
 	putInt(b[408:412], v.PilotKillsWithAmpedWallActive)
 	return b, nil
 }
+func (v *SKillStats) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v SKillStats) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v SKillStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type SMapStats struct {
-	GamesJoined                         [GameModesCount]int32   `json:"gamesJoined"`
-	GamesCompleted                      [GameModesCount]int32   `json:"gamesCompleted"`
-	GamesWon                            [GameModesCount]int32   `json:"gamesWon"`
-	GamesLost                           [GameModesCount]int32   `json:"gamesLost"`
-	TopPlayerOnTeam                     [GameModesCount]int32   `json:"topPlayerOnTeam"`
-	Top3OnTeam                          [GameModesCount]int32   `json:"top3OnTeam"`
-	HoursPlayed                         [GameModesCount]float32 `json:"hoursPlayed"`
-	TimesScored100AttritionPoints_byMap int32                   `json:"timesScored100AttritionPoints_byMap"`
-	WinsByDifficulty                    [5]int32                `json:"winsByDifficulty"`
-	MatchesByDifficulty                 [5]int32                `json:"matchesByDifficulty"`
-	PerfectMatchesByDifficulty          [5]int32                `json:"perfectMatchesByDifficulty"`
+	GamesJoined                         [GameModesCount]int32   `pdef:"gamesJoined"`
+	GamesCompleted                      [GameModesCount]int32   `pdef:"gamesCompleted"`
+	GamesWon                            [GameModesCount]int32   `pdef:"gamesWon"`
+	GamesLost                           [GameModesCount]int32   `pdef:"gamesLost"`
+	TopPlayerOnTeam                     [GameModesCount]int32   `pdef:"topPlayerOnTeam"`
+	Top3OnTeam                          [GameModesCount]int32   `pdef:"top3OnTeam"`
+	HoursPlayed                         [GameModesCount]float32 `pdef:"hoursPlayed"`
+	TimesScored100AttritionPoints_byMap int32                   `pdef:"timesScored100AttritionPoints_byMap"`
+	WinsByDifficulty                    [5]int32                `pdef:"winsByDifficulty"`
+	MatchesByDifficulty                 [5]int32                `pdef:"matchesByDifficulty"`
+	PerfectMatchesByDifficulty          [5]int32                `pdef:"perfectMatchesByDifficulty"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*SMapStats)(nil)
 var _ encoding.BinaryMarshaler = SMapStats{}
+var _ json.Unmarshaler = (*SMapStats)(nil)
+var _ json.Marshaler = SMapStats{}
 
 func (v *SMapStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 456 {
@@ -7883,21 +8056,32 @@ func (v SMapStats) MarshalBinary() ([]byte, error) {
 	putInt(b[452:456], v.PerfectMatchesByDifficulty[4])
 	return b, nil
 }
+func (v *SMapStats) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v SMapStats) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v SMapStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type SMilesTraveled struct {
-	Total           float32                    `json:"total"`
-	AsTitan         [TitanClassesCount]float32 `json:"asTitan"`
-	AsPilot         float32                    `json:"asPilot"`
-	AsTitanTotal    float32                    `json:"asTitanTotal"`
-	Wallrunning     float32                    `json:"wallrunning"`
-	InAir           float32                    `json:"inAir"`
-	Ziplining       float32                    `json:"ziplining"`
-	OnFriendlyTitan float32                    `json:"onFriendlyTitan"`
-	OnEnemyTitan    float32                    `json:"onEnemyTitan"`
+	Total           float32                    `pdef:"total"`
+	AsTitan         [TitanClassesCount]float32 `pdef:"asTitan"`
+	AsPilot         float32                    `pdef:"asPilot"`
+	AsTitanTotal    float32                    `pdef:"asTitanTotal"`
+	Wallrunning     float32                    `pdef:"wallrunning"`
+	InAir           float32                    `pdef:"inAir"`
+	Ziplining       float32                    `pdef:"ziplining"`
+	OnFriendlyTitan float32                    `pdef:"onFriendlyTitan"`
+	OnEnemyTitan    float32                    `pdef:"onEnemyTitan"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*SMilesTraveled)(nil)
 var _ encoding.BinaryMarshaler = SMilesTraveled{}
+var _ json.Unmarshaler = (*SMilesTraveled)(nil)
+var _ json.Marshaler = SMilesTraveled{}
 
 func (v *SMilesTraveled) UnmarshalBinary(b []byte) error {
 	if len(b) != 60 {
@@ -7939,39 +8123,50 @@ func (v SMilesTraveled) MarshalBinary() ([]byte, error) {
 	putFloat(b[56:60], v.OnEnemyTitan)
 	return b, nil
 }
+func (v *SMilesTraveled) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v SMilesTraveled) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v SMilesTraveled) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type SMiscStats struct {
-	TitanFalls                    int32            `json:"titanFalls"`
-	TitanFallsFirst               int32            `json:"titanFallsFirst"`
-	TitanEmbarks                  int32            `json:"titanEmbarks"`
-	Rodeos                        int32            `json:"rodeos"`
-	RodeosFromEject               int32            `json:"rodeosFromEject"`
-	TimesEjected                  int32            `json:"timesEjected"`
-	TimesEjectedNuclear           int32            `json:"timesEjectedNuclear"`
-	BurnCardsEarned               int32            `json:"burnCardsEarned"`
-	BurnCardsSpent                int32            `json:"burnCardsSpent"`
-	BoostsActivated               int32            `json:"boostsActivated"`
-	SpectreLeeches                int32            `json:"spectreLeeches"`
-	SpectreLeechesByMap           [MapsCount]int32 `json:"spectreLeechesByMap"`
-	EvacsAttempted                int32            `json:"evacsAttempted"`
-	EvacsSurvived                 int32            `json:"evacsSurvived"`
-	FlagsCaptured                 int32            `json:"flagsCaptured"`
-	FlagsReturned                 int32            `json:"flagsReturned"`
-	ArcCannonMultiKills           int32            `json:"arcCannonMultiKills"`
-	GruntsConscripted             int32            `json:"gruntsConscripted"`
-	HardpointsCaptured            int32            `json:"hardpointsCaptured"`
-	ChallengeTiersCompleted       int32            `json:"challengeTiersCompleted"`
-	ChallengesCompleted           int32            `json:"challengesCompleted"`
-	DailyChallengesCompleted      int32            `json:"dailyChallengesCompleted"`
-	TimesLastTitanRemaining       int32            `json:"timesLastTitanRemaining"`
-	KillingSprees                 int32            `json:"killingSprees"`
-	CoopChallengesCompleted       int32            `json:"coopChallengesCompleted"`
-	ForgedCertificationsUsed      int32            `json:"forgedCertificationsUsed"`
-	RegenForgedCertificationsUsed int32            `json:"regenForgedCertificationsUsed"`
+	TitanFalls                    int32            `pdef:"titanFalls"`
+	TitanFallsFirst               int32            `pdef:"titanFallsFirst"`
+	TitanEmbarks                  int32            `pdef:"titanEmbarks"`
+	Rodeos                        int32            `pdef:"rodeos"`
+	RodeosFromEject               int32            `pdef:"rodeosFromEject"`
+	TimesEjected                  int32            `pdef:"timesEjected"`
+	TimesEjectedNuclear           int32            `pdef:"timesEjectedNuclear"`
+	BurnCardsEarned               int32            `pdef:"burnCardsEarned"`
+	BurnCardsSpent                int32            `pdef:"burnCardsSpent"`
+	BoostsActivated               int32            `pdef:"boostsActivated"`
+	SpectreLeeches                int32            `pdef:"spectreLeeches"`
+	SpectreLeechesByMap           [MapsCount]int32 `pdef:"spectreLeechesByMap"`
+	EvacsAttempted                int32            `pdef:"evacsAttempted"`
+	EvacsSurvived                 int32            `pdef:"evacsSurvived"`
+	FlagsCaptured                 int32            `pdef:"flagsCaptured"`
+	FlagsReturned                 int32            `pdef:"flagsReturned"`
+	ArcCannonMultiKills           int32            `pdef:"arcCannonMultiKills"`
+	GruntsConscripted             int32            `pdef:"gruntsConscripted"`
+	HardpointsCaptured            int32            `pdef:"hardpointsCaptured"`
+	ChallengeTiersCompleted       int32            `pdef:"challengeTiersCompleted"`
+	ChallengesCompleted           int32            `pdef:"challengesCompleted"`
+	DailyChallengesCompleted      int32            `pdef:"dailyChallengesCompleted"`
+	TimesLastTitanRemaining       int32            `pdef:"timesLastTitanRemaining"`
+	KillingSprees                 int32            `pdef:"killingSprees"`
+	CoopChallengesCompleted       int32            `pdef:"coopChallengesCompleted"`
+	ForgedCertificationsUsed      int32            `pdef:"forgedCertificationsUsed"`
+	RegenForgedCertificationsUsed int32            `pdef:"regenForgedCertificationsUsed"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*SMiscStats)(nil)
 var _ encoding.BinaryMarshaler = SMiscStats{}
+var _ json.Unmarshaler = (*SMiscStats)(nil)
+var _ json.Marshaler = SMiscStats{}
 
 func (v *SMiscStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 204 {
@@ -8085,23 +8280,34 @@ func (v SMiscStats) MarshalBinary() ([]byte, error) {
 	putInt(b[200:204], v.RegenForgedCertificationsUsed)
 	return b, nil
 }
+func (v *SMiscStats) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v SMiscStats) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v SMiscStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type STitanStats struct {
-	Pilots                     int32    `json:"pilots"`
-	TitansTotal                int32    `json:"titansTotal"`
-	Ejections                  int32    `json:"ejections"`
-	TitansWhileDoomed          int32    `json:"titansWhileDoomed"`
-	TitanDamage                int32    `json:"titanDamage"`
-	TitansAsPrime              int32    `json:"titansAsPrime"`
-	PilotsAsPrime              int32    `json:"pilotsAsPrime"`
-	ExecutionsAsPrime          int32    `json:"executionsAsPrime"`
-	CoresEarned                int32    `json:"coresEarned"`
-	MatchesByDifficulty        [5]int32 `json:"matchesByDifficulty"`
-	PerfectMatchesByDifficulty [5]int32 `json:"perfectMatchesByDifficulty"`
+	Pilots                     int32    `pdef:"pilots"`
+	TitansTotal                int32    `pdef:"titansTotal"`
+	Ejections                  int32    `pdef:"ejections"`
+	TitansWhileDoomed          int32    `pdef:"titansWhileDoomed"`
+	TitanDamage                int32    `pdef:"titanDamage"`
+	TitansAsPrime              int32    `pdef:"titansAsPrime"`
+	PilotsAsPrime              int32    `pdef:"pilotsAsPrime"`
+	ExecutionsAsPrime          int32    `pdef:"executionsAsPrime"`
+	CoresEarned                int32    `pdef:"coresEarned"`
+	MatchesByDifficulty        [5]int32 `pdef:"matchesByDifficulty"`
+	PerfectMatchesByDifficulty [5]int32 `pdef:"perfectMatchesByDifficulty"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*STitanStats)(nil)
 var _ encoding.BinaryMarshaler = STitanStats{}
+var _ json.Unmarshaler = (*STitanStats)(nil)
+var _ json.Marshaler = STitanStats{}
 
 func (v *STitanStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 76 {
@@ -8151,24 +8357,35 @@ func (v STitanStats) MarshalBinary() ([]byte, error) {
 	putInt(b[72:76], v.PerfectMatchesByDifficulty[4])
 	return b, nil
 }
+func (v *STitanStats) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v STitanStats) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v STitanStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type SWeaponKillStats struct {
-	Total           int32                    `json:"total"`
-	Pilots          int32                    `json:"pilots"`
-	Ejecting_pilots int32                    `json:"ejecting_pilots"`
-	Spectres        int32                    `json:"spectres"`
-	Marvins         int32                    `json:"marvins"`
-	Grunts          int32                    `json:"grunts"`
-	Ai              int32                    `json:"ai"`
-	TitansTotal     int32                    `json:"titansTotal"`
-	Titans          [TitanClassesCount]int32 `json:"titans"`
-	NpcTitans       [TitanClassesCount]int32 `json:"npcTitans"`
-	AssistsTotal    int32                    `json:"assistsTotal"`
-	KillingSprees   int32                    `json:"killingSprees"`
+	Total           int32                    `pdef:"total"`
+	Pilots          int32                    `pdef:"pilots"`
+	Ejecting_pilots int32                    `pdef:"ejecting_pilots"`
+	Spectres        int32                    `pdef:"spectres"`
+	Marvins         int32                    `pdef:"marvins"`
+	Grunts          int32                    `pdef:"grunts"`
+	Ai              int32                    `pdef:"ai"`
+	TitansTotal     int32                    `pdef:"titansTotal"`
+	Titans          [TitanClassesCount]int32 `pdef:"titans"`
+	NpcTitans       [TitanClassesCount]int32 `pdef:"npcTitans"`
+	AssistsTotal    int32                    `pdef:"assistsTotal"`
+	KillingSprees   int32                    `pdef:"killingSprees"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*SWeaponKillStats)(nil)
 var _ encoding.BinaryMarshaler = SWeaponKillStats{}
+var _ json.Unmarshaler = (*SWeaponKillStats)(nil)
+var _ json.Marshaler = SWeaponKillStats{}
 
 func (v *SWeaponKillStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 96 {
@@ -8228,19 +8445,30 @@ func (v SWeaponKillStats) MarshalBinary() ([]byte, error) {
 	putInt(b[92:96], v.KillingSprees)
 	return b, nil
 }
+func (v *SWeaponKillStats) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v SWeaponKillStats) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v SWeaponKillStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type SWeaponStats struct {
-	HoursUsed     float32 `json:"hoursUsed"`
-	HoursEquipped float32 `json:"hoursEquipped"`
-	ShotsFired    int32   `json:"shotsFired"`
-	ShotsHit      int32   `json:"shotsHit"`
-	Headshots     int32   `json:"headshots"`
-	CritHits      int32   `json:"critHits"`
-	TitanDamage   int32   `json:"titanDamage"`
+	HoursUsed     float32 `pdef:"hoursUsed"`
+	HoursEquipped float32 `pdef:"hoursEquipped"`
+	ShotsFired    int32   `pdef:"shotsFired"`
+	ShotsHit      int32   `pdef:"shotsHit"`
+	Headshots     int32   `pdef:"headshots"`
+	CritHits      int32   `pdef:"critHits"`
+	TitanDamage   int32   `pdef:"titanDamage"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*SWeaponStats)(nil)
 var _ encoding.BinaryMarshaler = SWeaponStats{}
+var _ json.Unmarshaler = (*SWeaponStats)(nil)
+var _ json.Marshaler = SWeaponStats{}
 
 func (v *SWeaponStats) UnmarshalBinary(b []byte) error {
 	if len(b) != 28 {
@@ -8266,13 +8494,24 @@ func (v SWeaponStats) MarshalBinary() ([]byte, error) {
 	putInt(b[24:28], v.TitanDamage)
 	return b, nil
 }
+func (v *SWeaponStats) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v SWeaponStats) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v SWeaponStats) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type SpawnLoadout struct {
-	Index int32 `json:"index"`
+	Index int32 `pdef:"index"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*SpawnLoadout)(nil)
 var _ encoding.BinaryMarshaler = SpawnLoadout{}
+var _ json.Unmarshaler = (*SpawnLoadout)(nil)
+var _ json.Marshaler = SpawnLoadout{}
 
 func (v *SpawnLoadout) UnmarshalBinary(b []byte) error {
 	if len(b) != 4 {
@@ -8286,15 +8525,26 @@ func (v SpawnLoadout) MarshalBinary() ([]byte, error) {
 	putInt(b[0:4], v.Index)
 	return b, nil
 }
+func (v *SpawnLoadout) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v SpawnLoadout) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v SpawnLoadout) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type Struct_activeBurnCardData struct {
-	CardRef      BurnCard `json:"cardRef"`
-	LastCardRef  BurnCard `json:"lastCardRef"`
-	ClearOnStart bool     `json:"clearOnStart"`
+	CardRef      BurnCard `pdef:"cardRef"`
+	LastCardRef  BurnCard `pdef:"lastCardRef"`
+	ClearOnStart bool     `pdef:"clearOnStart"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*Struct_activeBurnCardData)(nil)
 var _ encoding.BinaryMarshaler = Struct_activeBurnCardData{}
+var _ json.Unmarshaler = (*Struct_activeBurnCardData)(nil)
+var _ json.Marshaler = Struct_activeBurnCardData{}
 
 func (v *Struct_activeBurnCardData) UnmarshalBinary(b []byte) error {
 	if len(b) != 3 {
@@ -8312,13 +8562,24 @@ func (v Struct_activeBurnCardData) MarshalBinary() ([]byte, error) {
 	putBool(b[2:3], v.ClearOnStart)
 	return b, nil
 }
+func (v *Struct_activeBurnCardData) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v Struct_activeBurnCardData) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v Struct_activeBurnCardData) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type Struct_blackMarketBurnCardUpgrades struct {
-	CardRef BurnCard `json:"cardRef"`
+	CardRef BurnCard `pdef:"cardRef"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*Struct_blackMarketBurnCardUpgrades)(nil)
 var _ encoding.BinaryMarshaler = Struct_blackMarketBurnCardUpgrades{}
+var _ json.Unmarshaler = (*Struct_blackMarketBurnCardUpgrades)(nil)
+var _ json.Marshaler = Struct_blackMarketBurnCardUpgrades{}
 
 func (v *Struct_blackMarketBurnCardUpgrades) UnmarshalBinary(b []byte) error {
 	if len(b) != 1 {
@@ -8332,14 +8593,25 @@ func (v Struct_blackMarketBurnCardUpgrades) MarshalBinary() ([]byte, error) {
 	putEnum(b[0:1], uint8(v.CardRef))
 	return b, nil
 }
+func (v *Struct_blackMarketBurnCardUpgrades) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v Struct_blackMarketBurnCardUpgrades) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v Struct_blackMarketBurnCardUpgrades) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type Struct_historyBurnCardData struct {
-	Collected int32 `json:"collected"`
-	Spent     int32 `json:"spent"`
+	Collected int32 `pdef:"collected"`
+	Spent     int32 `pdef:"spent"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*Struct_historyBurnCardData)(nil)
 var _ encoding.BinaryMarshaler = Struct_historyBurnCardData{}
+var _ json.Unmarshaler = (*Struct_historyBurnCardData)(nil)
+var _ json.Marshaler = Struct_historyBurnCardData{}
 
 func (v *Struct_historyBurnCardData) UnmarshalBinary(b []byte) error {
 	if len(b) != 8 {
@@ -8355,14 +8627,25 @@ func (v Struct_historyBurnCardData) MarshalBinary() ([]byte, error) {
 	putInt(b[4:8], v.Spent)
 	return b, nil
 }
+func (v *Struct_historyBurnCardData) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v Struct_historyBurnCardData) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v Struct_historyBurnCardData) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type Struct_ranked struct {
-	IsPlayingRanked bool  `json:"isPlayingRanked"`
-	CurrentRank     int32 `json:"currentRank"`
+	IsPlayingRanked bool  `pdef:"isPlayingRanked"`
+	CurrentRank     int32 `pdef:"currentRank"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*Struct_ranked)(nil)
 var _ encoding.BinaryMarshaler = Struct_ranked{}
+var _ json.Unmarshaler = (*Struct_ranked)(nil)
+var _ json.Marshaler = Struct_ranked{}
 
 func (v *Struct_ranked) UnmarshalBinary(b []byte) error {
 	if len(b) != 5 {
@@ -8378,34 +8661,45 @@ func (v Struct_ranked) MarshalBinary() ([]byte, error) {
 	putInt(b[1:5], v.CurrentRank)
 	return b, nil
 }
+func (v *Struct_ranked) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v Struct_ranked) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v Struct_ranked) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type TitanLoadout struct {
-	Name             string                     `json:"name"`
-	TitanClass       TitanClasses               `json:"titanClass"`
-	PrimaryMod       TitanMod                   `json:"primaryMod"`
-	Special          LoadoutWeaponsAndAbilities `json:"special"`
-	Antirodeo        LoadoutWeaponsAndAbilities `json:"antirodeo"`
-	Passive1         TitanPassive               `json:"passive1"`
-	Passive2         TitanPassive               `json:"passive2"`
-	Passive3         TitanPassive               `json:"passive3"`
-	Passive4         TitanPassive               `json:"passive4"`
-	Passive5         TitanPassive               `json:"passive5"`
-	Passive6         TitanPassive               `json:"passive6"`
-	TitanExecution   TitanExecution             `json:"titanExecution"`
-	SkinIndex        int32                      `json:"skinIndex"`
-	CamoIndex        int32                      `json:"camoIndex"`
-	DecalIndex       int32                      `json:"decalIndex"`
-	PrimarySkinIndex int32                      `json:"primarySkinIndex"`
-	PrimaryCamoIndex int32                      `json:"primaryCamoIndex"`
-	IsPrime          TitanIsPrimeTitan          `json:"isPrime"`
-	PrimeSkinIndex   int32                      `json:"primeSkinIndex"`
-	PrimeCamoIndex   int32                      `json:"primeCamoIndex"`
-	PrimeDecalIndex  int32                      `json:"primeDecalIndex"`
-	ShowArmBadge     int32                      `json:"showArmBadge"`
+	Name             string                     `pdef:"name"`
+	TitanClass       TitanClasses               `pdef:"titanClass"`
+	PrimaryMod       TitanMod                   `pdef:"primaryMod"`
+	Special          LoadoutWeaponsAndAbilities `pdef:"special"`
+	Antirodeo        LoadoutWeaponsAndAbilities `pdef:"antirodeo"`
+	Passive1         TitanPassive               `pdef:"passive1"`
+	Passive2         TitanPassive               `pdef:"passive2"`
+	Passive3         TitanPassive               `pdef:"passive3"`
+	Passive4         TitanPassive               `pdef:"passive4"`
+	Passive5         TitanPassive               `pdef:"passive5"`
+	Passive6         TitanPassive               `pdef:"passive6"`
+	TitanExecution   TitanExecution             `pdef:"titanExecution"`
+	SkinIndex        int32                      `pdef:"skinIndex"`
+	CamoIndex        int32                      `pdef:"camoIndex"`
+	DecalIndex       int32                      `pdef:"decalIndex"`
+	PrimarySkinIndex int32                      `pdef:"primarySkinIndex"`
+	PrimaryCamoIndex int32                      `pdef:"primaryCamoIndex"`
+	IsPrime          TitanIsPrimeTitan          `pdef:"isPrime"`
+	PrimeSkinIndex   int32                      `pdef:"primeSkinIndex"`
+	PrimeCamoIndex   int32                      `pdef:"primeCamoIndex"`
+	PrimeDecalIndex  int32                      `pdef:"primeDecalIndex"`
+	ShowArmBadge     int32                      `pdef:"showArmBadge"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*TitanLoadout)(nil)
 var _ encoding.BinaryMarshaler = TitanLoadout{}
+var _ json.Unmarshaler = (*TitanLoadout)(nil)
+var _ json.Marshaler = TitanLoadout{}
 
 func (v *TitanLoadout) UnmarshalBinary(b []byte) error {
 	if len(b) != 90 {
@@ -8463,28 +8757,39 @@ func (v TitanLoadout) MarshalBinary() ([]byte, error) {
 	putInt(b[86:90], v.ShowArmBadge)
 	return b, nil
 }
+func (v *TitanLoadout) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v TitanLoadout) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v TitanLoadout) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type TitanMain struct {
-	NewPassives              [2]int32 `json:"newPassives"`
-	UnlockedPassives         [2]int32 `json:"unlockedPassives"`
-	NewSkins                 [5]int32 `json:"newSkins"`
-	UnlockedSkins            [5]int32 `json:"unlockedSkins"`
-	NewPrimeSkins            [2]int32 `json:"newPrimeSkins"`
-	UnlockedPrimeSkins       [2]int32 `json:"unlockedPrimeSkins"`
-	NewWeaponSkins           [5]int32 `json:"newWeaponSkins"`
-	UnlockedWeaponSkins      [5]int32 `json:"unlockedWeaponSkins"`
-	NewPrimeWeaponSkins      int32    `json:"newPrimeWeaponSkins"`
-	UnlockedPrimeWeaponSkins int32    `json:"unlockedPrimeWeaponSkins"`
-	NewTitanDecals           [3]int32 `json:"newTitanDecals"`
-	UnlockedTitanDecals      [3]int32 `json:"unlockedTitanDecals"`
-	NewPrimeTitanDecals      int32    `json:"newPrimeTitanDecals"`
-	UnlockedPrimeTitanDecals int32    `json:"unlockedPrimeTitanDecals"`
-	UnlockedFDUpgrades       [2]int32 `json:"unlockedFDUpgrades"`
-	NewFDUpgrades            [2]int32 `json:"newFDUpgrades"`
+	NewPassives              [2]int32 `pdef:"newPassives"`
+	UnlockedPassives         [2]int32 `pdef:"unlockedPassives"`
+	NewSkins                 [5]int32 `pdef:"newSkins"`
+	UnlockedSkins            [5]int32 `pdef:"unlockedSkins"`
+	NewPrimeSkins            [2]int32 `pdef:"newPrimeSkins"`
+	UnlockedPrimeSkins       [2]int32 `pdef:"unlockedPrimeSkins"`
+	NewWeaponSkins           [5]int32 `pdef:"newWeaponSkins"`
+	UnlockedWeaponSkins      [5]int32 `pdef:"unlockedWeaponSkins"`
+	NewPrimeWeaponSkins      int32    `pdef:"newPrimeWeaponSkins"`
+	UnlockedPrimeWeaponSkins int32    `pdef:"unlockedPrimeWeaponSkins"`
+	NewTitanDecals           [3]int32 `pdef:"newTitanDecals"`
+	UnlockedTitanDecals      [3]int32 `pdef:"unlockedTitanDecals"`
+	NewPrimeTitanDecals      int32    `pdef:"newPrimeTitanDecals"`
+	UnlockedPrimeTitanDecals int32    `pdef:"unlockedPrimeTitanDecals"`
+	UnlockedFDUpgrades       [2]int32 `pdef:"unlockedFDUpgrades"`
+	NewFDUpgrades            [2]int32 `pdef:"newFDUpgrades"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*TitanMain)(nil)
 var _ encoding.BinaryMarshaler = TitanMain{}
+var _ json.Unmarshaler = (*TitanMain)(nil)
+var _ json.Marshaler = TitanMain{}
 
 func (v *TitanMain) UnmarshalBinary(b []byte) error {
 	if len(b) != 168 {
@@ -8580,26 +8885,37 @@ func (v TitanMain) MarshalBinary() ([]byte, error) {
 	putInt(b[164:168], v.NewFDUpgrades[1])
 	return b, nil
 }
+func (v *TitanMain) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v TitanMain) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v TitanMain) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type WeaponMain struct {
-	WeaponStats              SWeaponStats     `json:"weaponStats"`
-	WeaponKillStats          SWeaponKillStats `json:"weaponKillStats"`
-	WeaponXP                 int32            `json:"weaponXP"`
-	PreviousWeaponXP         int32            `json:"previousWeaponXP"`
-	ProScreenKills           int32            `json:"proScreenKills"`
-	PreviousProScreenKills   int32            `json:"previousProScreenKills"`
-	NewMods                  int32            `json:"newMods"`
-	UnlockedMods             int32            `json:"unlockedMods"`
-	NewWeaponSkins           [5]int32         `json:"newWeaponSkins"`
-	UnlockedWeaponSkins      [5]int32         `json:"unlockedWeaponSkins"`
-	NewPrimeWeaponSkins      [6]int32         `json:"newPrimeWeaponSkins"`
-	UnlockedPrimeWeaponSkins [6]int32         `json:"unlockedPrimeWeaponSkins"`
-	NewFeatures              int32            `json:"newFeatures"`
-	UnlockedFeatures         int32            `json:"unlockedFeatures"`
+	WeaponStats              SWeaponStats     `pdef:"weaponStats"`
+	WeaponKillStats          SWeaponKillStats `pdef:"weaponKillStats"`
+	WeaponXP                 int32            `pdef:"weaponXP"`
+	PreviousWeaponXP         int32            `pdef:"previousWeaponXP"`
+	ProScreenKills           int32            `pdef:"proScreenKills"`
+	PreviousProScreenKills   int32            `pdef:"previousProScreenKills"`
+	NewMods                  int32            `pdef:"newMods"`
+	UnlockedMods             int32            `pdef:"unlockedMods"`
+	NewWeaponSkins           [5]int32         `pdef:"newWeaponSkins"`
+	UnlockedWeaponSkins      [5]int32         `pdef:"unlockedWeaponSkins"`
+	NewPrimeWeaponSkins      [6]int32         `pdef:"newPrimeWeaponSkins"`
+	UnlockedPrimeWeaponSkins [6]int32         `pdef:"unlockedPrimeWeaponSkins"`
+	NewFeatures              int32            `pdef:"newFeatures"`
+	UnlockedFeatures         int32            `pdef:"unlockedFeatures"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*WeaponMain)(nil)
 var _ encoding.BinaryMarshaler = WeaponMain{}
+var _ json.Unmarshaler = (*WeaponMain)(nil)
+var _ json.Marshaler = WeaponMain{}
 
 func (v *WeaponMain) UnmarshalBinary(b []byte) error {
 	if len(b) != 244 {
@@ -8687,14 +9003,25 @@ func (v WeaponMain) MarshalBinary() ([]byte, error) {
 	putInt(b[240:244], v.UnlockedFeatures)
 	return b, nil
 }
+func (v *WeaponMain) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v WeaponMain) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v WeaponMain) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
+}
 
 type WeaponOffhand struct {
-	WeaponStats     SWeaponStats     `json:"weaponStats"`
-	WeaponKillStats SWeaponKillStats `json:"weaponKillStats"`
+	WeaponStats     SWeaponStats     `pdef:"weaponStats"`
+	WeaponKillStats SWeaponKillStats `pdef:"weaponKillStats"`
 }
 
 var _ encoding.BinaryUnmarshaler = (*WeaponOffhand)(nil)
 var _ encoding.BinaryMarshaler = WeaponOffhand{}
+var _ json.Unmarshaler = (*WeaponOffhand)(nil)
+var _ json.Marshaler = WeaponOffhand{}
 
 func (v *WeaponOffhand) UnmarshalBinary(b []byte) error {
 	if len(b) != 124 {
@@ -8721,6 +9048,15 @@ func (v WeaponOffhand) MarshalBinary() ([]byte, error) {
 		copy(b[28:124], x)
 	}
 	return b, nil
+}
+func (v *WeaponOffhand) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (v WeaponOffhand) MarshalJSON() ([]byte, error) {
+	return v.MarshalJSONFilter(nil)
+}
+func (v WeaponOffhand) MarshalJSONFilter(filter func(path ...string) bool) ([]byte, error) {
+	return pdataMarshalJSONStruct(v, filter)
 }
 
 type BurnCard uint8
@@ -8809,9 +9145,10 @@ const (
 
 var _ fmt.Stringer = BurnCard(0)
 var _ fmt.GoStringer = BurnCard(0)
-
-//var _ encoding.TextMarshaler = BurnCard(0)
+var _ encoding.TextMarshaler = BurnCard(0)
 var _ encoding.TextUnmarshaler = (*BurnCard)(nil)
+var _ json.Marshaler = BurnCard(0)
+var _ json.Unmarshaler = (*BurnCard)(nil)
 
 func (v BurnCard) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -9306,6 +9643,331 @@ func (v *BurnCard) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v BurnCard) MarshalJSON() ([]byte, error) {
+	switch v {
+	case BurnCard_NULL:
+		return []byte("\"NULL\""), nil
+	case BurnCard_bc_conscription:
+		return []byte("\"bc_conscription\""), nil
+	case BurnCard_bc_double_xp:
+		return []byte("\"bc_double_xp\""), nil
+	case BurnCard_bc_free_xp:
+		return []byte("\"bc_free_xp\""), nil
+	case BurnCard_bc_fast_cooldown1:
+		return []byte("\"bc_fast_cooldown1\""), nil
+	case BurnCard_bc_fast_cooldown2:
+		return []byte("\"bc_fast_cooldown2\""), nil
+	case BurnCard_bc_super_stim:
+		return []byte("\"bc_super_stim\""), nil
+	case BurnCard_bc_super_cloak:
+		return []byte("\"bc_super_cloak\""), nil
+	case BurnCard_bc_super_sonar:
+		return []byte("\"bc_super_sonar\""), nil
+	case BurnCard_bc_summon_ogre:
+		return []byte("\"bc_summon_ogre\""), nil
+	case BurnCard_bc_cloak_forever:
+		return []byte("\"bc_cloak_forever\""), nil
+	case BurnCard_bc_stim_forever:
+		return []byte("\"bc_stim_forever\""), nil
+	case BurnCard_bc_sonar_forever:
+		return []byte("\"bc_sonar_forever\""), nil
+	case BurnCard_bc_summon_stryder:
+		return []byte("\"bc_summon_stryder\""), nil
+	case BurnCard_bc_spectre_virus:
+		return []byte("\"bc_spectre_virus\""), nil
+	case BurnCard_bc_play_spectre:
+		return []byte("\"bc_play_spectre\""), nil
+	case BurnCard_bc_double_agent:
+		return []byte("\"bc_double_agent\""), nil
+	case BurnCard_bc_minimap:
+		return []byte("\"bc_minimap\""), nil
+	case BurnCard_bc_summon_atlas:
+		return []byte("\"bc_summon_atlas\""), nil
+	case BurnCard_bc_megaturrets:
+		return []byte("\"bc_megaturrets\""), nil
+	case BurnCard_bc_summon_dogfighter:
+		return []byte("\"bc_summon_dogfighter\""), nil
+	case BurnCard_bc_wifi_spectre_hack:
+		return []byte("\"bc_wifi_spectre_hack\""), nil
+	case BurnCard_bc_nuclear_core:
+		return []byte("\"bc_nuclear_core\""), nil
+	case BurnCard_bc_core_charged:
+		return []byte("\"bc_core_charged\""), nil
+	case BurnCard_bc_smart_pistol_m2:
+		return []byte("\"bc_smart_pistol_m2\""), nil
+	case BurnCard_bc_r97_m2:
+		return []byte("\"bc_r97_m2\""), nil
+	case BurnCard_bc_rspn101_m2:
+		return []byte("\"bc_rspn101_m2\""), nil
+	case BurnCard_bc_dmr_m2:
+		return []byte("\"bc_dmr_m2\""), nil
+	case BurnCard_bc_shotgun_m2:
+		return []byte("\"bc_shotgun_m2\""), nil
+	case BurnCard_bc_lmg_m2:
+		return []byte("\"bc_lmg_m2\""), nil
+	case BurnCard_bc_g2_m2:
+		return []byte("\"bc_g2_m2\""), nil
+	case BurnCard_bc_car_m2:
+		return []byte("\"bc_car_m2\""), nil
+	case BurnCard_bc_hemlok_m2:
+		return []byte("\"bc_hemlok_m2\""), nil
+	case BurnCard_bc_sniper_m2:
+		return []byte("\"bc_sniper_m2\""), nil
+	case BurnCard_bc_smr_m2:
+		return []byte("\"bc_smr_m2\""), nil
+	case BurnCard_bc_mgl_m2:
+		return []byte("\"bc_mgl_m2\""), nil
+	case BurnCard_bc_defender_m2:
+		return []byte("\"bc_defender_m2\""), nil
+	case BurnCard_bc_rocket_launcher_m2:
+		return []byte("\"bc_rocket_launcher_m2\""), nil
+	case BurnCard_bc_semipistol_m2:
+		return []byte("\"bc_semipistol_m2\""), nil
+	case BurnCard_bc_autopistol_m2:
+		return []byte("\"bc_autopistol_m2\""), nil
+	case BurnCard_bc_wingman_m2:
+		return []byte("\"bc_wingman_m2\""), nil
+	case BurnCard_bc_satchel_m2:
+		return []byte("\"bc_satchel_m2\""), nil
+	case BurnCard_bc_frag_m2:
+		return []byte("\"bc_frag_m2\""), nil
+	case BurnCard_bc_arc_m2:
+		return []byte("\"bc_arc_m2\""), nil
+	case BurnCard_bc_prox_m2:
+		return []byte("\"bc_prox_m2\""), nil
+	case BurnCard_bc_pilot_warning:
+		return []byte("\"bc_pilot_warning\""), nil
+	case BurnCard_bc_rematch:
+		return []byte("\"bc_rematch\""), nil
+	case BurnCard_bc_minimap_scan:
+		return []byte("\"bc_minimap_scan\""), nil
+	case BurnCard_bc_free_build_time_1:
+		return []byte("\"bc_free_build_time_1\""), nil
+	case BurnCard_bc_free_build_time_2:
+		return []byte("\"bc_free_build_time_2\""), nil
+	case BurnCard_bc_fast_build_1:
+		return []byte("\"bc_fast_build_1\""), nil
+	case BurnCard_bc_fast_build_2:
+		return []byte("\"bc_fast_build_2\""), nil
+	case BurnCard_bc_hunt_soldier:
+		return []byte("\"bc_hunt_soldier\""), nil
+	case BurnCard_bc_hunt_spectre:
+		return []byte("\"bc_hunt_spectre\""), nil
+	case BurnCard_bc_hunt_titan:
+		return []byte("\"bc_hunt_titan\""), nil
+	case BurnCard_bc_hunt_pilot:
+		return []byte("\"bc_hunt_pilot\""), nil
+	case BurnCard_bc_auto_sonar:
+		return []byte("\"bc_auto_sonar\""), nil
+	case BurnCard_bc_fast_movespeed:
+		return []byte("\"bc_fast_movespeed\""), nil
+	case BurnCard_bc_auto_refill:
+		return []byte("\"bc_auto_refill\""), nil
+	case BurnCard_bc_dice_ondeath:
+		return []byte("\"bc_dice_ondeath\""), nil
+	case BurnCard_bc_titan_40mm_m2:
+		return []byte("\"bc_titan_40mm_m2\""), nil
+	case BurnCard_bc_titan_arc_cannon_m2:
+		return []byte("\"bc_titan_arc_cannon_m2\""), nil
+	case BurnCard_bc_titan_rocket_launcher_m2:
+		return []byte("\"bc_titan_rocket_launcher_m2\""), nil
+	case BurnCard_bc_titan_sniper_m2:
+		return []byte("\"bc_titan_sniper_m2\""), nil
+	case BurnCard_bc_titan_triple_threat_m2:
+		return []byte("\"bc_titan_triple_threat_m2\""), nil
+	case BurnCard_bc_titan_xo16_m2:
+		return []byte("\"bc_titan_xo16_m2\""), nil
+	case BurnCard_bc_titan_dumbfire_missile_m2:
+		return []byte("\"bc_titan_dumbfire_missile_m2\""), nil
+	case BurnCard_bc_titan_homing_rockets_m2:
+		return []byte("\"bc_titan_homing_rockets_m2\""), nil
+	case BurnCard_bc_titan_salvo_rockets_m2:
+		return []byte("\"bc_titan_salvo_rockets_m2\""), nil
+	case BurnCard_bc_titan_shoulder_rockets_m2:
+		return []byte("\"bc_titan_shoulder_rockets_m2\""), nil
+	case BurnCard_bc_titan_vortex_shield_m2:
+		return []byte("\"bc_titan_vortex_shield_m2\""), nil
+	case BurnCard_bc_titan_electric_smoke_m2:
+		return []byte("\"bc_titan_electric_smoke_m2\""), nil
+	case BurnCard_bc_titan_shield_wall_m2:
+		return []byte("\"bc_titan_shield_wall_m2\""), nil
+	case BurnCard_bc_titan_melee_m2:
+		return []byte("\"bc_titan_melee_m2\""), nil
+	case BurnCard_bc_extra_dash:
+		return []byte("\"bc_extra_dash\""), nil
+	case BurnCard_bc_lstar_m2:
+		return []byte("\"bc_lstar_m2\""), nil
+	case BurnCard_bc_mastiff_m2:
+		return []byte("\"bc_mastiff_m2\""), nil
+	case BurnCard_bc_vinson_m2:
+		return []byte("\"bc_vinson_m2\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *BurnCard) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"NULL\"":
+		*v = BurnCard_NULL
+	case "\"bc_conscription\"":
+		*v = BurnCard_bc_conscription
+	case "\"bc_double_xp\"":
+		*v = BurnCard_bc_double_xp
+	case "\"bc_free_xp\"":
+		*v = BurnCard_bc_free_xp
+	case "\"bc_fast_cooldown1\"":
+		*v = BurnCard_bc_fast_cooldown1
+	case "\"bc_fast_cooldown2\"":
+		*v = BurnCard_bc_fast_cooldown2
+	case "\"bc_super_stim\"":
+		*v = BurnCard_bc_super_stim
+	case "\"bc_super_cloak\"":
+		*v = BurnCard_bc_super_cloak
+	case "\"bc_super_sonar\"":
+		*v = BurnCard_bc_super_sonar
+	case "\"bc_summon_ogre\"":
+		*v = BurnCard_bc_summon_ogre
+	case "\"bc_cloak_forever\"":
+		*v = BurnCard_bc_cloak_forever
+	case "\"bc_stim_forever\"":
+		*v = BurnCard_bc_stim_forever
+	case "\"bc_sonar_forever\"":
+		*v = BurnCard_bc_sonar_forever
+	case "\"bc_summon_stryder\"":
+		*v = BurnCard_bc_summon_stryder
+	case "\"bc_spectre_virus\"":
+		*v = BurnCard_bc_spectre_virus
+	case "\"bc_play_spectre\"":
+		*v = BurnCard_bc_play_spectre
+	case "\"bc_double_agent\"":
+		*v = BurnCard_bc_double_agent
+	case "\"bc_minimap\"":
+		*v = BurnCard_bc_minimap
+	case "\"bc_summon_atlas\"":
+		*v = BurnCard_bc_summon_atlas
+	case "\"bc_megaturrets\"":
+		*v = BurnCard_bc_megaturrets
+	case "\"bc_summon_dogfighter\"":
+		*v = BurnCard_bc_summon_dogfighter
+	case "\"bc_wifi_spectre_hack\"":
+		*v = BurnCard_bc_wifi_spectre_hack
+	case "\"bc_nuclear_core\"":
+		*v = BurnCard_bc_nuclear_core
+	case "\"bc_core_charged\"":
+		*v = BurnCard_bc_core_charged
+	case "\"bc_smart_pistol_m2\"":
+		*v = BurnCard_bc_smart_pistol_m2
+	case "\"bc_r97_m2\"":
+		*v = BurnCard_bc_r97_m2
+	case "\"bc_rspn101_m2\"":
+		*v = BurnCard_bc_rspn101_m2
+	case "\"bc_dmr_m2\"":
+		*v = BurnCard_bc_dmr_m2
+	case "\"bc_shotgun_m2\"":
+		*v = BurnCard_bc_shotgun_m2
+	case "\"bc_lmg_m2\"":
+		*v = BurnCard_bc_lmg_m2
+	case "\"bc_g2_m2\"":
+		*v = BurnCard_bc_g2_m2
+	case "\"bc_car_m2\"":
+		*v = BurnCard_bc_car_m2
+	case "\"bc_hemlok_m2\"":
+		*v = BurnCard_bc_hemlok_m2
+	case "\"bc_sniper_m2\"":
+		*v = BurnCard_bc_sniper_m2
+	case "\"bc_smr_m2\"":
+		*v = BurnCard_bc_smr_m2
+	case "\"bc_mgl_m2\"":
+		*v = BurnCard_bc_mgl_m2
+	case "\"bc_defender_m2\"":
+		*v = BurnCard_bc_defender_m2
+	case "\"bc_rocket_launcher_m2\"":
+		*v = BurnCard_bc_rocket_launcher_m2
+	case "\"bc_semipistol_m2\"":
+		*v = BurnCard_bc_semipistol_m2
+	case "\"bc_autopistol_m2\"":
+		*v = BurnCard_bc_autopistol_m2
+	case "\"bc_wingman_m2\"":
+		*v = BurnCard_bc_wingman_m2
+	case "\"bc_satchel_m2\"":
+		*v = BurnCard_bc_satchel_m2
+	case "\"bc_frag_m2\"":
+		*v = BurnCard_bc_frag_m2
+	case "\"bc_arc_m2\"":
+		*v = BurnCard_bc_arc_m2
+	case "\"bc_prox_m2\"":
+		*v = BurnCard_bc_prox_m2
+	case "\"bc_pilot_warning\"":
+		*v = BurnCard_bc_pilot_warning
+	case "\"bc_rematch\"":
+		*v = BurnCard_bc_rematch
+	case "\"bc_minimap_scan\"":
+		*v = BurnCard_bc_minimap_scan
+	case "\"bc_free_build_time_1\"":
+		*v = BurnCard_bc_free_build_time_1
+	case "\"bc_free_build_time_2\"":
+		*v = BurnCard_bc_free_build_time_2
+	case "\"bc_fast_build_1\"":
+		*v = BurnCard_bc_fast_build_1
+	case "\"bc_fast_build_2\"":
+		*v = BurnCard_bc_fast_build_2
+	case "\"bc_hunt_soldier\"":
+		*v = BurnCard_bc_hunt_soldier
+	case "\"bc_hunt_spectre\"":
+		*v = BurnCard_bc_hunt_spectre
+	case "\"bc_hunt_titan\"":
+		*v = BurnCard_bc_hunt_titan
+	case "\"bc_hunt_pilot\"":
+		*v = BurnCard_bc_hunt_pilot
+	case "\"bc_auto_sonar\"":
+		*v = BurnCard_bc_auto_sonar
+	case "\"bc_fast_movespeed\"":
+		*v = BurnCard_bc_fast_movespeed
+	case "\"bc_auto_refill\"":
+		*v = BurnCard_bc_auto_refill
+	case "\"bc_dice_ondeath\"":
+		*v = BurnCard_bc_dice_ondeath
+	case "\"bc_titan_40mm_m2\"":
+		*v = BurnCard_bc_titan_40mm_m2
+	case "\"bc_titan_arc_cannon_m2\"":
+		*v = BurnCard_bc_titan_arc_cannon_m2
+	case "\"bc_titan_rocket_launcher_m2\"":
+		*v = BurnCard_bc_titan_rocket_launcher_m2
+	case "\"bc_titan_sniper_m2\"":
+		*v = BurnCard_bc_titan_sniper_m2
+	case "\"bc_titan_triple_threat_m2\"":
+		*v = BurnCard_bc_titan_triple_threat_m2
+	case "\"bc_titan_xo16_m2\"":
+		*v = BurnCard_bc_titan_xo16_m2
+	case "\"bc_titan_dumbfire_missile_m2\"":
+		*v = BurnCard_bc_titan_dumbfire_missile_m2
+	case "\"bc_titan_homing_rockets_m2\"":
+		*v = BurnCard_bc_titan_homing_rockets_m2
+	case "\"bc_titan_salvo_rockets_m2\"":
+		*v = BurnCard_bc_titan_salvo_rockets_m2
+	case "\"bc_titan_shoulder_rockets_m2\"":
+		*v = BurnCard_bc_titan_shoulder_rockets_m2
+	case "\"bc_titan_vortex_shield_m2\"":
+		*v = BurnCard_bc_titan_vortex_shield_m2
+	case "\"bc_titan_electric_smoke_m2\"":
+		*v = BurnCard_bc_titan_electric_smoke_m2
+	case "\"bc_titan_shield_wall_m2\"":
+		*v = BurnCard_bc_titan_shield_wall_m2
+	case "\"bc_titan_melee_m2\"":
+		*v = BurnCard_bc_titan_melee_m2
+	case "\"bc_extra_dash\"":
+		*v = BurnCard_bc_extra_dash
+	case "\"bc_lstar_m2\"":
+		*v = BurnCard_bc_lstar_m2
+	case "\"bc_mastiff_m2\"":
+		*v = BurnCard_bc_mastiff_m2
+	case "\"bc_vinson_m2\"":
+		*v = BurnCard_bc_vinson_m2
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type Challenge uint8
 
@@ -9492,9 +10154,10 @@ const (
 
 var _ fmt.Stringer = Challenge(0)
 var _ fmt.GoStringer = Challenge(0)
-
-//var _ encoding.TextMarshaler = Challenge(0)
+var _ encoding.TextMarshaler = Challenge(0)
 var _ encoding.TextUnmarshaler = (*Challenge)(nil)
+var _ json.Marshaler = Challenge(0)
+var _ json.Unmarshaler = (*Challenge)(nil)
 
 func (v Challenge) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -10583,6 +11246,727 @@ func (v *Challenge) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v Challenge) MarshalJSON() ([]byte, error) {
+	switch v {
+	case Challenge_NULL:
+		return []byte("\"NULL\""), nil
+	case Challenge_ch_games_played:
+		return []byte("\"ch_games_played\""), nil
+	case Challenge_ch_games_won:
+		return []byte("\"ch_games_won\""), nil
+	case Challenge_ch_games_mvp:
+		return []byte("\"ch_games_mvp\""), nil
+	case Challenge_ch_titan_falls:
+		return []byte("\"ch_titan_falls\""), nil
+	case Challenge_ch_rodeos:
+		return []byte("\"ch_rodeos\""), nil
+	case Challenge_ch_times_ejected:
+		return []byte("\"ch_times_ejected\""), nil
+	case Challenge_ch_spectres_leeched:
+		return []byte("\"ch_spectres_leeched\""), nil
+	case Challenge_ch_hours_played:
+		return []byte("\"ch_hours_played\""), nil
+	case Challenge_ch_hours_played_pilot:
+		return []byte("\"ch_hours_played_pilot\""), nil
+	case Challenge_ch_hours_played_titan:
+		return []byte("\"ch_hours_played_titan\""), nil
+	case Challenge_ch_hours_wallhang:
+		return []byte("\"ch_hours_wallhang\""), nil
+	case Challenge_ch_dist_total:
+		return []byte("\"ch_dist_total\""), nil
+	case Challenge_ch_dist_pilot:
+		return []byte("\"ch_dist_pilot\""), nil
+	case Challenge_ch_dist_titan:
+		return []byte("\"ch_dist_titan\""), nil
+	case Challenge_ch_dist_wallrun:
+		return []byte("\"ch_dist_wallrun\""), nil
+	case Challenge_ch_dist_inair:
+		return []byte("\"ch_dist_inair\""), nil
+	case Challenge_ch_dist_zipline:
+		return []byte("\"ch_dist_zipline\""), nil
+	case Challenge_ch_dist_on_friendly_titan:
+		return []byte("\"ch_dist_on_friendly_titan\""), nil
+	case Challenge_ch_dist_on_enemy_titan:
+		return []byte("\"ch_dist_on_enemy_titan\""), nil
+	case Challenge_ch_grunt_kills:
+		return []byte("\"ch_grunt_kills\""), nil
+	case Challenge_ch_spectre_kills:
+		return []byte("\"ch_spectre_kills\""), nil
+	case Challenge_ch_marvin_kills:
+		return []byte("\"ch_marvin_kills\""), nil
+	case Challenge_ch_first_strikes:
+		return []byte("\"ch_first_strikes\""), nil
+	case Challenge_ch_ejecting_pilot_kills:
+		return []byte("\"ch_ejecting_pilot_kills\""), nil
+	case Challenge_ch_kills_while_ejecting:
+		return []byte("\"ch_kills_while_ejecting\""), nil
+	case Challenge_ch_cloaked_pilot_kills:
+		return []byte("\"ch_cloaked_pilot_kills\""), nil
+	case Challenge_ch_kills_while_cloaked:
+		return []byte("\"ch_kills_while_cloaked\""), nil
+	case Challenge_ch_wallrunning_pilot_kills:
+		return []byte("\"ch_wallrunning_pilot_kills\""), nil
+	case Challenge_ch_wallhanging_pilot_kills:
+		return []byte("\"ch_wallhanging_pilot_kills\""), nil
+	case Challenge_ch_kills_while_wallrunning:
+		return []byte("\"ch_kills_while_wallrunning\""), nil
+	case Challenge_ch_kills_while_wallhanging:
+		return []byte("\"ch_kills_while_wallhanging\""), nil
+	case Challenge_ch_pilotExecutePilot:
+		return []byte("\"ch_pilotExecutePilot\""), nil
+	case Challenge_ch_pilotKickMelee:
+		return []byte("\"ch_pilotKickMelee\""), nil
+	case Challenge_ch_pilotKickMeleePilot:
+		return []byte("\"ch_pilotKickMeleePilot\""), nil
+	case Challenge_ch_titanMelee:
+		return []byte("\"ch_titanMelee\""), nil
+	case Challenge_ch_titanMeleePilot:
+		return []byte("\"ch_titanMeleePilot\""), nil
+	case Challenge_ch_titanStepCrush:
+		return []byte("\"ch_titanStepCrush\""), nil
+	case Challenge_ch_titanStepCrushPilot:
+		return []byte("\"ch_titanStepCrushPilot\""), nil
+	case Challenge_ch_titanExocutionStryder:
+		return []byte("\"ch_titanExocutionStryder\""), nil
+	case Challenge_ch_titanExocutionBuddy:
+		return []byte("\"ch_titanExocutionBuddy\""), nil
+	case Challenge_ch_titanExocutionAtlas:
+		return []byte("\"ch_titanExocutionAtlas\""), nil
+	case Challenge_ch_titanExocutionOgre:
+		return []byte("\"ch_titanExocutionOgre\""), nil
+	case Challenge_ch_titanFallKill:
+		return []byte("\"ch_titanFallKill\""), nil
+	case Challenge_ch_petTitanKillsFollowMode:
+		return []byte("\"ch_petTitanKillsFollowMode\""), nil
+	case Challenge_ch_petTitanKillsGuardMode:
+		return []byte("\"ch_petTitanKillsGuardMode\""), nil
+	case Challenge_ch_rodeo_kills:
+		return []byte("\"ch_rodeo_kills\""), nil
+	case Challenge_ch_40mm_kills:
+		return []byte("\"ch_40mm_kills\""), nil
+	case Challenge_ch_40mm_pilot_kills:
+		return []byte("\"ch_40mm_pilot_kills\""), nil
+	case Challenge_ch_40mm_titan_kills:
+		return []byte("\"ch_40mm_titan_kills\""), nil
+	case Challenge_ch_40mm_spectre_kills:
+		return []byte("\"ch_40mm_spectre_kills\""), nil
+	case Challenge_ch_40mm_grunt_kills:
+		return []byte("\"ch_40mm_grunt_kills\""), nil
+	case Challenge_ch_40mm_hours_used:
+		return []byte("\"ch_40mm_hours_used\""), nil
+	case Challenge_ch_40mm_crits:
+		return []byte("\"ch_40mm_crits\""), nil
+	case Challenge_ch_xo16_kills:
+		return []byte("\"ch_xo16_kills\""), nil
+	case Challenge_ch_xo16_pilot_kills:
+		return []byte("\"ch_xo16_pilot_kills\""), nil
+	case Challenge_ch_xo16_titan_kills:
+		return []byte("\"ch_xo16_titan_kills\""), nil
+	case Challenge_ch_xo16_spectre_kills:
+		return []byte("\"ch_xo16_spectre_kills\""), nil
+	case Challenge_ch_xo16_grunt_kills:
+		return []byte("\"ch_xo16_grunt_kills\""), nil
+	case Challenge_ch_xo16_hours_used:
+		return []byte("\"ch_xo16_hours_used\""), nil
+	case Challenge_ch_xo16_headshots:
+		return []byte("\"ch_xo16_headshots\""), nil
+	case Challenge_ch_xo16_crits:
+		return []byte("\"ch_xo16_crits\""), nil
+	case Challenge_ch_titan_sniper_kills:
+		return []byte("\"ch_titan_sniper_kills\""), nil
+	case Challenge_ch_titan_sniper_pilot_kills:
+		return []byte("\"ch_titan_sniper_pilot_kills\""), nil
+	case Challenge_ch_titan_sniper_titan_kills:
+		return []byte("\"ch_titan_sniper_titan_kills\""), nil
+	case Challenge_ch_titan_sniper_spectre_kills:
+		return []byte("\"ch_titan_sniper_spectre_kills\""), nil
+	case Challenge_ch_titan_sniper_grunt_kills:
+		return []byte("\"ch_titan_sniper_grunt_kills\""), nil
+	case Challenge_ch_titan_sniper_hours_used:
+		return []byte("\"ch_titan_sniper_hours_used\""), nil
+	case Challenge_ch_titan_sniper_crits:
+		return []byte("\"ch_titan_sniper_crits\""), nil
+	case Challenge_ch_rocket_launcher_kills:
+		return []byte("\"ch_rocket_launcher_kills\""), nil
+	case Challenge_ch_rocket_launcher_pilot_kills:
+		return []byte("\"ch_rocket_launcher_pilot_kills\""), nil
+	case Challenge_ch_rocket_launcher_titan_kills:
+		return []byte("\"ch_rocket_launcher_titan_kills\""), nil
+	case Challenge_ch_rocket_launcher_spectre_kills:
+		return []byte("\"ch_rocket_launcher_spectre_kills\""), nil
+	case Challenge_ch_rocket_launcher_grunt_kills:
+		return []byte("\"ch_rocket_launcher_grunt_kills\""), nil
+	case Challenge_ch_rocket_launcher_hours_used:
+		return []byte("\"ch_rocket_launcher_hours_used\""), nil
+	case Challenge_ch_triple_threat_kills:
+		return []byte("\"ch_triple_threat_kills\""), nil
+	case Challenge_ch_triple_threat_pilot_kills:
+		return []byte("\"ch_triple_threat_pilot_kills\""), nil
+	case Challenge_ch_triple_threat_titan_kills:
+		return []byte("\"ch_triple_threat_titan_kills\""), nil
+	case Challenge_ch_triple_threat_spectre_kills:
+		return []byte("\"ch_triple_threat_spectre_kills\""), nil
+	case Challenge_ch_triple_threat_grunt_kills:
+		return []byte("\"ch_triple_threat_grunt_kills\""), nil
+	case Challenge_ch_triple_threat_hours_used:
+		return []byte("\"ch_triple_threat_hours_used\""), nil
+	case Challenge_ch_salvo_rockets_kills:
+		return []byte("\"ch_salvo_rockets_kills\""), nil
+	case Challenge_ch_salvo_rockets_pilot_kills:
+		return []byte("\"ch_salvo_rockets_pilot_kills\""), nil
+	case Challenge_ch_salvo_rockets_titan_kills:
+		return []byte("\"ch_salvo_rockets_titan_kills\""), nil
+	case Challenge_ch_salvo_rockets_spectre_kills:
+		return []byte("\"ch_salvo_rockets_spectre_kills\""), nil
+	case Challenge_ch_salvo_rockets_grunt_kills:
+		return []byte("\"ch_salvo_rockets_grunt_kills\""), nil
+	case Challenge_ch_salvo_rockets_hours_used:
+		return []byte("\"ch_salvo_rockets_hours_used\""), nil
+	case Challenge_ch_homing_rockets_titan_kills:
+		return []byte("\"ch_homing_rockets_titan_kills\""), nil
+	case Challenge_ch_homing_rockets_hours_used:
+		return []byte("\"ch_homing_rockets_hours_used\""), nil
+	case Challenge_ch_dumbfire_rockets_kills:
+		return []byte("\"ch_dumbfire_rockets_kills\""), nil
+	case Challenge_ch_dumbfire_rockets_pilot_kills:
+		return []byte("\"ch_dumbfire_rockets_pilot_kills\""), nil
+	case Challenge_ch_dumbfire_rockets_titan_kills:
+		return []byte("\"ch_dumbfire_rockets_titan_kills\""), nil
+	case Challenge_ch_dumbfire_rockets_spectre_kills:
+		return []byte("\"ch_dumbfire_rockets_spectre_kills\""), nil
+	case Challenge_ch_dumbfire_rockets_grunt_kills:
+		return []byte("\"ch_dumbfire_rockets_grunt_kills\""), nil
+	case Challenge_ch_dumbfire_rockets_hours_used:
+		return []byte("\"ch_dumbfire_rockets_hours_used\""), nil
+	case Challenge_ch_shoulder_rockets_titan_kills:
+		return []byte("\"ch_shoulder_rockets_titan_kills\""), nil
+	case Challenge_ch_shoulder_rockets_hours_used:
+		return []byte("\"ch_shoulder_rockets_hours_used\""), nil
+	case Challenge_ch_smart_pistol_kills:
+		return []byte("\"ch_smart_pistol_kills\""), nil
+	case Challenge_ch_smart_pistol_pilot_kills:
+		return []byte("\"ch_smart_pistol_pilot_kills\""), nil
+	case Challenge_ch_smart_pistol_spectre_kills:
+		return []byte("\"ch_smart_pistol_spectre_kills\""), nil
+	case Challenge_ch_smart_pistol_grunt_kills:
+		return []byte("\"ch_smart_pistol_grunt_kills\""), nil
+	case Challenge_ch_smart_pistol_hours_used:
+		return []byte("\"ch_smart_pistol_hours_used\""), nil
+	case Challenge_ch_shotgun_kills:
+		return []byte("\"ch_shotgun_kills\""), nil
+	case Challenge_ch_shotgun_pilot_kills:
+		return []byte("\"ch_shotgun_pilot_kills\""), nil
+	case Challenge_ch_shotgun_spectre_kills:
+		return []byte("\"ch_shotgun_spectre_kills\""), nil
+	case Challenge_ch_shotgun_grunt_kills:
+		return []byte("\"ch_shotgun_grunt_kills\""), nil
+	case Challenge_ch_shotgun_hours_used:
+		return []byte("\"ch_shotgun_hours_used\""), nil
+	case Challenge_ch_r97_kills:
+		return []byte("\"ch_r97_kills\""), nil
+	case Challenge_ch_r97_pilot_kills:
+		return []byte("\"ch_r97_pilot_kills\""), nil
+	case Challenge_ch_r97_spectre_kills:
+		return []byte("\"ch_r97_spectre_kills\""), nil
+	case Challenge_ch_r97_grunt_kills:
+		return []byte("\"ch_r97_grunt_kills\""), nil
+	case Challenge_ch_r97_hours_used:
+		return []byte("\"ch_r97_hours_used\""), nil
+	case Challenge_ch_r97_headshots:
+		return []byte("\"ch_r97_headshots\""), nil
+	case Challenge_ch_car_kills:
+		return []byte("\"ch_car_kills\""), nil
+	case Challenge_ch_car_pilot_kills:
+		return []byte("\"ch_car_pilot_kills\""), nil
+	case Challenge_ch_car_spectre_kills:
+		return []byte("\"ch_car_spectre_kills\""), nil
+	case Challenge_ch_car_grunt_kills:
+		return []byte("\"ch_car_grunt_kills\""), nil
+	case Challenge_ch_car_hours_used:
+		return []byte("\"ch_car_hours_used\""), nil
+	case Challenge_ch_car_headshots:
+		return []byte("\"ch_car_headshots\""), nil
+	case Challenge_ch_lmg_kills:
+		return []byte("\"ch_lmg_kills\""), nil
+	case Challenge_ch_lmg_pilot_kills:
+		return []byte("\"ch_lmg_pilot_kills\""), nil
+	case Challenge_ch_lmg_spectre_kills:
+		return []byte("\"ch_lmg_spectre_kills\""), nil
+	case Challenge_ch_lmg_grunt_kills:
+		return []byte("\"ch_lmg_grunt_kills\""), nil
+	case Challenge_ch_lmg_hours_used:
+		return []byte("\"ch_lmg_hours_used\""), nil
+	case Challenge_ch_lmg_headshots:
+		return []byte("\"ch_lmg_headshots\""), nil
+	case Challenge_ch_rspn101_kills:
+		return []byte("\"ch_rspn101_kills\""), nil
+	case Challenge_ch_rspn101_pilot_kills:
+		return []byte("\"ch_rspn101_pilot_kills\""), nil
+	case Challenge_ch_rspn101_spectre_kills:
+		return []byte("\"ch_rspn101_spectre_kills\""), nil
+	case Challenge_ch_rspn101_grunt_kills:
+		return []byte("\"ch_rspn101_grunt_kills\""), nil
+	case Challenge_ch_rspn101_hours_used:
+		return []byte("\"ch_rspn101_hours_used\""), nil
+	case Challenge_ch_rspn101_headshots:
+		return []byte("\"ch_rspn101_headshots\""), nil
+	case Challenge_ch_hemlok_kills:
+		return []byte("\"ch_hemlok_kills\""), nil
+	case Challenge_ch_hemlok_pilot_kills:
+		return []byte("\"ch_hemlok_pilot_kills\""), nil
+	case Challenge_ch_hemlok_spectre_kills:
+		return []byte("\"ch_hemlok_spectre_kills\""), nil
+	case Challenge_ch_hemlok_grunt_kills:
+		return []byte("\"ch_hemlok_grunt_kills\""), nil
+	case Challenge_ch_hemlok_hours_used:
+		return []byte("\"ch_hemlok_hours_used\""), nil
+	case Challenge_ch_hemlok_headshots:
+		return []byte("\"ch_hemlok_headshots\""), nil
+	case Challenge_ch_g2_kills:
+		return []byte("\"ch_g2_kills\""), nil
+	case Challenge_ch_g2_pilot_kills:
+		return []byte("\"ch_g2_pilot_kills\""), nil
+	case Challenge_ch_g2_spectre_kills:
+		return []byte("\"ch_g2_spectre_kills\""), nil
+	case Challenge_ch_g2_grunt_kills:
+		return []byte("\"ch_g2_grunt_kills\""), nil
+	case Challenge_ch_g2_hours_used:
+		return []byte("\"ch_g2_hours_used\""), nil
+	case Challenge_ch_g2_headshots:
+		return []byte("\"ch_g2_headshots\""), nil
+	case Challenge_ch_dmr_kills:
+		return []byte("\"ch_dmr_kills\""), nil
+	case Challenge_ch_dmr_pilot_kills:
+		return []byte("\"ch_dmr_pilot_kills\""), nil
+	case Challenge_ch_dmr_spectre_kills:
+		return []byte("\"ch_dmr_spectre_kills\""), nil
+	case Challenge_ch_dmr_grunt_kills:
+		return []byte("\"ch_dmr_grunt_kills\""), nil
+	case Challenge_ch_dmr_hours_used:
+		return []byte("\"ch_dmr_hours_used\""), nil
+	case Challenge_ch_dmr_headshots:
+		return []byte("\"ch_dmr_headshots\""), nil
+	case Challenge_ch_sniper_kills:
+		return []byte("\"ch_sniper_kills\""), nil
+	case Challenge_ch_sniper_pilot_kills:
+		return []byte("\"ch_sniper_pilot_kills\""), nil
+	case Challenge_ch_sniper_spectre_kills:
+		return []byte("\"ch_sniper_spectre_kills\""), nil
+	case Challenge_ch_sniper_grunt_kills:
+		return []byte("\"ch_sniper_grunt_kills\""), nil
+	case Challenge_ch_sniper_hours_used:
+		return []byte("\"ch_sniper_hours_used\""), nil
+	case Challenge_ch_smr_titan_kills:
+		return []byte("\"ch_smr_titan_kills\""), nil
+	case Challenge_ch_smr_crits:
+		return []byte("\"ch_smr_crits\""), nil
+	case Challenge_ch_mgl_titan_kills:
+		return []byte("\"ch_mgl_titan_kills\""), nil
+	case Challenge_ch_archer_titan_kills:
+		return []byte("\"ch_archer_titan_kills\""), nil
+	case Challenge_ch_defender_titan_kills:
+		return []byte("\"ch_defender_titan_kills\""), nil
+	case Challenge_ch_defender_crits:
+		return []byte("\"ch_defender_crits\""), nil
+	case Challenge_ch_frag_grenade_throws:
+		return []byte("\"ch_frag_grenade_throws\""), nil
+	case Challenge_ch_frag_grenade_kills:
+		return []byte("\"ch_frag_grenade_kills\""), nil
+	case Challenge_ch_frag_grenade_pilot_kills:
+		return []byte("\"ch_frag_grenade_pilot_kills\""), nil
+	case Challenge_ch_frag_grenade_grunt_kills:
+		return []byte("\"ch_frag_grenade_grunt_kills\""), nil
+	case Challenge_ch_emp_grenade_throws:
+		return []byte("\"ch_emp_grenade_throws\""), nil
+	case Challenge_ch_emp_grenade_kills:
+		return []byte("\"ch_emp_grenade_kills\""), nil
+	case Challenge_ch_emp_grenade_pilot_kills:
+		return []byte("\"ch_emp_grenade_pilot_kills\""), nil
+	case Challenge_ch_emp_grenade_grunt_kills:
+		return []byte("\"ch_emp_grenade_grunt_kills\""), nil
+	case Challenge_ch_emp_grenade_spectre_kills:
+		return []byte("\"ch_emp_grenade_spectre_kills\""), nil
+	case Challenge_ch_proximity_mine_throws:
+		return []byte("\"ch_proximity_mine_throws\""), nil
+	case Challenge_ch_proximity_mine_kills:
+		return []byte("\"ch_proximity_mine_kills\""), nil
+	case Challenge_ch_proximity_mine_pilot_kills:
+		return []byte("\"ch_proximity_mine_pilot_kills\""), nil
+	case Challenge_ch_proximity_mine_grunt_kills:
+		return []byte("\"ch_proximity_mine_grunt_kills\""), nil
+	case Challenge_ch_satchel_throws:
+		return []byte("\"ch_satchel_throws\""), nil
+	case Challenge_ch_satchel_kills:
+		return []byte("\"ch_satchel_kills\""), nil
+	case Challenge_ch_satchel_pilot_kills:
+		return []byte("\"ch_satchel_pilot_kills\""), nil
+	case Challenge_ch_satchel_grunt_kills:
+		return []byte("\"ch_satchel_grunt_kills\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *Challenge) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"NULL\"":
+		*v = Challenge_NULL
+	case "\"ch_games_played\"":
+		*v = Challenge_ch_games_played
+	case "\"ch_games_won\"":
+		*v = Challenge_ch_games_won
+	case "\"ch_games_mvp\"":
+		*v = Challenge_ch_games_mvp
+	case "\"ch_titan_falls\"":
+		*v = Challenge_ch_titan_falls
+	case "\"ch_rodeos\"":
+		*v = Challenge_ch_rodeos
+	case "\"ch_times_ejected\"":
+		*v = Challenge_ch_times_ejected
+	case "\"ch_spectres_leeched\"":
+		*v = Challenge_ch_spectres_leeched
+	case "\"ch_hours_played\"":
+		*v = Challenge_ch_hours_played
+	case "\"ch_hours_played_pilot\"":
+		*v = Challenge_ch_hours_played_pilot
+	case "\"ch_hours_played_titan\"":
+		*v = Challenge_ch_hours_played_titan
+	case "\"ch_hours_wallhang\"":
+		*v = Challenge_ch_hours_wallhang
+	case "\"ch_dist_total\"":
+		*v = Challenge_ch_dist_total
+	case "\"ch_dist_pilot\"":
+		*v = Challenge_ch_dist_pilot
+	case "\"ch_dist_titan\"":
+		*v = Challenge_ch_dist_titan
+	case "\"ch_dist_wallrun\"":
+		*v = Challenge_ch_dist_wallrun
+	case "\"ch_dist_inair\"":
+		*v = Challenge_ch_dist_inair
+	case "\"ch_dist_zipline\"":
+		*v = Challenge_ch_dist_zipline
+	case "\"ch_dist_on_friendly_titan\"":
+		*v = Challenge_ch_dist_on_friendly_titan
+	case "\"ch_dist_on_enemy_titan\"":
+		*v = Challenge_ch_dist_on_enemy_titan
+	case "\"ch_grunt_kills\"":
+		*v = Challenge_ch_grunt_kills
+	case "\"ch_spectre_kills\"":
+		*v = Challenge_ch_spectre_kills
+	case "\"ch_marvin_kills\"":
+		*v = Challenge_ch_marvin_kills
+	case "\"ch_first_strikes\"":
+		*v = Challenge_ch_first_strikes
+	case "\"ch_ejecting_pilot_kills\"":
+		*v = Challenge_ch_ejecting_pilot_kills
+	case "\"ch_kills_while_ejecting\"":
+		*v = Challenge_ch_kills_while_ejecting
+	case "\"ch_cloaked_pilot_kills\"":
+		*v = Challenge_ch_cloaked_pilot_kills
+	case "\"ch_kills_while_cloaked\"":
+		*v = Challenge_ch_kills_while_cloaked
+	case "\"ch_wallrunning_pilot_kills\"":
+		*v = Challenge_ch_wallrunning_pilot_kills
+	case "\"ch_wallhanging_pilot_kills\"":
+		*v = Challenge_ch_wallhanging_pilot_kills
+	case "\"ch_kills_while_wallrunning\"":
+		*v = Challenge_ch_kills_while_wallrunning
+	case "\"ch_kills_while_wallhanging\"":
+		*v = Challenge_ch_kills_while_wallhanging
+	case "\"ch_pilotExecutePilot\"":
+		*v = Challenge_ch_pilotExecutePilot
+	case "\"ch_pilotKickMelee\"":
+		*v = Challenge_ch_pilotKickMelee
+	case "\"ch_pilotKickMeleePilot\"":
+		*v = Challenge_ch_pilotKickMeleePilot
+	case "\"ch_titanMelee\"":
+		*v = Challenge_ch_titanMelee
+	case "\"ch_titanMeleePilot\"":
+		*v = Challenge_ch_titanMeleePilot
+	case "\"ch_titanStepCrush\"":
+		*v = Challenge_ch_titanStepCrush
+	case "\"ch_titanStepCrushPilot\"":
+		*v = Challenge_ch_titanStepCrushPilot
+	case "\"ch_titanExocutionStryder\"":
+		*v = Challenge_ch_titanExocutionStryder
+	case "\"ch_titanExocutionBuddy\"":
+		*v = Challenge_ch_titanExocutionBuddy
+	case "\"ch_titanExocutionAtlas\"":
+		*v = Challenge_ch_titanExocutionAtlas
+	case "\"ch_titanExocutionOgre\"":
+		*v = Challenge_ch_titanExocutionOgre
+	case "\"ch_titanFallKill\"":
+		*v = Challenge_ch_titanFallKill
+	case "\"ch_petTitanKillsFollowMode\"":
+		*v = Challenge_ch_petTitanKillsFollowMode
+	case "\"ch_petTitanKillsGuardMode\"":
+		*v = Challenge_ch_petTitanKillsGuardMode
+	case "\"ch_rodeo_kills\"":
+		*v = Challenge_ch_rodeo_kills
+	case "\"ch_40mm_kills\"":
+		*v = Challenge_ch_40mm_kills
+	case "\"ch_40mm_pilot_kills\"":
+		*v = Challenge_ch_40mm_pilot_kills
+	case "\"ch_40mm_titan_kills\"":
+		*v = Challenge_ch_40mm_titan_kills
+	case "\"ch_40mm_spectre_kills\"":
+		*v = Challenge_ch_40mm_spectre_kills
+	case "\"ch_40mm_grunt_kills\"":
+		*v = Challenge_ch_40mm_grunt_kills
+	case "\"ch_40mm_hours_used\"":
+		*v = Challenge_ch_40mm_hours_used
+	case "\"ch_40mm_crits\"":
+		*v = Challenge_ch_40mm_crits
+	case "\"ch_xo16_kills\"":
+		*v = Challenge_ch_xo16_kills
+	case "\"ch_xo16_pilot_kills\"":
+		*v = Challenge_ch_xo16_pilot_kills
+	case "\"ch_xo16_titan_kills\"":
+		*v = Challenge_ch_xo16_titan_kills
+	case "\"ch_xo16_spectre_kills\"":
+		*v = Challenge_ch_xo16_spectre_kills
+	case "\"ch_xo16_grunt_kills\"":
+		*v = Challenge_ch_xo16_grunt_kills
+	case "\"ch_xo16_hours_used\"":
+		*v = Challenge_ch_xo16_hours_used
+	case "\"ch_xo16_headshots\"":
+		*v = Challenge_ch_xo16_headshots
+	case "\"ch_xo16_crits\"":
+		*v = Challenge_ch_xo16_crits
+	case "\"ch_titan_sniper_kills\"":
+		*v = Challenge_ch_titan_sniper_kills
+	case "\"ch_titan_sniper_pilot_kills\"":
+		*v = Challenge_ch_titan_sniper_pilot_kills
+	case "\"ch_titan_sniper_titan_kills\"":
+		*v = Challenge_ch_titan_sniper_titan_kills
+	case "\"ch_titan_sniper_spectre_kills\"":
+		*v = Challenge_ch_titan_sniper_spectre_kills
+	case "\"ch_titan_sniper_grunt_kills\"":
+		*v = Challenge_ch_titan_sniper_grunt_kills
+	case "\"ch_titan_sniper_hours_used\"":
+		*v = Challenge_ch_titan_sniper_hours_used
+	case "\"ch_titan_sniper_crits\"":
+		*v = Challenge_ch_titan_sniper_crits
+	case "\"ch_rocket_launcher_kills\"":
+		*v = Challenge_ch_rocket_launcher_kills
+	case "\"ch_rocket_launcher_pilot_kills\"":
+		*v = Challenge_ch_rocket_launcher_pilot_kills
+	case "\"ch_rocket_launcher_titan_kills\"":
+		*v = Challenge_ch_rocket_launcher_titan_kills
+	case "\"ch_rocket_launcher_spectre_kills\"":
+		*v = Challenge_ch_rocket_launcher_spectre_kills
+	case "\"ch_rocket_launcher_grunt_kills\"":
+		*v = Challenge_ch_rocket_launcher_grunt_kills
+	case "\"ch_rocket_launcher_hours_used\"":
+		*v = Challenge_ch_rocket_launcher_hours_used
+	case "\"ch_triple_threat_kills\"":
+		*v = Challenge_ch_triple_threat_kills
+	case "\"ch_triple_threat_pilot_kills\"":
+		*v = Challenge_ch_triple_threat_pilot_kills
+	case "\"ch_triple_threat_titan_kills\"":
+		*v = Challenge_ch_triple_threat_titan_kills
+	case "\"ch_triple_threat_spectre_kills\"":
+		*v = Challenge_ch_triple_threat_spectre_kills
+	case "\"ch_triple_threat_grunt_kills\"":
+		*v = Challenge_ch_triple_threat_grunt_kills
+	case "\"ch_triple_threat_hours_used\"":
+		*v = Challenge_ch_triple_threat_hours_used
+	case "\"ch_salvo_rockets_kills\"":
+		*v = Challenge_ch_salvo_rockets_kills
+	case "\"ch_salvo_rockets_pilot_kills\"":
+		*v = Challenge_ch_salvo_rockets_pilot_kills
+	case "\"ch_salvo_rockets_titan_kills\"":
+		*v = Challenge_ch_salvo_rockets_titan_kills
+	case "\"ch_salvo_rockets_spectre_kills\"":
+		*v = Challenge_ch_salvo_rockets_spectre_kills
+	case "\"ch_salvo_rockets_grunt_kills\"":
+		*v = Challenge_ch_salvo_rockets_grunt_kills
+	case "\"ch_salvo_rockets_hours_used\"":
+		*v = Challenge_ch_salvo_rockets_hours_used
+	case "\"ch_homing_rockets_titan_kills\"":
+		*v = Challenge_ch_homing_rockets_titan_kills
+	case "\"ch_homing_rockets_hours_used\"":
+		*v = Challenge_ch_homing_rockets_hours_used
+	case "\"ch_dumbfire_rockets_kills\"":
+		*v = Challenge_ch_dumbfire_rockets_kills
+	case "\"ch_dumbfire_rockets_pilot_kills\"":
+		*v = Challenge_ch_dumbfire_rockets_pilot_kills
+	case "\"ch_dumbfire_rockets_titan_kills\"":
+		*v = Challenge_ch_dumbfire_rockets_titan_kills
+	case "\"ch_dumbfire_rockets_spectre_kills\"":
+		*v = Challenge_ch_dumbfire_rockets_spectre_kills
+	case "\"ch_dumbfire_rockets_grunt_kills\"":
+		*v = Challenge_ch_dumbfire_rockets_grunt_kills
+	case "\"ch_dumbfire_rockets_hours_used\"":
+		*v = Challenge_ch_dumbfire_rockets_hours_used
+	case "\"ch_shoulder_rockets_titan_kills\"":
+		*v = Challenge_ch_shoulder_rockets_titan_kills
+	case "\"ch_shoulder_rockets_hours_used\"":
+		*v = Challenge_ch_shoulder_rockets_hours_used
+	case "\"ch_smart_pistol_kills\"":
+		*v = Challenge_ch_smart_pistol_kills
+	case "\"ch_smart_pistol_pilot_kills\"":
+		*v = Challenge_ch_smart_pistol_pilot_kills
+	case "\"ch_smart_pistol_spectre_kills\"":
+		*v = Challenge_ch_smart_pistol_spectre_kills
+	case "\"ch_smart_pistol_grunt_kills\"":
+		*v = Challenge_ch_smart_pistol_grunt_kills
+	case "\"ch_smart_pistol_hours_used\"":
+		*v = Challenge_ch_smart_pistol_hours_used
+	case "\"ch_shotgun_kills\"":
+		*v = Challenge_ch_shotgun_kills
+	case "\"ch_shotgun_pilot_kills\"":
+		*v = Challenge_ch_shotgun_pilot_kills
+	case "\"ch_shotgun_spectre_kills\"":
+		*v = Challenge_ch_shotgun_spectre_kills
+	case "\"ch_shotgun_grunt_kills\"":
+		*v = Challenge_ch_shotgun_grunt_kills
+	case "\"ch_shotgun_hours_used\"":
+		*v = Challenge_ch_shotgun_hours_used
+	case "\"ch_r97_kills\"":
+		*v = Challenge_ch_r97_kills
+	case "\"ch_r97_pilot_kills\"":
+		*v = Challenge_ch_r97_pilot_kills
+	case "\"ch_r97_spectre_kills\"":
+		*v = Challenge_ch_r97_spectre_kills
+	case "\"ch_r97_grunt_kills\"":
+		*v = Challenge_ch_r97_grunt_kills
+	case "\"ch_r97_hours_used\"":
+		*v = Challenge_ch_r97_hours_used
+	case "\"ch_r97_headshots\"":
+		*v = Challenge_ch_r97_headshots
+	case "\"ch_car_kills\"":
+		*v = Challenge_ch_car_kills
+	case "\"ch_car_pilot_kills\"":
+		*v = Challenge_ch_car_pilot_kills
+	case "\"ch_car_spectre_kills\"":
+		*v = Challenge_ch_car_spectre_kills
+	case "\"ch_car_grunt_kills\"":
+		*v = Challenge_ch_car_grunt_kills
+	case "\"ch_car_hours_used\"":
+		*v = Challenge_ch_car_hours_used
+	case "\"ch_car_headshots\"":
+		*v = Challenge_ch_car_headshots
+	case "\"ch_lmg_kills\"":
+		*v = Challenge_ch_lmg_kills
+	case "\"ch_lmg_pilot_kills\"":
+		*v = Challenge_ch_lmg_pilot_kills
+	case "\"ch_lmg_spectre_kills\"":
+		*v = Challenge_ch_lmg_spectre_kills
+	case "\"ch_lmg_grunt_kills\"":
+		*v = Challenge_ch_lmg_grunt_kills
+	case "\"ch_lmg_hours_used\"":
+		*v = Challenge_ch_lmg_hours_used
+	case "\"ch_lmg_headshots\"":
+		*v = Challenge_ch_lmg_headshots
+	case "\"ch_rspn101_kills\"":
+		*v = Challenge_ch_rspn101_kills
+	case "\"ch_rspn101_pilot_kills\"":
+		*v = Challenge_ch_rspn101_pilot_kills
+	case "\"ch_rspn101_spectre_kills\"":
+		*v = Challenge_ch_rspn101_spectre_kills
+	case "\"ch_rspn101_grunt_kills\"":
+		*v = Challenge_ch_rspn101_grunt_kills
+	case "\"ch_rspn101_hours_used\"":
+		*v = Challenge_ch_rspn101_hours_used
+	case "\"ch_rspn101_headshots\"":
+		*v = Challenge_ch_rspn101_headshots
+	case "\"ch_hemlok_kills\"":
+		*v = Challenge_ch_hemlok_kills
+	case "\"ch_hemlok_pilot_kills\"":
+		*v = Challenge_ch_hemlok_pilot_kills
+	case "\"ch_hemlok_spectre_kills\"":
+		*v = Challenge_ch_hemlok_spectre_kills
+	case "\"ch_hemlok_grunt_kills\"":
+		*v = Challenge_ch_hemlok_grunt_kills
+	case "\"ch_hemlok_hours_used\"":
+		*v = Challenge_ch_hemlok_hours_used
+	case "\"ch_hemlok_headshots\"":
+		*v = Challenge_ch_hemlok_headshots
+	case "\"ch_g2_kills\"":
+		*v = Challenge_ch_g2_kills
+	case "\"ch_g2_pilot_kills\"":
+		*v = Challenge_ch_g2_pilot_kills
+	case "\"ch_g2_spectre_kills\"":
+		*v = Challenge_ch_g2_spectre_kills
+	case "\"ch_g2_grunt_kills\"":
+		*v = Challenge_ch_g2_grunt_kills
+	case "\"ch_g2_hours_used\"":
+		*v = Challenge_ch_g2_hours_used
+	case "\"ch_g2_headshots\"":
+		*v = Challenge_ch_g2_headshots
+	case "\"ch_dmr_kills\"":
+		*v = Challenge_ch_dmr_kills
+	case "\"ch_dmr_pilot_kills\"":
+		*v = Challenge_ch_dmr_pilot_kills
+	case "\"ch_dmr_spectre_kills\"":
+		*v = Challenge_ch_dmr_spectre_kills
+	case "\"ch_dmr_grunt_kills\"":
+		*v = Challenge_ch_dmr_grunt_kills
+	case "\"ch_dmr_hours_used\"":
+		*v = Challenge_ch_dmr_hours_used
+	case "\"ch_dmr_headshots\"":
+		*v = Challenge_ch_dmr_headshots
+	case "\"ch_sniper_kills\"":
+		*v = Challenge_ch_sniper_kills
+	case "\"ch_sniper_pilot_kills\"":
+		*v = Challenge_ch_sniper_pilot_kills
+	case "\"ch_sniper_spectre_kills\"":
+		*v = Challenge_ch_sniper_spectre_kills
+	case "\"ch_sniper_grunt_kills\"":
+		*v = Challenge_ch_sniper_grunt_kills
+	case "\"ch_sniper_hours_used\"":
+		*v = Challenge_ch_sniper_hours_used
+	case "\"ch_smr_titan_kills\"":
+		*v = Challenge_ch_smr_titan_kills
+	case "\"ch_smr_crits\"":
+		*v = Challenge_ch_smr_crits
+	case "\"ch_mgl_titan_kills\"":
+		*v = Challenge_ch_mgl_titan_kills
+	case "\"ch_archer_titan_kills\"":
+		*v = Challenge_ch_archer_titan_kills
+	case "\"ch_defender_titan_kills\"":
+		*v = Challenge_ch_defender_titan_kills
+	case "\"ch_defender_crits\"":
+		*v = Challenge_ch_defender_crits
+	case "\"ch_frag_grenade_throws\"":
+		*v = Challenge_ch_frag_grenade_throws
+	case "\"ch_frag_grenade_kills\"":
+		*v = Challenge_ch_frag_grenade_kills
+	case "\"ch_frag_grenade_pilot_kills\"":
+		*v = Challenge_ch_frag_grenade_pilot_kills
+	case "\"ch_frag_grenade_grunt_kills\"":
+		*v = Challenge_ch_frag_grenade_grunt_kills
+	case "\"ch_emp_grenade_throws\"":
+		*v = Challenge_ch_emp_grenade_throws
+	case "\"ch_emp_grenade_kills\"":
+		*v = Challenge_ch_emp_grenade_kills
+	case "\"ch_emp_grenade_pilot_kills\"":
+		*v = Challenge_ch_emp_grenade_pilot_kills
+	case "\"ch_emp_grenade_grunt_kills\"":
+		*v = Challenge_ch_emp_grenade_grunt_kills
+	case "\"ch_emp_grenade_spectre_kills\"":
+		*v = Challenge_ch_emp_grenade_spectre_kills
+	case "\"ch_proximity_mine_throws\"":
+		*v = Challenge_ch_proximity_mine_throws
+	case "\"ch_proximity_mine_kills\"":
+		*v = Challenge_ch_proximity_mine_kills
+	case "\"ch_proximity_mine_pilot_kills\"":
+		*v = Challenge_ch_proximity_mine_pilot_kills
+	case "\"ch_proximity_mine_grunt_kills\"":
+		*v = Challenge_ch_proximity_mine_grunt_kills
+	case "\"ch_satchel_throws\"":
+		*v = Challenge_ch_satchel_throws
+	case "\"ch_satchel_kills\"":
+		*v = Challenge_ch_satchel_kills
+	case "\"ch_satchel_pilot_kills\"":
+		*v = Challenge_ch_satchel_pilot_kills
+	case "\"ch_satchel_grunt_kills\"":
+		*v = Challenge_ch_satchel_grunt_kills
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type Dailychallenge uint8
 
@@ -10596,9 +11980,10 @@ const (
 
 var _ fmt.Stringer = Dailychallenge(0)
 var _ fmt.GoStringer = Dailychallenge(0)
-
-//var _ encoding.TextMarshaler = Dailychallenge(0)
+var _ encoding.TextMarshaler = Dailychallenge(0)
 var _ encoding.TextUnmarshaler = (*Dailychallenge)(nil)
+var _ json.Marshaler = Dailychallenge(0)
+var _ json.Unmarshaler = (*Dailychallenge)(nil)
 
 func (v Dailychallenge) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -10649,6 +12034,35 @@ func (v *Dailychallenge) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v Dailychallenge) MarshalJSON() ([]byte, error) {
+	switch v {
+	case Dailychallenge_NULL:
+		return []byte("\"NULL\""), nil
+	case Dailychallenge_ch_daily_xo16_pilot_kills:
+		return []byte("\"ch_daily_xo16_pilot_kills\""), nil
+	case Dailychallenge_ch_daily_emp_grenade_kills:
+		return []byte("\"ch_daily_emp_grenade_kills\""), nil
+	case Dailychallenge_ch_daily_kills_nuclear_core:
+		return []byte("\"ch_daily_kills_nuclear_core\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *Dailychallenge) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"NULL\"":
+		*v = Dailychallenge_NULL
+	case "\"ch_daily_xo16_pilot_kills\"":
+		*v = Dailychallenge_ch_daily_xo16_pilot_kills
+	case "\"ch_daily_emp_grenade_kills\"":
+		*v = Dailychallenge_ch_daily_emp_grenade_kills
+	case "\"ch_daily_kills_nuclear_core\"":
+		*v = Dailychallenge_ch_daily_kills_nuclear_core
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type Faction uint8
 
@@ -10665,9 +12079,10 @@ const (
 
 var _ fmt.Stringer = Faction(0)
 var _ fmt.GoStringer = Faction(0)
-
-//var _ encoding.TextMarshaler = Faction(0)
+var _ encoding.TextMarshaler = Faction(0)
 var _ encoding.TextUnmarshaler = (*Faction)(nil)
+var _ json.Marshaler = Faction(0)
+var _ json.Unmarshaler = (*Faction)(nil)
 
 func (v Faction) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -10736,6 +12151,47 @@ func (v *Faction) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v Faction) MarshalJSON() ([]byte, error) {
+	switch v {
+	case Faction_faction_apex:
+		return []byte("\"faction_apex\""), nil
+	case Faction_faction_64:
+		return []byte("\"faction_64\""), nil
+	case Faction_faction_vinson:
+		return []byte("\"faction_vinson\""), nil
+	case Faction_faction_marauder:
+		return []byte("\"faction_marauder\""), nil
+	case Faction_faction_aces:
+		return []byte("\"faction_aces\""), nil
+	case Faction_faction_ares:
+		return []byte("\"faction_ares\""), nil
+	case Faction_faction_marvin:
+		return []byte("\"faction_marvin\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *Faction) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"faction_apex\"":
+		*v = Faction_faction_apex
+	case "\"faction_64\"":
+		*v = Faction_faction_64
+	case "\"faction_vinson\"":
+		*v = Faction_faction_vinson
+	case "\"faction_marauder\"":
+		*v = Faction_faction_marauder
+	case "\"faction_aces\"":
+		*v = Faction_faction_aces
+	case "\"faction_ares\"":
+		*v = Faction_faction_ares
+	case "\"faction_marvin\"":
+		*v = Faction_faction_marvin
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type GameModes uint8
 
@@ -10759,9 +12215,10 @@ const (
 
 var _ fmt.Stringer = GameModes(0)
 var _ fmt.GoStringer = GameModes(0)
-
-//var _ encoding.TextMarshaler = GameModes(0)
+var _ encoding.TextMarshaler = GameModes(0)
 var _ encoding.TextUnmarshaler = (*GameModes)(nil)
+var _ json.Marshaler = GameModes(0)
+var _ json.Unmarshaler = (*GameModes)(nil)
 
 func (v GameModes) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -10869,6 +12326,75 @@ func (v *GameModes) UnmarshalText(b []byte) error {
 		*v = GameModes_fd
 	default:
 		return fmt.Errorf("%w: invalid value %q for enum %q", ErrInvalidEnumValue, string(b), "GameModes")
+	}
+	return nil
+}
+func (v GameModes) MarshalJSON() ([]byte, error) {
+	switch v {
+	case GameModes_tdm:
+		return []byte("\"tdm\""), nil
+	case GameModes_cp:
+		return []byte("\"cp\""), nil
+	case GameModes_at:
+		return []byte("\"at\""), nil
+	case GameModes_ctf:
+		return []byte("\"ctf\""), nil
+	case GameModes_lts:
+		return []byte("\"lts\""), nil
+	case GameModes_ps:
+		return []byte("\"ps\""), nil
+	case GameModes_ffa:
+		return []byte("\"ffa\""), nil
+	case GameModes_coliseum:
+		return []byte("\"coliseum\""), nil
+	case GameModes_aitdm:
+		return []byte("\"aitdm\""), nil
+	case GameModes_speedball:
+		return []byte("\"speedball\""), nil
+	case GameModes_mfd:
+		return []byte("\"mfd\""), nil
+	case GameModes_ttdm:
+		return []byte("\"ttdm\""), nil
+	case GameModes_fra:
+		return []byte("\"fra\""), nil
+	case GameModes_fd:
+		return []byte("\"fd\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *GameModes) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"tdm\"":
+		*v = GameModes_tdm
+	case "\"cp\"":
+		*v = GameModes_cp
+	case "\"at\"":
+		*v = GameModes_at
+	case "\"ctf\"":
+		*v = GameModes_ctf
+	case "\"lts\"":
+		*v = GameModes_lts
+	case "\"ps\"":
+		*v = GameModes_ps
+	case "\"ffa\"":
+		*v = GameModes_ffa
+	case "\"coliseum\"":
+		*v = GameModes_coliseum
+	case "\"aitdm\"":
+		*v = GameModes_aitdm
+	case "\"speedball\"":
+		*v = GameModes_speedball
+	case "\"mfd\"":
+		*v = GameModes_mfd
+	case "\"ttdm\"":
+		*v = GameModes_ttdm
+	case "\"fra\"":
+		*v = GameModes_fra
+	case "\"fd\"":
+		*v = GameModes_fd
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
 	}
 	return nil
 }
@@ -10981,9 +12507,10 @@ const (
 
 var _ fmt.Stringer = LoadoutWeaponsAndAbilities(0)
 var _ fmt.GoStringer = LoadoutWeaponsAndAbilities(0)
-
-//var _ encoding.TextMarshaler = LoadoutWeaponsAndAbilities(0)
+var _ encoding.TextMarshaler = LoadoutWeaponsAndAbilities(0)
 var _ encoding.TextUnmarshaler = (*LoadoutWeaponsAndAbilities)(nil)
+var _ json.Marshaler = LoadoutWeaponsAndAbilities(0)
+var _ json.Unmarshaler = (*LoadoutWeaponsAndAbilities)(nil)
 
 func (v LoadoutWeaponsAndAbilities) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -11610,6 +13137,419 @@ func (v *LoadoutWeaponsAndAbilities) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v LoadoutWeaponsAndAbilities) MarshalJSON() ([]byte, error) {
+	switch v {
+	case LoadoutWeaponsAndAbilities_NULL:
+		return []byte("\"NULL\""), nil
+	case LoadoutWeaponsAndAbilities_melee_pilot_emptyhanded:
+		return []byte("\"melee_pilot_emptyhanded\""), nil
+	case LoadoutWeaponsAndAbilities_melee_pilot_sword:
+		return []byte("\"melee_pilot_sword\""), nil
+	case LoadoutWeaponsAndAbilities_melee_titan_sword:
+		return []byte("\"melee_titan_sword\""), nil
+	case LoadoutWeaponsAndAbilities_melee_titan_sword_aoe:
+		return []byte("\"melee_titan_sword_aoe\""), nil
+	case LoadoutWeaponsAndAbilities_mp_ability_cloak:
+		return []byte("\"mp_ability_cloak\""), nil
+	case LoadoutWeaponsAndAbilities_mp_ability_grapple:
+		return []byte("\"mp_ability_grapple\""), nil
+	case LoadoutWeaponsAndAbilities_mp_ability_heal:
+		return []byte("\"mp_ability_heal\""), nil
+	case LoadoutWeaponsAndAbilities_mp_ability_holopilot:
+		return []byte("\"mp_ability_holopilot\""), nil
+	case LoadoutWeaponsAndAbilities_mp_ability_phase_rewind:
+		return []byte("\"mp_ability_phase_rewind\""), nil
+	case LoadoutWeaponsAndAbilities_mp_ability_shifter:
+		return []byte("\"mp_ability_shifter\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_ammo_swap:
+		return []byte("\"mp_titanability_ammo_swap\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_basic_block:
+		return []byte("\"mp_titanability_basic_block\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_gun_shield:
+		return []byte("\"mp_titanability_gun_shield\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_hover:
+		return []byte("\"mp_titanability_hover\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_laser_trip:
+		return []byte("\"mp_titanability_laser_trip\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_particle_wall:
+		return []byte("\"mp_titanability_particle_wall\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_phase_dash:
+		return []byte("\"mp_titanability_phase_dash\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_power_shot:
+		return []byte("\"mp_titanability_power_shot\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_slow_trap:
+		return []byte("\"mp_titanability_slow_trap\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_smoke:
+		return []byte("\"mp_titanability_smoke\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_sonar_pulse:
+		return []byte("\"mp_titanability_sonar_pulse\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_tether_trap:
+		return []byte("\"mp_titanability_tether_trap\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanability_rearm:
+		return []byte("\"mp_titanability_rearm\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titancore_flame_wave:
+		return []byte("\"mp_titancore_flame_wave\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titancore_flight_core:
+		return []byte("\"mp_titancore_flight_core\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titancore_laser_cannon:
+		return []byte("\"mp_titancore_laser_cannon\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titancore_salvo_core:
+		return []byte("\"mp_titancore_salvo_core\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titancore_shift_core:
+		return []byte("\"mp_titancore_shift_core\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titancore_siege_mode:
+		return []byte("\"mp_titancore_siege_mode\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titancore_upgrade:
+		return []byte("\"mp_titancore_upgrade\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_40mm:
+		return []byte("\"mp_titanweapon_40mm\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_arc_wave:
+		return []byte("\"mp_titanweapon_arc_wave\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_flame_wall:
+		return []byte("\"mp_titanweapon_flame_wall\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_heat_shield:
+		return []byte("\"mp_titanweapon_heat_shield\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_homing_rockets:
+		return []byte("\"mp_titanweapon_homing_rockets\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_dumbfire_rockets:
+		return []byte("\"mp_titanweapon_dumbfire_rockets\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_laser_lite:
+		return []byte("\"mp_titanweapon_laser_lite\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_leadwall:
+		return []byte("\"mp_titanweapon_leadwall\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_meteor:
+		return []byte("\"mp_titanweapon_meteor\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_particle_accelerator:
+		return []byte("\"mp_titanweapon_particle_accelerator\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_predator_cannon:
+		return []byte("\"mp_titanweapon_predator_cannon\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_rocket_launcher:
+		return []byte("\"mp_titanweapon_rocket_launcher\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_rocketeer_rocketstream:
+		return []byte("\"mp_titanweapon_rocketeer_rocketstream\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_salvo_rockets:
+		return []byte("\"mp_titanweapon_salvo_rockets\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_sniper:
+		return []byte("\"mp_titanweapon_sniper\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_sticky_40mm:
+		return []byte("\"mp_titanweapon_sticky_40mm\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_stun_laser:
+		return []byte("\"mp_titanweapon_stun_laser\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_tracker_rockets:
+		return []byte("\"mp_titanweapon_tracker_rockets\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_vortex_shield:
+		return []byte("\"mp_titanweapon_vortex_shield\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_vortex_shield_ion:
+		return []byte("\"mp_titanweapon_vortex_shield_ion\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_xo16:
+		return []byte("\"mp_titanweapon_xo16\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_xo16_shorty:
+		return []byte("\"mp_titanweapon_xo16_shorty\""), nil
+	case LoadoutWeaponsAndAbilities_mp_titanweapon_xo16_vanguard:
+		return []byte("\"mp_titanweapon_xo16_vanguard\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_alternator_smg:
+		return []byte("\"mp_weapon_alternator_smg\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_arc_launcher:
+		return []byte("\"mp_weapon_arc_launcher\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_autopistol:
+		return []byte("\"mp_weapon_autopistol\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_car:
+		return []byte("\"mp_weapon_car\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_defender:
+		return []byte("\"mp_weapon_defender\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_deployable_cover:
+		return []byte("\"mp_weapon_deployable_cover\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_dmr:
+		return []byte("\"mp_weapon_dmr\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_doubletake:
+		return []byte("\"mp_weapon_doubletake\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_epg:
+		return []byte("\"mp_weapon_epg\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_esaw:
+		return []byte("\"mp_weapon_esaw\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_frag_drone:
+		return []byte("\"mp_weapon_frag_drone\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_frag_grenade:
+		return []byte("\"mp_weapon_frag_grenade\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_g2:
+		return []byte("\"mp_weapon_g2\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_grenade_electric_smoke:
+		return []byte("\"mp_weapon_grenade_electric_smoke\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_grenade_emp:
+		return []byte("\"mp_weapon_grenade_emp\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_grenade_gravity:
+		return []byte("\"mp_weapon_grenade_gravity\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_grenade_sonar:
+		return []byte("\"mp_weapon_grenade_sonar\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_hemlok:
+		return []byte("\"mp_weapon_hemlok\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_hemlok_smg:
+		return []byte("\"mp_weapon_hemlok_smg\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_lmg:
+		return []byte("\"mp_weapon_lmg\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_lstar:
+		return []byte("\"mp_weapon_lstar\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_mastiff:
+		return []byte("\"mp_weapon_mastiff\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_mgl:
+		return []byte("\"mp_weapon_mgl\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_pulse_lmg:
+		return []byte("\"mp_weapon_pulse_lmg\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_r97:
+		return []byte("\"mp_weapon_r97\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_rocket_launcher:
+		return []byte("\"mp_weapon_rocket_launcher\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_rspn101:
+		return []byte("\"mp_weapon_rspn101\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_rspn101_og:
+		return []byte("\"mp_weapon_rspn101_og\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_satchel:
+		return []byte("\"mp_weapon_satchel\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_semipistol:
+		return []byte("\"mp_weapon_semipistol\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_shotgun:
+		return []byte("\"mp_weapon_shotgun\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_shotgun_pistol:
+		return []byte("\"mp_weapon_shotgun_pistol\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_smart_pistol:
+		return []byte("\"mp_weapon_smart_pistol\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_smr:
+		return []byte("\"mp_weapon_smr\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_sniper:
+		return []byte("\"mp_weapon_sniper\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_softball:
+		return []byte("\"mp_weapon_softball\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_thermite_grenade:
+		return []byte("\"mp_weapon_thermite_grenade\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_vinson:
+		return []byte("\"mp_weapon_vinson\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_wingman:
+		return []byte("\"mp_weapon_wingman\""), nil
+	case LoadoutWeaponsAndAbilities_mp_weapon_wingman_n:
+		return []byte("\"mp_weapon_wingman_n\""), nil
+	case LoadoutWeaponsAndAbilities_melee_titan_punch_ion:
+		return []byte("\"melee_titan_punch_ion\""), nil
+	case LoadoutWeaponsAndAbilities_melee_titan_punch_legion:
+		return []byte("\"melee_titan_punch_legion\""), nil
+	case LoadoutWeaponsAndAbilities_melee_titan_punch_northstar:
+		return []byte("\"melee_titan_punch_northstar\""), nil
+	case LoadoutWeaponsAndAbilities_melee_titan_punch_scorch:
+		return []byte("\"melee_titan_punch_scorch\""), nil
+	case LoadoutWeaponsAndAbilities_melee_titan_punch_tone:
+		return []byte("\"melee_titan_punch_tone\""), nil
+	case LoadoutWeaponsAndAbilities_melee_titan_punch_vanguard:
+		return []byte("\"melee_titan_punch_vanguard\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *LoadoutWeaponsAndAbilities) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"NULL\"":
+		*v = LoadoutWeaponsAndAbilities_NULL
+	case "\"melee_pilot_emptyhanded\"":
+		*v = LoadoutWeaponsAndAbilities_melee_pilot_emptyhanded
+	case "\"melee_pilot_sword\"":
+		*v = LoadoutWeaponsAndAbilities_melee_pilot_sword
+	case "\"melee_titan_sword\"":
+		*v = LoadoutWeaponsAndAbilities_melee_titan_sword
+	case "\"melee_titan_sword_aoe\"":
+		*v = LoadoutWeaponsAndAbilities_melee_titan_sword_aoe
+	case "\"mp_ability_cloak\"":
+		*v = LoadoutWeaponsAndAbilities_mp_ability_cloak
+	case "\"mp_ability_grapple\"":
+		*v = LoadoutWeaponsAndAbilities_mp_ability_grapple
+	case "\"mp_ability_heal\"":
+		*v = LoadoutWeaponsAndAbilities_mp_ability_heal
+	case "\"mp_ability_holopilot\"":
+		*v = LoadoutWeaponsAndAbilities_mp_ability_holopilot
+	case "\"mp_ability_phase_rewind\"":
+		*v = LoadoutWeaponsAndAbilities_mp_ability_phase_rewind
+	case "\"mp_ability_shifter\"":
+		*v = LoadoutWeaponsAndAbilities_mp_ability_shifter
+	case "\"mp_titanability_ammo_swap\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_ammo_swap
+	case "\"mp_titanability_basic_block\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_basic_block
+	case "\"mp_titanability_gun_shield\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_gun_shield
+	case "\"mp_titanability_hover\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_hover
+	case "\"mp_titanability_laser_trip\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_laser_trip
+	case "\"mp_titanability_particle_wall\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_particle_wall
+	case "\"mp_titanability_phase_dash\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_phase_dash
+	case "\"mp_titanability_power_shot\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_power_shot
+	case "\"mp_titanability_slow_trap\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_slow_trap
+	case "\"mp_titanability_smoke\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_smoke
+	case "\"mp_titanability_sonar_pulse\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_sonar_pulse
+	case "\"mp_titanability_tether_trap\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_tether_trap
+	case "\"mp_titanability_rearm\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanability_rearm
+	case "\"mp_titancore_flame_wave\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titancore_flame_wave
+	case "\"mp_titancore_flight_core\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titancore_flight_core
+	case "\"mp_titancore_laser_cannon\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titancore_laser_cannon
+	case "\"mp_titancore_salvo_core\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titancore_salvo_core
+	case "\"mp_titancore_shift_core\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titancore_shift_core
+	case "\"mp_titancore_siege_mode\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titancore_siege_mode
+	case "\"mp_titancore_upgrade\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titancore_upgrade
+	case "\"mp_titanweapon_40mm\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_40mm
+	case "\"mp_titanweapon_arc_wave\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_arc_wave
+	case "\"mp_titanweapon_flame_wall\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_flame_wall
+	case "\"mp_titanweapon_heat_shield\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_heat_shield
+	case "\"mp_titanweapon_homing_rockets\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_homing_rockets
+	case "\"mp_titanweapon_dumbfire_rockets\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_dumbfire_rockets
+	case "\"mp_titanweapon_laser_lite\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_laser_lite
+	case "\"mp_titanweapon_leadwall\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_leadwall
+	case "\"mp_titanweapon_meteor\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_meteor
+	case "\"mp_titanweapon_particle_accelerator\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_particle_accelerator
+	case "\"mp_titanweapon_predator_cannon\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_predator_cannon
+	case "\"mp_titanweapon_rocket_launcher\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_rocket_launcher
+	case "\"mp_titanweapon_rocketeer_rocketstream\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_rocketeer_rocketstream
+	case "\"mp_titanweapon_salvo_rockets\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_salvo_rockets
+	case "\"mp_titanweapon_sniper\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_sniper
+	case "\"mp_titanweapon_sticky_40mm\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_sticky_40mm
+	case "\"mp_titanweapon_stun_laser\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_stun_laser
+	case "\"mp_titanweapon_tracker_rockets\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_tracker_rockets
+	case "\"mp_titanweapon_vortex_shield\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_vortex_shield
+	case "\"mp_titanweapon_vortex_shield_ion\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_vortex_shield_ion
+	case "\"mp_titanweapon_xo16\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_xo16
+	case "\"mp_titanweapon_xo16_shorty\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_xo16_shorty
+	case "\"mp_titanweapon_xo16_vanguard\"":
+		*v = LoadoutWeaponsAndAbilities_mp_titanweapon_xo16_vanguard
+	case "\"mp_weapon_alternator_smg\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_alternator_smg
+	case "\"mp_weapon_arc_launcher\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_arc_launcher
+	case "\"mp_weapon_autopistol\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_autopistol
+	case "\"mp_weapon_car\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_car
+	case "\"mp_weapon_defender\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_defender
+	case "\"mp_weapon_deployable_cover\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_deployable_cover
+	case "\"mp_weapon_dmr\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_dmr
+	case "\"mp_weapon_doubletake\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_doubletake
+	case "\"mp_weapon_epg\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_epg
+	case "\"mp_weapon_esaw\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_esaw
+	case "\"mp_weapon_frag_drone\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_frag_drone
+	case "\"mp_weapon_frag_grenade\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_frag_grenade
+	case "\"mp_weapon_g2\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_g2
+	case "\"mp_weapon_grenade_electric_smoke\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_grenade_electric_smoke
+	case "\"mp_weapon_grenade_emp\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_grenade_emp
+	case "\"mp_weapon_grenade_gravity\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_grenade_gravity
+	case "\"mp_weapon_grenade_sonar\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_grenade_sonar
+	case "\"mp_weapon_hemlok\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_hemlok
+	case "\"mp_weapon_hemlok_smg\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_hemlok_smg
+	case "\"mp_weapon_lmg\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_lmg
+	case "\"mp_weapon_lstar\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_lstar
+	case "\"mp_weapon_mastiff\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_mastiff
+	case "\"mp_weapon_mgl\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_mgl
+	case "\"mp_weapon_pulse_lmg\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_pulse_lmg
+	case "\"mp_weapon_r97\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_r97
+	case "\"mp_weapon_rocket_launcher\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_rocket_launcher
+	case "\"mp_weapon_rspn101\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_rspn101
+	case "\"mp_weapon_rspn101_og\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_rspn101_og
+	case "\"mp_weapon_satchel\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_satchel
+	case "\"mp_weapon_semipistol\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_semipistol
+	case "\"mp_weapon_shotgun\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_shotgun
+	case "\"mp_weapon_shotgun_pistol\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_shotgun_pistol
+	case "\"mp_weapon_smart_pistol\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_smart_pistol
+	case "\"mp_weapon_smr\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_smr
+	case "\"mp_weapon_sniper\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_sniper
+	case "\"mp_weapon_softball\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_softball
+	case "\"mp_weapon_thermite_grenade\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_thermite_grenade
+	case "\"mp_weapon_vinson\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_vinson
+	case "\"mp_weapon_wingman\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_wingman
+	case "\"mp_weapon_wingman_n\"":
+		*v = LoadoutWeaponsAndAbilities_mp_weapon_wingman_n
+	case "\"melee_titan_punch_ion\"":
+		*v = LoadoutWeaponsAndAbilities_melee_titan_punch_ion
+	case "\"melee_titan_punch_legion\"":
+		*v = LoadoutWeaponsAndAbilities_melee_titan_punch_legion
+	case "\"melee_titan_punch_northstar\"":
+		*v = LoadoutWeaponsAndAbilities_melee_titan_punch_northstar
+	case "\"melee_titan_punch_scorch\"":
+		*v = LoadoutWeaponsAndAbilities_melee_titan_punch_scorch
+	case "\"melee_titan_punch_tone\"":
+		*v = LoadoutWeaponsAndAbilities_melee_titan_punch_tone
+	case "\"melee_titan_punch_vanguard\"":
+		*v = LoadoutWeaponsAndAbilities_melee_titan_punch_vanguard
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type Maps uint8
 
@@ -11644,9 +13584,10 @@ const (
 
 var _ fmt.Stringer = Maps(0)
 var _ fmt.GoStringer = Maps(0)
-
-//var _ encoding.TextMarshaler = Maps(0)
+var _ encoding.TextMarshaler = Maps(0)
 var _ encoding.TextUnmarshaler = (*Maps)(nil)
+var _ json.Marshaler = Maps(0)
+var _ json.Unmarshaler = (*Maps)(nil)
 
 func (v Maps) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -11823,6 +13764,119 @@ func (v *Maps) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v Maps) MarshalJSON() ([]byte, error) {
+	switch v {
+	case Maps_mp_box:
+		return []byte("\"mp_box\""), nil
+	case Maps_mp_test_engagement_range:
+		return []byte("\"mp_test_engagement_range\""), nil
+	case Maps_mp_forwardbase_kodai:
+		return []byte("\"mp_forwardbase_kodai\""), nil
+	case Maps_mp_grave:
+		return []byte("\"mp_grave\""), nil
+	case Maps_mp_homestead:
+		return []byte("\"mp_homestead\""), nil
+	case Maps_mp_thaw:
+		return []byte("\"mp_thaw\""), nil
+	case Maps_mp_black_water_canal:
+		return []byte("\"mp_black_water_canal\""), nil
+	case Maps_mp_eden:
+		return []byte("\"mp_eden\""), nil
+	case Maps_mp_drydock:
+		return []byte("\"mp_drydock\""), nil
+	case Maps_mp_crashsite3:
+		return []byte("\"mp_crashsite3\""), nil
+	case Maps_mp_complex3:
+		return []byte("\"mp_complex3\""), nil
+	case Maps_mp_coliseum:
+		return []byte("\"mp_coliseum\""), nil
+	case Maps_mp_angel_city:
+		return []byte("\"mp_angel_city\""), nil
+	case Maps_mp_colony02:
+		return []byte("\"mp_colony02\""), nil
+	case Maps_mp_relic02:
+		return []byte("\"mp_relic02\""), nil
+	case Maps_mp_glitch:
+		return []byte("\"mp_glitch\""), nil
+	case Maps_mp_lf_stacks:
+		return []byte("\"mp_lf_stacks\""), nil
+	case Maps_mp_lf_meadow:
+		return []byte("\"mp_lf_meadow\""), nil
+	case Maps_mp_lf_deck:
+		return []byte("\"mp_lf_deck\""), nil
+	case Maps_mp_lf_traffic:
+		return []byte("\"mp_lf_traffic\""), nil
+	case Maps_mp_lf_township:
+		return []byte("\"mp_lf_township\""), nil
+	case Maps_mp_lf_uma:
+		return []byte("\"mp_lf_uma\""), nil
+	case Maps_mp_coliseum_column:
+		return []byte("\"mp_coliseum_column\""), nil
+	case Maps_mp_wargames:
+		return []byte("\"mp_wargames\""), nil
+	case Maps_mp_rise:
+		return []byte("\"mp_rise\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *Maps) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"mp_box\"":
+		*v = Maps_mp_box
+	case "\"mp_test_engagement_range\"":
+		*v = Maps_mp_test_engagement_range
+	case "\"mp_forwardbase_kodai\"":
+		*v = Maps_mp_forwardbase_kodai
+	case "\"mp_grave\"":
+		*v = Maps_mp_grave
+	case "\"mp_homestead\"":
+		*v = Maps_mp_homestead
+	case "\"mp_thaw\"":
+		*v = Maps_mp_thaw
+	case "\"mp_black_water_canal\"":
+		*v = Maps_mp_black_water_canal
+	case "\"mp_eden\"":
+		*v = Maps_mp_eden
+	case "\"mp_drydock\"":
+		*v = Maps_mp_drydock
+	case "\"mp_crashsite3\"":
+		*v = Maps_mp_crashsite3
+	case "\"mp_complex3\"":
+		*v = Maps_mp_complex3
+	case "\"mp_coliseum\"":
+		*v = Maps_mp_coliseum
+	case "\"mp_angel_city\"":
+		*v = Maps_mp_angel_city
+	case "\"mp_colony02\"":
+		*v = Maps_mp_colony02
+	case "\"mp_relic02\"":
+		*v = Maps_mp_relic02
+	case "\"mp_glitch\"":
+		*v = Maps_mp_glitch
+	case "\"mp_lf_stacks\"":
+		*v = Maps_mp_lf_stacks
+	case "\"mp_lf_meadow\"":
+		*v = Maps_mp_lf_meadow
+	case "\"mp_lf_deck\"":
+		*v = Maps_mp_lf_deck
+	case "\"mp_lf_traffic\"":
+		*v = Maps_mp_lf_traffic
+	case "\"mp_lf_township\"":
+		*v = Maps_mp_lf_township
+	case "\"mp_lf_uma\"":
+		*v = Maps_mp_lf_uma
+	case "\"mp_coliseum_column\"":
+		*v = Maps_mp_coliseum_column
+	case "\"mp_wargames\"":
+		*v = Maps_mp_wargames
+	case "\"mp_rise\"":
+		*v = Maps_mp_rise
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type OwnedEntitlements uint8
 
@@ -11841,9 +13895,10 @@ const (
 
 var _ fmt.Stringer = OwnedEntitlements(0)
 var _ fmt.GoStringer = OwnedEntitlements(0)
-
-//var _ encoding.TextMarshaler = OwnedEntitlements(0)
+var _ encoding.TextMarshaler = OwnedEntitlements(0)
 var _ encoding.TextUnmarshaler = (*OwnedEntitlements)(nil)
+var _ json.Marshaler = OwnedEntitlements(0)
+var _ json.Unmarshaler = (*OwnedEntitlements)(nil)
 
 func (v OwnedEntitlements) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -11924,6 +13979,55 @@ func (v *OwnedEntitlements) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v OwnedEntitlements) MarshalJSON() ([]byte, error) {
+	switch v {
+	case OwnedEntitlements_ET_DLC7_WEAPON_BUNDLE:
+		return []byte("\"ET_DLC7_WEAPON_BUNDLE\""), nil
+	case OwnedEntitlements_ET_DLC7_R201_WARPAINT:
+		return []byte("\"ET_DLC7_R201_WARPAINT\""), nil
+	case OwnedEntitlements_ET_DLC7_G2A5_WARPAINT:
+		return []byte("\"ET_DLC7_G2A5_WARPAINT\""), nil
+	case OwnedEntitlements_ET_DLC7_FLATLINE_WARPAINT:
+		return []byte("\"ET_DLC7_FLATLINE_WARPAINT\""), nil
+	case OwnedEntitlements_ET_DLC7_CAR_WARPAINT:
+		return []byte("\"ET_DLC7_CAR_WARPAINT\""), nil
+	case OwnedEntitlements_ET_DLC7_ALTERNATOR_WARPAINT:
+		return []byte("\"ET_DLC7_ALTERNATOR_WARPAINT\""), nil
+	case OwnedEntitlements_ET_DLC7_EVA8_WARPAINT:
+		return []byte("\"ET_DLC7_EVA8_WARPAINT\""), nil
+	case OwnedEntitlements_ET_DLC7_WINGMAN_WARPAINT:
+		return []byte("\"ET_DLC7_WINGMAN_WARPAINT\""), nil
+	case OwnedEntitlements_ET_DLC7_ARCHER_WARPAINT:
+		return []byte("\"ET_DLC7_ARCHER_WARPAINT\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *OwnedEntitlements) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"ET_DLC7_WEAPON_BUNDLE\"":
+		*v = OwnedEntitlements_ET_DLC7_WEAPON_BUNDLE
+	case "\"ET_DLC7_R201_WARPAINT\"":
+		*v = OwnedEntitlements_ET_DLC7_R201_WARPAINT
+	case "\"ET_DLC7_G2A5_WARPAINT\"":
+		*v = OwnedEntitlements_ET_DLC7_G2A5_WARPAINT
+	case "\"ET_DLC7_FLATLINE_WARPAINT\"":
+		*v = OwnedEntitlements_ET_DLC7_FLATLINE_WARPAINT
+	case "\"ET_DLC7_CAR_WARPAINT\"":
+		*v = OwnedEntitlements_ET_DLC7_CAR_WARPAINT
+	case "\"ET_DLC7_ALTERNATOR_WARPAINT\"":
+		*v = OwnedEntitlements_ET_DLC7_ALTERNATOR_WARPAINT
+	case "\"ET_DLC7_EVA8_WARPAINT\"":
+		*v = OwnedEntitlements_ET_DLC7_EVA8_WARPAINT
+	case "\"ET_DLC7_WINGMAN_WARPAINT\"":
+		*v = OwnedEntitlements_ET_DLC7_WINGMAN_WARPAINT
+	case "\"ET_DLC7_ARCHER_WARPAINT\"":
+		*v = OwnedEntitlements_ET_DLC7_ARCHER_WARPAINT
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type PilotExecution uint8
 
@@ -11946,9 +14050,10 @@ const (
 
 var _ fmt.Stringer = PilotExecution(0)
 var _ fmt.GoStringer = PilotExecution(0)
-
-//var _ encoding.TextMarshaler = PilotExecution(0)
+var _ encoding.TextMarshaler = PilotExecution(0)
 var _ encoding.TextUnmarshaler = (*PilotExecution)(nil)
+var _ json.Marshaler = PilotExecution(0)
+var _ json.Unmarshaler = (*PilotExecution)(nil)
 
 func (v PilotExecution) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -12053,6 +14158,71 @@ func (v *PilotExecution) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v PilotExecution) MarshalJSON() ([]byte, error) {
+	switch v {
+	case PilotExecution_execution_neck_snap:
+		return []byte("\"execution_neck_snap\""), nil
+	case PilotExecution_execution_face_stab:
+		return []byte("\"execution_face_stab\""), nil
+	case PilotExecution_execution_backshot:
+		return []byte("\"execution_backshot\""), nil
+	case PilotExecution_execution_combo:
+		return []byte("\"execution_combo\""), nil
+	case PilotExecution_execution_knockout:
+		return []byte("\"execution_knockout\""), nil
+	case PilotExecution_execution_telefrag:
+		return []byte("\"execution_telefrag\""), nil
+	case PilotExecution_execution_stim:
+		return []byte("\"execution_stim\""), nil
+	case PilotExecution_execution_grapple:
+		return []byte("\"execution_grapple\""), nil
+	case PilotExecution_execution_pulseblade:
+		return []byte("\"execution_pulseblade\""), nil
+	case PilotExecution_execution_random:
+		return []byte("\"execution_random\""), nil
+	case PilotExecution_execution_cloak:
+		return []byte("\"execution_cloak\""), nil
+	case PilotExecution_execution_holopilot:
+		return []byte("\"execution_holopilot\""), nil
+	case PilotExecution_execution_ampedwall:
+		return []byte("\"execution_ampedwall\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *PilotExecution) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"execution_neck_snap\"":
+		*v = PilotExecution_execution_neck_snap
+	case "\"execution_face_stab\"":
+		*v = PilotExecution_execution_face_stab
+	case "\"execution_backshot\"":
+		*v = PilotExecution_execution_backshot
+	case "\"execution_combo\"":
+		*v = PilotExecution_execution_combo
+	case "\"execution_knockout\"":
+		*v = PilotExecution_execution_knockout
+	case "\"execution_telefrag\"":
+		*v = PilotExecution_execution_telefrag
+	case "\"execution_stim\"":
+		*v = PilotExecution_execution_stim
+	case "\"execution_grapple\"":
+		*v = PilotExecution_execution_grapple
+	case "\"execution_pulseblade\"":
+		*v = PilotExecution_execution_pulseblade
+	case "\"execution_random\"":
+		*v = PilotExecution_execution_random
+	case "\"execution_cloak\"":
+		*v = PilotExecution_execution_cloak
+	case "\"execution_holopilot\"":
+		*v = PilotExecution_execution_holopilot
+	case "\"execution_ampedwall\"":
+		*v = PilotExecution_execution_ampedwall
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type PilotMod uint8
 
@@ -12141,9 +14311,10 @@ const (
 
 var _ fmt.Stringer = PilotMod(0)
 var _ fmt.GoStringer = PilotMod(0)
-
-//var _ encoding.TextMarshaler = PilotMod(0)
+var _ encoding.TextMarshaler = PilotMod(0)
 var _ encoding.TextUnmarshaler = (*PilotMod)(nil)
+var _ json.Marshaler = PilotMod(0)
+var _ json.Unmarshaler = (*PilotMod)(nil)
 
 func (v PilotMod) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -12644,6 +14815,335 @@ func (v *PilotMod) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v PilotMod) MarshalJSON() ([]byte, error) {
+	switch v {
+	case PilotMod_NULL:
+		return []byte("\"NULL\""), nil
+	case PilotMod_aog:
+		return []byte("\"aog\""), nil
+	case PilotMod_automatic_fire:
+		return []byte("\"automatic_fire\""), nil
+	case PilotMod_burn_mod_rspn101:
+		return []byte("\"burn_mod_rspn101\""), nil
+	case PilotMod_burn_mod_g2:
+		return []byte("\"burn_mod_g2\""), nil
+	case PilotMod_burn_mod_hemlok:
+		return []byte("\"burn_mod_hemlok\""), nil
+	case PilotMod_burn_mod_vinson:
+		return []byte("\"burn_mod_vinson\""), nil
+	case PilotMod_burn_mod_lstar:
+		return []byte("\"burn_mod_lstar\""), nil
+	case PilotMod_burn_mod_car:
+		return []byte("\"burn_mod_car\""), nil
+	case PilotMod_burn_mod_r97:
+		return []byte("\"burn_mod_r97\""), nil
+	case PilotMod_burn_mod_alternator_smg:
+		return []byte("\"burn_mod_alternator_smg\""), nil
+	case PilotMod_burn_mod_lmg:
+		return []byte("\"burn_mod_lmg\""), nil
+	case PilotMod_burn_mod_esaw:
+		return []byte("\"burn_mod_esaw\""), nil
+	case PilotMod_burn_mod_pulse_lmg:
+		return []byte("\"burn_mod_pulse_lmg\""), nil
+	case PilotMod_burn_mod_sniper:
+		return []byte("\"burn_mod_sniper\""), nil
+	case PilotMod_burn_mod_dmr:
+		return []byte("\"burn_mod_dmr\""), nil
+	case PilotMod_burn_mod_doubletake:
+		return []byte("\"burn_mod_doubletake\""), nil
+	case PilotMod_burn_mod_mastiff:
+		return []byte("\"burn_mod_mastiff\""), nil
+	case PilotMod_burn_mod_shotgun:
+		return []byte("\"burn_mod_shotgun\""), nil
+	case PilotMod_burn_mod_softball:
+		return []byte("\"burn_mod_softball\""), nil
+	case PilotMod_burn_mod_shotgun_pistol:
+		return []byte("\"burn_mod_shotgun_pistol\""), nil
+	case PilotMod_burn_mod_autopistol:
+		return []byte("\"burn_mod_autopistol\""), nil
+	case PilotMod_burn_mod_wingman:
+		return []byte("\"burn_mod_wingman\""), nil
+	case PilotMod_burn_mod_semipistol:
+		return []byte("\"burn_mod_semipistol\""), nil
+	case PilotMod_burn_mod_smart_pistol:
+		return []byte("\"burn_mod_smart_pistol\""), nil
+	case PilotMod_burn_mod_emp_grenade:
+		return []byte("\"burn_mod_emp_grenade\""), nil
+	case PilotMod_burn_mod_frag_grenade:
+		return []byte("\"burn_mod_frag_grenade\""), nil
+	case PilotMod_burn_mod_satchel:
+		return []byte("\"burn_mod_satchel\""), nil
+	case PilotMod_burn_mod_proximity_mine:
+		return []byte("\"burn_mod_proximity_mine\""), nil
+	case PilotMod_burn_mod_grenade_electric_smoke:
+		return []byte("\"burn_mod_grenade_electric_smoke\""), nil
+	case PilotMod_burn_mod_grenade_gravity:
+		return []byte("\"burn_mod_grenade_gravity\""), nil
+	case PilotMod_burn_mod_thermite_grenade:
+		return []byte("\"burn_mod_thermite_grenade\""), nil
+	case PilotMod_burn_mod_defender:
+		return []byte("\"burn_mod_defender\""), nil
+	case PilotMod_burn_mod_rocket_launcher:
+		return []byte("\"burn_mod_rocket_launcher\""), nil
+	case PilotMod_burn_mod_arc_launcher:
+		return []byte("\"burn_mod_arc_launcher\""), nil
+	case PilotMod_burn_mod_smr:
+		return []byte("\"burn_mod_smr\""), nil
+	case PilotMod_burn_mod_mgl:
+		return []byte("\"burn_mod_mgl\""), nil
+	case PilotMod_burst:
+		return []byte("\"burst\""), nil
+	case PilotMod_enhanced_targeting:
+		return []byte("\"enhanced_targeting\""), nil
+	case PilotMod_extended_ammo:
+		return []byte("\"extended_ammo\""), nil
+	case PilotMod_fast_lock:
+		return []byte("\"fast_lock\""), nil
+	case PilotMod_fast_reload:
+		return []byte("\"fast_reload\""), nil
+	case PilotMod_guided_missile:
+		return []byte("\"guided_missile\""), nil
+	case PilotMod_hcog:
+		return []byte("\"hcog\""), nil
+	case PilotMod_high_density:
+		return []byte("\"high_density\""), nil
+	case PilotMod_holosight:
+		return []byte("\"holosight\""), nil
+	case PilotMod_iron_sights:
+		return []byte("\"iron_sights\""), nil
+	case PilotMod_long_fuse:
+		return []byte("\"long_fuse\""), nil
+	case PilotMod_powered_magnets:
+		return []byte("\"powered_magnets\""), nil
+	case PilotMod_scope_4x:
+		return []byte("\"scope_4x\""), nil
+	case PilotMod_scope_6x:
+		return []byte("\"scope_6x\""), nil
+	case PilotMod_scope_8x:
+		return []byte("\"scope_8x\""), nil
+	case PilotMod_scope_10x:
+		return []byte("\"scope_10x\""), nil
+	case PilotMod_scope_12x:
+		return []byte("\"scope_12x\""), nil
+	case PilotMod_silencer:
+		return []byte("\"silencer\""), nil
+	case PilotMod_sniper_assist:
+		return []byte("\"sniper_assist\""), nil
+	case PilotMod_stabilizer:
+		return []byte("\"stabilizer\""), nil
+	case PilotMod_single_shot:
+		return []byte("\"single_shot\""), nil
+	case PilotMod_slammer:
+		return []byte("\"slammer\""), nil
+	case PilotMod_stabilized_warhead:
+		return []byte("\"stabilized_warhead\""), nil
+	case PilotMod_tank_buster:
+		return []byte("\"tank_buster\""), nil
+	case PilotMod_amped_wall:
+		return []byte("\"amped_wall\""), nil
+	case PilotMod_short_shift:
+		return []byte("\"short_shift\""), nil
+	case PilotMod_burn_mod_epg:
+		return []byte("\"burn_mod_epg\""), nil
+	case PilotMod_ricochet:
+		return []byte("\"ricochet\""), nil
+	case PilotMod_ar_trajectory:
+		return []byte("\"ar_trajectory\""), nil
+	case PilotMod_redline_sight:
+		return []byte("\"redline_sight\""), nil
+	case PilotMod_threat_scope:
+		return []byte("\"threat_scope\""), nil
+	case PilotMod_smart_lock:
+		return []byte("\"smart_lock\""), nil
+	case PilotMod_pro_screen:
+		return []byte("\"pro_screen\""), nil
+	case PilotMod_delayed_shot:
+		return []byte("\"delayed_shot\""), nil
+	case PilotMod_pas_run_and_gun:
+		return []byte("\"pas_run_and_gun\""), nil
+	case PilotMod_tactical_cdr_on_kill:
+		return []byte("\"tactical_cdr_on_kill\""), nil
+	case PilotMod_pas_fast_ads:
+		return []byte("\"pas_fast_ads\""), nil
+	case PilotMod_pas_fast_swap:
+		return []byte("\"pas_fast_swap\""), nil
+	case PilotMod_pas_fast_reload:
+		return []byte("\"pas_fast_reload\""), nil
+	case PilotMod_jump_kit:
+		return []byte("\"jump_kit\""), nil
+	case PilotMod_quick_charge:
+		return []byte("\"quick_charge\""), nil
+	case PilotMod_rocket_arena:
+		return []byte("\"rocket_arena\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *PilotMod) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"NULL\"":
+		*v = PilotMod_NULL
+	case "\"aog\"":
+		*v = PilotMod_aog
+	case "\"automatic_fire\"":
+		*v = PilotMod_automatic_fire
+	case "\"burn_mod_rspn101\"":
+		*v = PilotMod_burn_mod_rspn101
+	case "\"burn_mod_g2\"":
+		*v = PilotMod_burn_mod_g2
+	case "\"burn_mod_hemlok\"":
+		*v = PilotMod_burn_mod_hemlok
+	case "\"burn_mod_vinson\"":
+		*v = PilotMod_burn_mod_vinson
+	case "\"burn_mod_lstar\"":
+		*v = PilotMod_burn_mod_lstar
+	case "\"burn_mod_car\"":
+		*v = PilotMod_burn_mod_car
+	case "\"burn_mod_r97\"":
+		*v = PilotMod_burn_mod_r97
+	case "\"burn_mod_alternator_smg\"":
+		*v = PilotMod_burn_mod_alternator_smg
+	case "\"burn_mod_lmg\"":
+		*v = PilotMod_burn_mod_lmg
+	case "\"burn_mod_esaw\"":
+		*v = PilotMod_burn_mod_esaw
+	case "\"burn_mod_pulse_lmg\"":
+		*v = PilotMod_burn_mod_pulse_lmg
+	case "\"burn_mod_sniper\"":
+		*v = PilotMod_burn_mod_sniper
+	case "\"burn_mod_dmr\"":
+		*v = PilotMod_burn_mod_dmr
+	case "\"burn_mod_doubletake\"":
+		*v = PilotMod_burn_mod_doubletake
+	case "\"burn_mod_mastiff\"":
+		*v = PilotMod_burn_mod_mastiff
+	case "\"burn_mod_shotgun\"":
+		*v = PilotMod_burn_mod_shotgun
+	case "\"burn_mod_softball\"":
+		*v = PilotMod_burn_mod_softball
+	case "\"burn_mod_shotgun_pistol\"":
+		*v = PilotMod_burn_mod_shotgun_pistol
+	case "\"burn_mod_autopistol\"":
+		*v = PilotMod_burn_mod_autopistol
+	case "\"burn_mod_wingman\"":
+		*v = PilotMod_burn_mod_wingman
+	case "\"burn_mod_semipistol\"":
+		*v = PilotMod_burn_mod_semipistol
+	case "\"burn_mod_smart_pistol\"":
+		*v = PilotMod_burn_mod_smart_pistol
+	case "\"burn_mod_emp_grenade\"":
+		*v = PilotMod_burn_mod_emp_grenade
+	case "\"burn_mod_frag_grenade\"":
+		*v = PilotMod_burn_mod_frag_grenade
+	case "\"burn_mod_satchel\"":
+		*v = PilotMod_burn_mod_satchel
+	case "\"burn_mod_proximity_mine\"":
+		*v = PilotMod_burn_mod_proximity_mine
+	case "\"burn_mod_grenade_electric_smoke\"":
+		*v = PilotMod_burn_mod_grenade_electric_smoke
+	case "\"burn_mod_grenade_gravity\"":
+		*v = PilotMod_burn_mod_grenade_gravity
+	case "\"burn_mod_thermite_grenade\"":
+		*v = PilotMod_burn_mod_thermite_grenade
+	case "\"burn_mod_defender\"":
+		*v = PilotMod_burn_mod_defender
+	case "\"burn_mod_rocket_launcher\"":
+		*v = PilotMod_burn_mod_rocket_launcher
+	case "\"burn_mod_arc_launcher\"":
+		*v = PilotMod_burn_mod_arc_launcher
+	case "\"burn_mod_smr\"":
+		*v = PilotMod_burn_mod_smr
+	case "\"burn_mod_mgl\"":
+		*v = PilotMod_burn_mod_mgl
+	case "\"burst\"":
+		*v = PilotMod_burst
+	case "\"enhanced_targeting\"":
+		*v = PilotMod_enhanced_targeting
+	case "\"extended_ammo\"":
+		*v = PilotMod_extended_ammo
+	case "\"fast_lock\"":
+		*v = PilotMod_fast_lock
+	case "\"fast_reload\"":
+		*v = PilotMod_fast_reload
+	case "\"guided_missile\"":
+		*v = PilotMod_guided_missile
+	case "\"hcog\"":
+		*v = PilotMod_hcog
+	case "\"high_density\"":
+		*v = PilotMod_high_density
+	case "\"holosight\"":
+		*v = PilotMod_holosight
+	case "\"iron_sights\"":
+		*v = PilotMod_iron_sights
+	case "\"long_fuse\"":
+		*v = PilotMod_long_fuse
+	case "\"powered_magnets\"":
+		*v = PilotMod_powered_magnets
+	case "\"scope_4x\"":
+		*v = PilotMod_scope_4x
+	case "\"scope_6x\"":
+		*v = PilotMod_scope_6x
+	case "\"scope_8x\"":
+		*v = PilotMod_scope_8x
+	case "\"scope_10x\"":
+		*v = PilotMod_scope_10x
+	case "\"scope_12x\"":
+		*v = PilotMod_scope_12x
+	case "\"silencer\"":
+		*v = PilotMod_silencer
+	case "\"sniper_assist\"":
+		*v = PilotMod_sniper_assist
+	case "\"stabilizer\"":
+		*v = PilotMod_stabilizer
+	case "\"single_shot\"":
+		*v = PilotMod_single_shot
+	case "\"slammer\"":
+		*v = PilotMod_slammer
+	case "\"stabilized_warhead\"":
+		*v = PilotMod_stabilized_warhead
+	case "\"tank_buster\"":
+		*v = PilotMod_tank_buster
+	case "\"amped_wall\"":
+		*v = PilotMod_amped_wall
+	case "\"short_shift\"":
+		*v = PilotMod_short_shift
+	case "\"burn_mod_epg\"":
+		*v = PilotMod_burn_mod_epg
+	case "\"ricochet\"":
+		*v = PilotMod_ricochet
+	case "\"ar_trajectory\"":
+		*v = PilotMod_ar_trajectory
+	case "\"redline_sight\"":
+		*v = PilotMod_redline_sight
+	case "\"threat_scope\"":
+		*v = PilotMod_threat_scope
+	case "\"smart_lock\"":
+		*v = PilotMod_smart_lock
+	case "\"pro_screen\"":
+		*v = PilotMod_pro_screen
+	case "\"delayed_shot\"":
+		*v = PilotMod_delayed_shot
+	case "\"pas_run_and_gun\"":
+		*v = PilotMod_pas_run_and_gun
+	case "\"tactical_cdr_on_kill\"":
+		*v = PilotMod_tactical_cdr_on_kill
+	case "\"pas_fast_ads\"":
+		*v = PilotMod_pas_fast_ads
+	case "\"pas_fast_swap\"":
+		*v = PilotMod_pas_fast_swap
+	case "\"pas_fast_reload\"":
+		*v = PilotMod_pas_fast_reload
+	case "\"jump_kit\"":
+		*v = PilotMod_jump_kit
+	case "\"quick_charge\"":
+		*v = PilotMod_quick_charge
+	case "\"rocket_arena\"":
+		*v = PilotMod_rocket_arena
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type PilotPassive uint8
 
@@ -12677,9 +15177,10 @@ const (
 
 var _ fmt.Stringer = PilotPassive(0)
 var _ fmt.GoStringer = PilotPassive(0)
-
-//var _ encoding.TextMarshaler = PilotPassive(0)
+var _ encoding.TextMarshaler = PilotPassive(0)
 var _ encoding.TextUnmarshaler = (*PilotPassive)(nil)
+var _ json.Marshaler = PilotPassive(0)
+var _ json.Unmarshaler = (*PilotPassive)(nil)
 
 func (v PilotPassive) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -12850,6 +15351,115 @@ func (v *PilotPassive) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v PilotPassive) MarshalJSON() ([]byte, error) {
+	switch v {
+	case PilotPassive_NULL:
+		return []byte("\"NULL\""), nil
+	case PilotPassive_pas_stealth_movement:
+		return []byte("\"pas_stealth_movement\""), nil
+	case PilotPassive_pas_ordnance_pack:
+		return []byte("\"pas_ordnance_pack\""), nil
+	case PilotPassive_pas_power_cell:
+		return []byte("\"pas_power_cell\""), nil
+	case PilotPassive_pas_wallhang:
+		return []byte("\"pas_wallhang\""), nil
+	case PilotPassive_pas_fast_health_regen:
+		return []byte("\"pas_fast_health_regen\""), nil
+	case PilotPassive_pas_minimap_ai:
+		return []byte("\"pas_minimap_ai\""), nil
+	case PilotPassive_pas_longer_bubble:
+		return []byte("\"pas_longer_bubble\""), nil
+	case PilotPassive_pas_run_and_gun:
+		return []byte("\"pas_run_and_gun\""), nil
+	case PilotPassive_pas_dead_mans_trigger:
+		return []byte("\"pas_dead_mans_trigger\""), nil
+	case PilotPassive_pas_wall_runner:
+		return []byte("\"pas_wall_runner\""), nil
+	case PilotPassive_pas_fast_hack:
+		return []byte("\"pas_fast_hack\""), nil
+	case PilotPassive_pas_cloaked_wallrun:
+		return []byte("\"pas_cloaked_wallrun\""), nil
+	case PilotPassive_pas_cloaked_wallhang:
+		return []byte("\"pas_cloaked_wallhang\""), nil
+	case PilotPassive_pas_smoke_sight:
+		return []byte("\"pas_smoke_sight\""), nil
+	case PilotPassive_pas_fast_embark:
+		return []byte("\"pas_fast_embark\""), nil
+	case PilotPassive_pas_cdr_on_kill:
+		return []byte("\"pas_cdr_on_kill\""), nil
+	case PilotPassive_pas_at_hunter:
+		return []byte("\"pas_at_hunter\""), nil
+	case PilotPassive_pas_ordnance_beam:
+		return []byte("\"pas_ordnance_beam\""), nil
+	case PilotPassive_pas_fast_rodeo:
+		return []byte("\"pas_fast_rodeo\""), nil
+	case PilotPassive_pas_phase_eject:
+		return []byte("\"pas_phase_eject\""), nil
+	case PilotPassive_pas_ads_hover:
+		return []byte("\"pas_ads_hover\""), nil
+	case PilotPassive_pas_enemy_death_icons:
+		return []byte("\"pas_enemy_death_icons\""), nil
+	case PilotPassive_pas_off_the_grid:
+		return []byte("\"pas_off_the_grid\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *PilotPassive) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"NULL\"":
+		*v = PilotPassive_NULL
+	case "\"pas_stealth_movement\"":
+		*v = PilotPassive_pas_stealth_movement
+	case "\"pas_ordnance_pack\"":
+		*v = PilotPassive_pas_ordnance_pack
+	case "\"pas_power_cell\"":
+		*v = PilotPassive_pas_power_cell
+	case "\"pas_wallhang\"":
+		*v = PilotPassive_pas_wallhang
+	case "\"pas_fast_health_regen\"":
+		*v = PilotPassive_pas_fast_health_regen
+	case "\"pas_minimap_ai\"":
+		*v = PilotPassive_pas_minimap_ai
+	case "\"pas_longer_bubble\"":
+		*v = PilotPassive_pas_longer_bubble
+	case "\"pas_run_and_gun\"":
+		*v = PilotPassive_pas_run_and_gun
+	case "\"pas_dead_mans_trigger\"":
+		*v = PilotPassive_pas_dead_mans_trigger
+	case "\"pas_wall_runner\"":
+		*v = PilotPassive_pas_wall_runner
+	case "\"pas_fast_hack\"":
+		*v = PilotPassive_pas_fast_hack
+	case "\"pas_cloaked_wallrun\"":
+		*v = PilotPassive_pas_cloaked_wallrun
+	case "\"pas_cloaked_wallhang\"":
+		*v = PilotPassive_pas_cloaked_wallhang
+	case "\"pas_smoke_sight\"":
+		*v = PilotPassive_pas_smoke_sight
+	case "\"pas_fast_embark\"":
+		*v = PilotPassive_pas_fast_embark
+	case "\"pas_cdr_on_kill\"":
+		*v = PilotPassive_pas_cdr_on_kill
+	case "\"pas_at_hunter\"":
+		*v = PilotPassive_pas_at_hunter
+	case "\"pas_ordnance_beam\"":
+		*v = PilotPassive_pas_ordnance_beam
+	case "\"pas_fast_rodeo\"":
+		*v = PilotPassive_pas_fast_rodeo
+	case "\"pas_phase_eject\"":
+		*v = PilotPassive_pas_phase_eject
+	case "\"pas_ads_hover\"":
+		*v = PilotPassive_pas_ads_hover
+	case "\"pas_enemy_death_icons\"":
+		*v = PilotPassive_pas_enemy_death_icons
+	case "\"pas_off_the_grid\"":
+		*v = PilotPassive_pas_off_the_grid
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type PilotRace uint8
 
@@ -12861,9 +15471,10 @@ const (
 
 var _ fmt.Stringer = PilotRace(0)
 var _ fmt.GoStringer = PilotRace(0)
-
-//var _ encoding.TextMarshaler = PilotRace(0)
+var _ encoding.TextMarshaler = PilotRace(0)
 var _ encoding.TextUnmarshaler = (*PilotRace)(nil)
+var _ json.Marshaler = PilotRace(0)
+var _ json.Unmarshaler = (*PilotRace)(nil)
 
 func (v PilotRace) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -12902,6 +15513,27 @@ func (v *PilotRace) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v PilotRace) MarshalJSON() ([]byte, error) {
+	switch v {
+	case PilotRace_race_human_male:
+		return []byte("\"race_human_male\""), nil
+	case PilotRace_race_human_female:
+		return []byte("\"race_human_female\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *PilotRace) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"race_human_male\"":
+		*v = PilotRace_race_human_male
+	case "\"race_human_female\"":
+		*v = PilotRace_race_human_female
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type PilotSuit uint8
 
@@ -12918,9 +15550,10 @@ const (
 
 var _ fmt.Stringer = PilotSuit(0)
 var _ fmt.GoStringer = PilotSuit(0)
-
-//var _ encoding.TextMarshaler = PilotSuit(0)
+var _ encoding.TextMarshaler = PilotSuit(0)
 var _ encoding.TextUnmarshaler = (*PilotSuit)(nil)
+var _ json.Marshaler = PilotSuit(0)
+var _ json.Unmarshaler = (*PilotSuit)(nil)
 
 func (v PilotSuit) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -12989,6 +15622,47 @@ func (v *PilotSuit) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v PilotSuit) MarshalJSON() ([]byte, error) {
+	switch v {
+	case PilotSuit_medium:
+		return []byte("\"medium\""), nil
+	case PilotSuit_geist:
+		return []byte("\"geist\""), nil
+	case PilotSuit_stalker:
+		return []byte("\"stalker\""), nil
+	case PilotSuit_light:
+		return []byte("\"light\""), nil
+	case PilotSuit_heavy:
+		return []byte("\"heavy\""), nil
+	case PilotSuit_grapple:
+		return []byte("\"grapple\""), nil
+	case PilotSuit_nomad:
+		return []byte("\"nomad\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *PilotSuit) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"medium\"":
+		*v = PilotSuit_medium
+	case "\"geist\"":
+		*v = PilotSuit_geist
+	case "\"stalker\"":
+		*v = PilotSuit_stalker
+	case "\"light\"":
+		*v = PilotSuit_light
+	case "\"heavy\"":
+		*v = PilotSuit_heavy
+	case "\"grapple\"":
+		*v = PilotSuit_grapple
+	case "\"nomad\"":
+		*v = PilotSuit_nomad
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type TitanClasses uint8
 
@@ -13005,9 +15679,10 @@ const (
 
 var _ fmt.Stringer = TitanClasses(0)
 var _ fmt.GoStringer = TitanClasses(0)
-
-//var _ encoding.TextMarshaler = TitanClasses(0)
+var _ encoding.TextMarshaler = TitanClasses(0)
 var _ encoding.TextUnmarshaler = (*TitanClasses)(nil)
+var _ json.Marshaler = TitanClasses(0)
+var _ json.Unmarshaler = (*TitanClasses)(nil)
 
 func (v TitanClasses) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -13076,6 +15751,47 @@ func (v *TitanClasses) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v TitanClasses) MarshalJSON() ([]byte, error) {
+	switch v {
+	case TitanClasses_ion:
+		return []byte("\"ion\""), nil
+	case TitanClasses_scorch:
+		return []byte("\"scorch\""), nil
+	case TitanClasses_ronin:
+		return []byte("\"ronin\""), nil
+	case TitanClasses_tone:
+		return []byte("\"tone\""), nil
+	case TitanClasses_northstar:
+		return []byte("\"northstar\""), nil
+	case TitanClasses_legion:
+		return []byte("\"legion\""), nil
+	case TitanClasses_vanguard:
+		return []byte("\"vanguard\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *TitanClasses) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"ion\"":
+		*v = TitanClasses_ion
+	case "\"scorch\"":
+		*v = TitanClasses_scorch
+	case "\"ronin\"":
+		*v = TitanClasses_ronin
+	case "\"tone\"":
+		*v = TitanClasses_tone
+	case "\"northstar\"":
+		*v = TitanClasses_northstar
+	case "\"legion\"":
+		*v = TitanClasses_legion
+	case "\"vanguard\"":
+		*v = TitanClasses_vanguard
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type TitanExecution uint8
 
@@ -13105,9 +15821,10 @@ const (
 
 var _ fmt.Stringer = TitanExecution(0)
 var _ fmt.GoStringer = TitanExecution(0)
-
-//var _ encoding.TextMarshaler = TitanExecution(0)
+var _ encoding.TextMarshaler = TitanExecution(0)
 var _ encoding.TextUnmarshaler = (*TitanExecution)(nil)
+var _ json.Marshaler = TitanExecution(0)
+var _ json.Unmarshaler = (*TitanExecution)(nil)
 
 func (v TitanExecution) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -13254,6 +15971,99 @@ func (v *TitanExecution) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v TitanExecution) MarshalJSON() ([]byte, error) {
+	switch v {
+	case TitanExecution_execution_ion:
+		return []byte("\"execution_ion\""), nil
+	case TitanExecution_execution_ion_prime:
+		return []byte("\"execution_ion_prime\""), nil
+	case TitanExecution_execution_tone:
+		return []byte("\"execution_tone\""), nil
+	case TitanExecution_execution_tone_prime:
+		return []byte("\"execution_tone_prime\""), nil
+	case TitanExecution_execution_ronin:
+		return []byte("\"execution_ronin\""), nil
+	case TitanExecution_execution_ronin_prime:
+		return []byte("\"execution_ronin_prime\""), nil
+	case TitanExecution_execution_northstar:
+		return []byte("\"execution_northstar\""), nil
+	case TitanExecution_execution_northstar_prime:
+		return []byte("\"execution_northstar_prime\""), nil
+	case TitanExecution_execution_legion:
+		return []byte("\"execution_legion\""), nil
+	case TitanExecution_execution_legion_prime:
+		return []byte("\"execution_legion_prime\""), nil
+	case TitanExecution_execution_vanguard:
+		return []byte("\"execution_vanguard\""), nil
+	case TitanExecution_execution_scorch:
+		return []byte("\"execution_scorch\""), nil
+	case TitanExecution_execution_scorch_prime:
+		return []byte("\"execution_scorch_prime\""), nil
+	case TitanExecution_execution_random_0:
+		return []byte("\"execution_random_0\""), nil
+	case TitanExecution_execution_random_1:
+		return []byte("\"execution_random_1\""), nil
+	case TitanExecution_execution_random_2:
+		return []byte("\"execution_random_2\""), nil
+	case TitanExecution_execution_random_3:
+		return []byte("\"execution_random_3\""), nil
+	case TitanExecution_execution_random_4:
+		return []byte("\"execution_random_4\""), nil
+	case TitanExecution_execution_random_5:
+		return []byte("\"execution_random_5\""), nil
+	case TitanExecution_execution_random_6:
+		return []byte("\"execution_random_6\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *TitanExecution) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"execution_ion\"":
+		*v = TitanExecution_execution_ion
+	case "\"execution_ion_prime\"":
+		*v = TitanExecution_execution_ion_prime
+	case "\"execution_tone\"":
+		*v = TitanExecution_execution_tone
+	case "\"execution_tone_prime\"":
+		*v = TitanExecution_execution_tone_prime
+	case "\"execution_ronin\"":
+		*v = TitanExecution_execution_ronin
+	case "\"execution_ronin_prime\"":
+		*v = TitanExecution_execution_ronin_prime
+	case "\"execution_northstar\"":
+		*v = TitanExecution_execution_northstar
+	case "\"execution_northstar_prime\"":
+		*v = TitanExecution_execution_northstar_prime
+	case "\"execution_legion\"":
+		*v = TitanExecution_execution_legion
+	case "\"execution_legion_prime\"":
+		*v = TitanExecution_execution_legion_prime
+	case "\"execution_vanguard\"":
+		*v = TitanExecution_execution_vanguard
+	case "\"execution_scorch\"":
+		*v = TitanExecution_execution_scorch
+	case "\"execution_scorch_prime\"":
+		*v = TitanExecution_execution_scorch_prime
+	case "\"execution_random_0\"":
+		*v = TitanExecution_execution_random_0
+	case "\"execution_random_1\"":
+		*v = TitanExecution_execution_random_1
+	case "\"execution_random_2\"":
+		*v = TitanExecution_execution_random_2
+	case "\"execution_random_3\"":
+		*v = TitanExecution_execution_random_3
+	case "\"execution_random_4\"":
+		*v = TitanExecution_execution_random_4
+	case "\"execution_random_5\"":
+		*v = TitanExecution_execution_random_5
+	case "\"execution_random_6\"":
+		*v = TitanExecution_execution_random_6
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type TitanIsPrimeTitan uint8
 
@@ -13265,9 +16075,10 @@ const (
 
 var _ fmt.Stringer = TitanIsPrimeTitan(0)
 var _ fmt.GoStringer = TitanIsPrimeTitan(0)
-
-//var _ encoding.TextMarshaler = TitanIsPrimeTitan(0)
+var _ encoding.TextMarshaler = TitanIsPrimeTitan(0)
 var _ encoding.TextUnmarshaler = (*TitanIsPrimeTitan)(nil)
+var _ json.Marshaler = TitanIsPrimeTitan(0)
+var _ json.Unmarshaler = (*TitanIsPrimeTitan)(nil)
 
 func (v TitanIsPrimeTitan) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -13306,6 +16117,27 @@ func (v *TitanIsPrimeTitan) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v TitanIsPrimeTitan) MarshalJSON() ([]byte, error) {
+	switch v {
+	case TitanIsPrimeTitan_titan_is_not_prime:
+		return []byte("\"titan_is_not_prime\""), nil
+	case TitanIsPrimeTitan_titan_is_prime:
+		return []byte("\"titan_is_prime\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *TitanIsPrimeTitan) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"titan_is_not_prime\"":
+		*v = TitanIsPrimeTitan_titan_is_not_prime
+	case "\"titan_is_prime\"":
+		*v = TitanIsPrimeTitan_titan_is_prime
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type TitanMod uint8
 
@@ -13341,9 +16173,10 @@ const (
 
 var _ fmt.Stringer = TitanMod(0)
 var _ fmt.GoStringer = TitanMod(0)
-
-//var _ encoding.TextMarshaler = TitanMod(0)
+var _ encoding.TextMarshaler = TitanMod(0)
 var _ encoding.TextUnmarshaler = (*TitanMod)(nil)
+var _ json.Marshaler = TitanMod(0)
+var _ json.Unmarshaler = (*TitanMod)(nil)
 
 func (v TitanMod) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -13526,6 +16359,123 @@ func (v *TitanMod) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v TitanMod) MarshalJSON() ([]byte, error) {
+	switch v {
+	case TitanMod_NULL:
+		return []byte("\"NULL\""), nil
+	case TitanMod_accelerator:
+		return []byte("\"accelerator\""), nil
+	case TitanMod_afterburners:
+		return []byte("\"afterburners\""), nil
+	case TitanMod_arc_triple_threat:
+		return []byte("\"arc_triple_threat\""), nil
+	case TitanMod_burn_mod_titan_40mm:
+		return []byte("\"burn_mod_titan_40mm\""), nil
+	case TitanMod_burn_mod_titan_arc_cannon:
+		return []byte("\"burn_mod_titan_arc_cannon\""), nil
+	case TitanMod_burn_mod_titan_sniper:
+		return []byte("\"burn_mod_titan_sniper\""), nil
+	case TitanMod_burn_mod_titan_triple_threat:
+		return []byte("\"burn_mod_titan_triple_threat\""), nil
+	case TitanMod_burn_mod_titan_xo16:
+		return []byte("\"burn_mod_titan_xo16\""), nil
+	case TitanMod_burn_mod_titan_dumbfire_rockets:
+		return []byte("\"burn_mod_titan_dumbfire_rockets\""), nil
+	case TitanMod_burn_mod_titan_homing_rockets:
+		return []byte("\"burn_mod_titan_homing_rockets\""), nil
+	case TitanMod_burn_mod_titan_salvo_rockets:
+		return []byte("\"burn_mod_titan_salvo_rockets\""), nil
+	case TitanMod_burn_mod_titan_shoulder_rockets:
+		return []byte("\"burn_mod_titan_shoulder_rockets\""), nil
+	case TitanMod_burn_mod_titan_vortex_shield:
+		return []byte("\"burn_mod_titan_vortex_shield\""), nil
+	case TitanMod_burn_mod_titan_smoke:
+		return []byte("\"burn_mod_titan_smoke\""), nil
+	case TitanMod_burn_mod_titan_particle_wall:
+		return []byte("\"burn_mod_titan_particle_wall\""), nil
+	case TitanMod_burst:
+		return []byte("\"burst\""), nil
+	case TitanMod_capacitor:
+		return []byte("\"capacitor\""), nil
+	case TitanMod_extended_ammo:
+		return []byte("\"extended_ammo\""), nil
+	case TitanMod_fast_lock:
+		return []byte("\"fast_lock\""), nil
+	case TitanMod_fast_reload:
+		return []byte("\"fast_reload\""), nil
+	case TitanMod_instant_shot:
+		return []byte("\"instant_shot\""), nil
+	case TitanMod_overcharge:
+		return []byte("\"overcharge\""), nil
+	case TitanMod_quick_shot:
+		return []byte("\"quick_shot\""), nil
+	case TitanMod_rapid_fire_missiles:
+		return []byte("\"rapid_fire_missiles\""), nil
+	case TitanMod_stryder_sniper:
+		return []byte("\"stryder_sniper\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *TitanMod) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"NULL\"":
+		*v = TitanMod_NULL
+	case "\"accelerator\"":
+		*v = TitanMod_accelerator
+	case "\"afterburners\"":
+		*v = TitanMod_afterburners
+	case "\"arc_triple_threat\"":
+		*v = TitanMod_arc_triple_threat
+	case "\"burn_mod_titan_40mm\"":
+		*v = TitanMod_burn_mod_titan_40mm
+	case "\"burn_mod_titan_arc_cannon\"":
+		*v = TitanMod_burn_mod_titan_arc_cannon
+	case "\"burn_mod_titan_sniper\"":
+		*v = TitanMod_burn_mod_titan_sniper
+	case "\"burn_mod_titan_triple_threat\"":
+		*v = TitanMod_burn_mod_titan_triple_threat
+	case "\"burn_mod_titan_xo16\"":
+		*v = TitanMod_burn_mod_titan_xo16
+	case "\"burn_mod_titan_dumbfire_rockets\"":
+		*v = TitanMod_burn_mod_titan_dumbfire_rockets
+	case "\"burn_mod_titan_homing_rockets\"":
+		*v = TitanMod_burn_mod_titan_homing_rockets
+	case "\"burn_mod_titan_salvo_rockets\"":
+		*v = TitanMod_burn_mod_titan_salvo_rockets
+	case "\"burn_mod_titan_shoulder_rockets\"":
+		*v = TitanMod_burn_mod_titan_shoulder_rockets
+	case "\"burn_mod_titan_vortex_shield\"":
+		*v = TitanMod_burn_mod_titan_vortex_shield
+	case "\"burn_mod_titan_smoke\"":
+		*v = TitanMod_burn_mod_titan_smoke
+	case "\"burn_mod_titan_particle_wall\"":
+		*v = TitanMod_burn_mod_titan_particle_wall
+	case "\"burst\"":
+		*v = TitanMod_burst
+	case "\"capacitor\"":
+		*v = TitanMod_capacitor
+	case "\"extended_ammo\"":
+		*v = TitanMod_extended_ammo
+	case "\"fast_lock\"":
+		*v = TitanMod_fast_lock
+	case "\"fast_reload\"":
+		*v = TitanMod_fast_reload
+	case "\"instant_shot\"":
+		*v = TitanMod_instant_shot
+	case "\"overcharge\"":
+		*v = TitanMod_overcharge
+	case "\"quick_shot\"":
+		*v = TitanMod_quick_shot
+	case "\"rapid_fire_missiles\"":
+		*v = TitanMod_rapid_fire_missiles
+	case "\"stryder_sniper\"":
+		*v = TitanMod_stryder_sniper
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type TitanPassive uint8
 
@@ -13597,9 +16547,10 @@ const (
 
 var _ fmt.Stringer = TitanPassive(0)
 var _ fmt.GoStringer = TitanPassive(0)
-
-//var _ encoding.TextMarshaler = TitanPassive(0)
+var _ encoding.TextMarshaler = TitanPassive(0)
 var _ encoding.TextUnmarshaler = (*TitanPassive)(nil)
+var _ json.Marshaler = TitanPassive(0)
+var _ json.Unmarshaler = (*TitanPassive)(nil)
 
 func (v TitanPassive) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -13998,6 +16949,267 @@ func (v *TitanPassive) UnmarshalText(b []byte) error {
 	}
 	return nil
 }
+func (v TitanPassive) MarshalJSON() ([]byte, error) {
+	switch v {
+	case TitanPassive_NULL:
+		return []byte("\"NULL\""), nil
+	case TitanPassive_pas_enhanced_titan_ai:
+		return []byte("\"pas_enhanced_titan_ai\""), nil
+	case TitanPassive_pas_auto_eject:
+		return []byte("\"pas_auto_eject\""), nil
+	case TitanPassive_pas_dash_recharge:
+		return []byte("\"pas_dash_recharge\""), nil
+	case TitanPassive_pas_defensive_core:
+		return []byte("\"pas_defensive_core\""), nil
+	case TitanPassive_pas_shield_regen:
+		return []byte("\"pas_shield_regen\""), nil
+	case TitanPassive_pas_assault_reactor:
+		return []byte("\"pas_assault_reactor\""), nil
+	case TitanPassive_pas_hyper_core:
+		return []byte("\"pas_hyper_core\""), nil
+	case TitanPassive_pas_anti_rodeo:
+		return []byte("\"pas_anti_rodeo\""), nil
+	case TitanPassive_pas_build_up_nuclear_core:
+		return []byte("\"pas_build_up_nuclear_core\""), nil
+	case TitanPassive_pas_offensive_autoload:
+		return []byte("\"pas_offensive_autoload\""), nil
+	case TitanPassive_pas_offensive_hitnrun:
+		return []byte("\"pas_offensive_hitnrun\""), nil
+	case TitanPassive_pas_offensive_regen:
+		return []byte("\"pas_offensive_regen\""), nil
+	case TitanPassive_pas_defensive_tacload:
+		return []byte("\"pas_defensive_tacload\""), nil
+	case TitanPassive_pas_defensive_quickdash:
+		return []byte("\"pas_defensive_quickdash\""), nil
+	case TitanPassive_pas_defensive_domeshield:
+		return []byte("\"pas_defensive_domeshield\""), nil
+	case TitanPassive_pas_mobility_dash_capacity:
+		return []byte("\"pas_mobility_dash_capacity\""), nil
+	case TitanPassive_pas_warpfall:
+		return []byte("\"pas_warpfall\""), nil
+	case TitanPassive_pas_bubbleshield:
+		return []byte("\"pas_bubbleshield\""), nil
+	case TitanPassive_pas_ronin_weapon:
+		return []byte("\"pas_ronin_weapon\""), nil
+	case TitanPassive_pas_northstar_weapon:
+		return []byte("\"pas_northstar_weapon\""), nil
+	case TitanPassive_pas_ion_weapon:
+		return []byte("\"pas_ion_weapon\""), nil
+	case TitanPassive_pas_tone_weapon:
+		return []byte("\"pas_tone_weapon\""), nil
+	case TitanPassive_pas_scorch_weapon:
+		return []byte("\"pas_scorch_weapon\""), nil
+	case TitanPassive_pas_legion_weapon:
+		return []byte("\"pas_legion_weapon\""), nil
+	case TitanPassive_pas_ion_tripwire:
+		return []byte("\"pas_ion_tripwire\""), nil
+	case TitanPassive_pas_ion_vortex:
+		return []byte("\"pas_ion_vortex\""), nil
+	case TitanPassive_pas_ion_lasercannon:
+		return []byte("\"pas_ion_lasercannon\""), nil
+	case TitanPassive_pas_tone_rockets:
+		return []byte("\"pas_tone_rockets\""), nil
+	case TitanPassive_pas_tone_sonar:
+		return []byte("\"pas_tone_sonar\""), nil
+	case TitanPassive_pas_tone_wall:
+		return []byte("\"pas_tone_wall\""), nil
+	case TitanPassive_pas_ronin_arcwave:
+		return []byte("\"pas_ronin_arcwave\""), nil
+	case TitanPassive_pas_ronin_phase:
+		return []byte("\"pas_ronin_phase\""), nil
+	case TitanPassive_pas_ronin_swordcore:
+		return []byte("\"pas_ronin_swordcore\""), nil
+	case TitanPassive_pas_northstar_cluster:
+		return []byte("\"pas_northstar_cluster\""), nil
+	case TitanPassive_pas_northstar_trap:
+		return []byte("\"pas_northstar_trap\""), nil
+	case TitanPassive_pas_northstar_flightcore:
+		return []byte("\"pas_northstar_flightcore\""), nil
+	case TitanPassive_pas_scorch_firewall:
+		return []byte("\"pas_scorch_firewall\""), nil
+	case TitanPassive_pas_scorch_shield:
+		return []byte("\"pas_scorch_shield\""), nil
+	case TitanPassive_pas_scorch_selfdmg:
+		return []byte("\"pas_scorch_selfdmg\""), nil
+	case TitanPassive_pas_legion_spinup:
+		return []byte("\"pas_legion_spinup\""), nil
+	case TitanPassive_pas_legion_gunshield:
+		return []byte("\"pas_legion_gunshield\""), nil
+	case TitanPassive_pas_legion_smartcore:
+		return []byte("\"pas_legion_smartcore\""), nil
+	case TitanPassive_pas_ion_weapon_ads:
+		return []byte("\"pas_ion_weapon_ads\""), nil
+	case TitanPassive_pas_tone_burst:
+		return []byte("\"pas_tone_burst\""), nil
+	case TitanPassive_pas_legion_chargeshot:
+		return []byte("\"pas_legion_chargeshot\""), nil
+	case TitanPassive_pas_ronin_autoshift:
+		return []byte("\"pas_ronin_autoshift\""), nil
+	case TitanPassive_pas_northstar_optics:
+		return []byte("\"pas_northstar_optics\""), nil
+	case TitanPassive_pas_scorch_flamecore:
+		return []byte("\"pas_scorch_flamecore\""), nil
+	case TitanPassive_pas_vanguard_coremeter:
+		return []byte("\"pas_vanguard_coremeter\""), nil
+	case TitanPassive_pas_vanguard_shield:
+		return []byte("\"pas_vanguard_shield\""), nil
+	case TitanPassive_pas_vanguard_rearm:
+		return []byte("\"pas_vanguard_rearm\""), nil
+	case TitanPassive_pas_vanguard_doom:
+		return []byte("\"pas_vanguard_doom\""), nil
+	case TitanPassive_pas_vanguard_core1:
+		return []byte("\"pas_vanguard_core1\""), nil
+	case TitanPassive_pas_vanguard_core2:
+		return []byte("\"pas_vanguard_core2\""), nil
+	case TitanPassive_pas_vanguard_core3:
+		return []byte("\"pas_vanguard_core3\""), nil
+	case TitanPassive_pas_vanguard_core4:
+		return []byte("\"pas_vanguard_core4\""), nil
+	case TitanPassive_pas_vanguard_core5:
+		return []byte("\"pas_vanguard_core5\""), nil
+	case TitanPassive_pas_vanguard_core6:
+		return []byte("\"pas_vanguard_core6\""), nil
+	case TitanPassive_pas_vanguard_core7:
+		return []byte("\"pas_vanguard_core7\""), nil
+	case TitanPassive_pas_vanguard_core8:
+		return []byte("\"pas_vanguard_core8\""), nil
+	case TitanPassive_pas_vanguard_core9:
+		return []byte("\"pas_vanguard_core9\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *TitanPassive) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"NULL\"":
+		*v = TitanPassive_NULL
+	case "\"pas_enhanced_titan_ai\"":
+		*v = TitanPassive_pas_enhanced_titan_ai
+	case "\"pas_auto_eject\"":
+		*v = TitanPassive_pas_auto_eject
+	case "\"pas_dash_recharge\"":
+		*v = TitanPassive_pas_dash_recharge
+	case "\"pas_defensive_core\"":
+		*v = TitanPassive_pas_defensive_core
+	case "\"pas_shield_regen\"":
+		*v = TitanPassive_pas_shield_regen
+	case "\"pas_assault_reactor\"":
+		*v = TitanPassive_pas_assault_reactor
+	case "\"pas_hyper_core\"":
+		*v = TitanPassive_pas_hyper_core
+	case "\"pas_anti_rodeo\"":
+		*v = TitanPassive_pas_anti_rodeo
+	case "\"pas_build_up_nuclear_core\"":
+		*v = TitanPassive_pas_build_up_nuclear_core
+	case "\"pas_offensive_autoload\"":
+		*v = TitanPassive_pas_offensive_autoload
+	case "\"pas_offensive_hitnrun\"":
+		*v = TitanPassive_pas_offensive_hitnrun
+	case "\"pas_offensive_regen\"":
+		*v = TitanPassive_pas_offensive_regen
+	case "\"pas_defensive_tacload\"":
+		*v = TitanPassive_pas_defensive_tacload
+	case "\"pas_defensive_quickdash\"":
+		*v = TitanPassive_pas_defensive_quickdash
+	case "\"pas_defensive_domeshield\"":
+		*v = TitanPassive_pas_defensive_domeshield
+	case "\"pas_mobility_dash_capacity\"":
+		*v = TitanPassive_pas_mobility_dash_capacity
+	case "\"pas_warpfall\"":
+		*v = TitanPassive_pas_warpfall
+	case "\"pas_bubbleshield\"":
+		*v = TitanPassive_pas_bubbleshield
+	case "\"pas_ronin_weapon\"":
+		*v = TitanPassive_pas_ronin_weapon
+	case "\"pas_northstar_weapon\"":
+		*v = TitanPassive_pas_northstar_weapon
+	case "\"pas_ion_weapon\"":
+		*v = TitanPassive_pas_ion_weapon
+	case "\"pas_tone_weapon\"":
+		*v = TitanPassive_pas_tone_weapon
+	case "\"pas_scorch_weapon\"":
+		*v = TitanPassive_pas_scorch_weapon
+	case "\"pas_legion_weapon\"":
+		*v = TitanPassive_pas_legion_weapon
+	case "\"pas_ion_tripwire\"":
+		*v = TitanPassive_pas_ion_tripwire
+	case "\"pas_ion_vortex\"":
+		*v = TitanPassive_pas_ion_vortex
+	case "\"pas_ion_lasercannon\"":
+		*v = TitanPassive_pas_ion_lasercannon
+	case "\"pas_tone_rockets\"":
+		*v = TitanPassive_pas_tone_rockets
+	case "\"pas_tone_sonar\"":
+		*v = TitanPassive_pas_tone_sonar
+	case "\"pas_tone_wall\"":
+		*v = TitanPassive_pas_tone_wall
+	case "\"pas_ronin_arcwave\"":
+		*v = TitanPassive_pas_ronin_arcwave
+	case "\"pas_ronin_phase\"":
+		*v = TitanPassive_pas_ronin_phase
+	case "\"pas_ronin_swordcore\"":
+		*v = TitanPassive_pas_ronin_swordcore
+	case "\"pas_northstar_cluster\"":
+		*v = TitanPassive_pas_northstar_cluster
+	case "\"pas_northstar_trap\"":
+		*v = TitanPassive_pas_northstar_trap
+	case "\"pas_northstar_flightcore\"":
+		*v = TitanPassive_pas_northstar_flightcore
+	case "\"pas_scorch_firewall\"":
+		*v = TitanPassive_pas_scorch_firewall
+	case "\"pas_scorch_shield\"":
+		*v = TitanPassive_pas_scorch_shield
+	case "\"pas_scorch_selfdmg\"":
+		*v = TitanPassive_pas_scorch_selfdmg
+	case "\"pas_legion_spinup\"":
+		*v = TitanPassive_pas_legion_spinup
+	case "\"pas_legion_gunshield\"":
+		*v = TitanPassive_pas_legion_gunshield
+	case "\"pas_legion_smartcore\"":
+		*v = TitanPassive_pas_legion_smartcore
+	case "\"pas_ion_weapon_ads\"":
+		*v = TitanPassive_pas_ion_weapon_ads
+	case "\"pas_tone_burst\"":
+		*v = TitanPassive_pas_tone_burst
+	case "\"pas_legion_chargeshot\"":
+		*v = TitanPassive_pas_legion_chargeshot
+	case "\"pas_ronin_autoshift\"":
+		*v = TitanPassive_pas_ronin_autoshift
+	case "\"pas_northstar_optics\"":
+		*v = TitanPassive_pas_northstar_optics
+	case "\"pas_scorch_flamecore\"":
+		*v = TitanPassive_pas_scorch_flamecore
+	case "\"pas_vanguard_coremeter\"":
+		*v = TitanPassive_pas_vanguard_coremeter
+	case "\"pas_vanguard_shield\"":
+		*v = TitanPassive_pas_vanguard_shield
+	case "\"pas_vanguard_rearm\"":
+		*v = TitanPassive_pas_vanguard_rearm
+	case "\"pas_vanguard_doom\"":
+		*v = TitanPassive_pas_vanguard_doom
+	case "\"pas_vanguard_core1\"":
+		*v = TitanPassive_pas_vanguard_core1
+	case "\"pas_vanguard_core2\"":
+		*v = TitanPassive_pas_vanguard_core2
+	case "\"pas_vanguard_core3\"":
+		*v = TitanPassive_pas_vanguard_core3
+	case "\"pas_vanguard_core4\"":
+		*v = TitanPassive_pas_vanguard_core4
+	case "\"pas_vanguard_core5\"":
+		*v = TitanPassive_pas_vanguard_core5
+	case "\"pas_vanguard_core6\"":
+		*v = TitanPassive_pas_vanguard_core6
+	case "\"pas_vanguard_core7\"":
+		*v = TitanPassive_pas_vanguard_core7
+	case "\"pas_vanguard_core8\"":
+		*v = TitanPassive_pas_vanguard_core8
+	case "\"pas_vanguard_core9\"":
+		*v = TitanPassive_pas_vanguard_core9
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
 
 type UnlockRefs uint8
 
@@ -14028,9 +17240,10 @@ const (
 
 var _ fmt.Stringer = UnlockRefs(0)
 var _ fmt.GoStringer = UnlockRefs(0)
-
-//var _ encoding.TextMarshaler = UnlockRefs(0)
+var _ encoding.TextMarshaler = UnlockRefs(0)
 var _ encoding.TextUnmarshaler = (*UnlockRefs)(nil)
+var _ json.Marshaler = UnlockRefs(0)
+var _ json.Unmarshaler = (*UnlockRefs)(nil)
 
 func (v UnlockRefs) String() string {
 	if b, err := v.MarshalText(); err == nil {
@@ -14182,4 +17395,202 @@ func (v *UnlockRefs) UnmarshalText(b []byte) error {
 		return fmt.Errorf("%w: invalid value %q for enum %q", ErrInvalidEnumValue, string(b), "UnlockRefs")
 	}
 	return nil
+}
+func (v UnlockRefs) MarshalJSON() ([]byte, error) {
+	switch v {
+	case UnlockRefs_edit_pilots:
+		return []byte("\"edit_pilots\""), nil
+	case UnlockRefs_edit_titans:
+		return []byte("\"edit_titans\""), nil
+	case UnlockRefs_pilot_custom_loadout_1:
+		return []byte("\"pilot_custom_loadout_1\""), nil
+	case UnlockRefs_pilot_custom_loadout_2:
+		return []byte("\"pilot_custom_loadout_2\""), nil
+	case UnlockRefs_pilot_custom_loadout_3:
+		return []byte("\"pilot_custom_loadout_3\""), nil
+	case UnlockRefs_pilot_custom_loadout_4:
+		return []byte("\"pilot_custom_loadout_4\""), nil
+	case UnlockRefs_pilot_custom_loadout_5:
+		return []byte("\"pilot_custom_loadout_5\""), nil
+	case UnlockRefs_titan_custom_loadout_1:
+		return []byte("\"titan_custom_loadout_1\""), nil
+	case UnlockRefs_titan_custom_loadout_2:
+		return []byte("\"titan_custom_loadout_2\""), nil
+	case UnlockRefs_titan_custom_loadout_3:
+		return []byte("\"titan_custom_loadout_3\""), nil
+	case UnlockRefs_titan_custom_loadout_4:
+		return []byte("\"titan_custom_loadout_4\""), nil
+	case UnlockRefs_titan_custom_loadout_5:
+		return []byte("\"titan_custom_loadout_5\""), nil
+	case UnlockRefs_burn_card_slot_1:
+		return []byte("\"burn_card_slot_1\""), nil
+	case UnlockRefs_burn_card_slot_2:
+		return []byte("\"burn_card_slot_2\""), nil
+	case UnlockRefs_burn_card_slot_3:
+		return []byte("\"burn_card_slot_3\""), nil
+	case UnlockRefs_burn_card_pack_1:
+		return []byte("\"burn_card_pack_1\""), nil
+	case UnlockRefs_burn_card_pack_2:
+		return []byte("\"burn_card_pack_2\""), nil
+	case UnlockRefs_burn_card_pack_3:
+		return []byte("\"burn_card_pack_3\""), nil
+	case UnlockRefs_burn_card_pack_4:
+		return []byte("\"burn_card_pack_4\""), nil
+	case UnlockRefs_burn_card_pack_5:
+		return []byte("\"burn_card_pack_5\""), nil
+	case UnlockRefs_challenges:
+		return []byte("\"challenges\""), nil
+	default:
+		return []byte(strconv.Itoa(int(v))), nil
+	}
+}
+func (v *UnlockRefs) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "\"edit_pilots\"":
+		*v = UnlockRefs_edit_pilots
+	case "\"edit_titans\"":
+		*v = UnlockRefs_edit_titans
+	case "\"pilot_custom_loadout_1\"":
+		*v = UnlockRefs_pilot_custom_loadout_1
+	case "\"pilot_custom_loadout_2\"":
+		*v = UnlockRefs_pilot_custom_loadout_2
+	case "\"pilot_custom_loadout_3\"":
+		*v = UnlockRefs_pilot_custom_loadout_3
+	case "\"pilot_custom_loadout_4\"":
+		*v = UnlockRefs_pilot_custom_loadout_4
+	case "\"pilot_custom_loadout_5\"":
+		*v = UnlockRefs_pilot_custom_loadout_5
+	case "\"titan_custom_loadout_1\"":
+		*v = UnlockRefs_titan_custom_loadout_1
+	case "\"titan_custom_loadout_2\"":
+		*v = UnlockRefs_titan_custom_loadout_2
+	case "\"titan_custom_loadout_3\"":
+		*v = UnlockRefs_titan_custom_loadout_3
+	case "\"titan_custom_loadout_4\"":
+		*v = UnlockRefs_titan_custom_loadout_4
+	case "\"titan_custom_loadout_5\"":
+		*v = UnlockRefs_titan_custom_loadout_5
+	case "\"burn_card_slot_1\"":
+		*v = UnlockRefs_burn_card_slot_1
+	case "\"burn_card_slot_2\"":
+		*v = UnlockRefs_burn_card_slot_2
+	case "\"burn_card_slot_3\"":
+		*v = UnlockRefs_burn_card_slot_3
+	case "\"burn_card_pack_1\"":
+		*v = UnlockRefs_burn_card_pack_1
+	case "\"burn_card_pack_2\"":
+		*v = UnlockRefs_burn_card_pack_2
+	case "\"burn_card_pack_3\"":
+		*v = UnlockRefs_burn_card_pack_3
+	case "\"burn_card_pack_4\"":
+		*v = UnlockRefs_burn_card_pack_4
+	case "\"burn_card_pack_5\"":
+		*v = UnlockRefs_burn_card_pack_5
+	case "\"challenges\"":
+		*v = UnlockRefs_challenges
+	default:
+		return json.Unmarshal(b, (*uint8)(v))
+	}
+	return nil
+}
+
+func pdataMarshalJSONStruct(obj any, filter func(path ...string) bool, path ...string) ([]byte, error) {
+	objVal := reflect.ValueOf(obj)
+	objTyp := objVal.Type()
+
+	if objTyp.Kind() != reflect.Struct {
+		panic("not a struct")
+	}
+
+	var b bytes.Buffer
+	b.WriteByte('{')
+	needComma := false
+	for i := 0; i < objTyp.NumField(); i++ {
+		fldTyp := objTyp.Field(i)
+		fldVal := objVal.Field(i)
+		fld := fldVal.Interface()
+
+		fldTag := fldTyp.Tag.Get("pdef")
+		fldTagName, fldTagAttr, _ := strings.Cut(fldTag, ",")
+		if fldTagName == "" {
+			continue
+		}
+		if fldTagAttr != "" {
+			panic(fmt.Errorf("unknown pdef field tag attrs %q", fldTagAttr))
+		}
+
+		fldPath := append(path, fldTagName)
+		if filter != nil && !filter(fldPath...) {
+			continue
+		}
+
+		if needComma {
+			b.WriteByte(',')
+			needComma = false
+		}
+
+		b.WriteString("\"" + fldTagName + "\":")
+		needComma = true
+
+		switch fldTyp.Type.Kind() {
+		case reflect.Struct:
+			buf, err := pdataMarshalJSONStruct(fld, filter, fldPath...)
+			if err != nil {
+				return nil, err
+			}
+			b.Write(buf)
+		case reflect.Array:
+			b.WriteByte('[')
+			for j := 0; j < fldTyp.Type.Len(); j++ {
+				fldValElemVal := fldVal.Index(j)
+				fldValElemTyp := fldValElemVal.Type()
+				fldValElem := fldValElemVal.Interface()
+
+				if j != 0 {
+					b.WriteByte(',')
+				}
+				if fldValElemTyp.Kind() == reflect.Struct {
+					buf, err := pdataMarshalJSONStruct(fldValElem, filter, fldPath...)
+					if err != nil {
+						return nil, err
+					}
+					b.Write(buf)
+				} else {
+					buf, err := pdataMarshalJSONPrimitive(fldValElem)
+					if err != nil {
+						return nil, err
+					}
+					b.Write(buf)
+				}
+			}
+			b.WriteByte(']')
+		default:
+			buf, err := pdataMarshalJSONPrimitive(fld)
+			if err != nil {
+				return nil, err
+			}
+			b.Write(buf)
+		}
+	}
+	b.WriteByte('}')
+	return b.Bytes(), nil
+}
+
+func pdataMarshalJSONPrimitive(v any) ([]byte, error) {
+	switch v := v.(type) {
+	case float32:
+		if math.IsNaN(float64(v)) || math.IsInf(float64(v), 0) {
+			return []byte("null"), nil // match the JS behaviour
+		}
+		return json.Marshal(v)
+	case int32, bool, string:
+		return json.Marshal(v)
+	case json.Marshaler:
+		if reflect.TypeOf(v).ConvertibleTo(reflect.TypeOf(uint8(0))) {
+			return v.MarshalJSON() // enum
+		}
+		panic(fmt.Errorf("unhandled type %T", v))
+	default:
+		panic(fmt.Errorf("unhandled type %T", v))
+	}
 }
