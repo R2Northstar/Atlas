@@ -89,6 +89,7 @@ func respMaybeCompress(w http.ResponseWriter, r *http.Request, status int, buf [
 			if cbuf.Len() < int(float64(len(buf))*0.8) {
 				buf = cbuf.Bytes()
 				w.Header().Set("Content-Encoding", "gzip")
+				w.Header().Del("ETag") // to avoid breaking caching proxies since ETag must be unique if Content-Encoding is different
 			}
 			break
 		}
