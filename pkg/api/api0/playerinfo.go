@@ -79,7 +79,17 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uid, err := strconv.ParseUint(r.URL.Query().Get("id"), 10, 64)
+	uidQ := r.URL.Query().Get("id")
+	if uidQ == "" {
+		respJSON(w, r, http.StatusBadRequest, map[string]any{
+			"success": false,
+			"error":   ErrorCode_BAD_REQUEST,
+			"msg":     fmt.Sprintf("%s: id param is required", ErrorCode_BAD_REQUEST.Message()),
+		})
+		return
+	}
+
+	uid, err := strconv.ParseUint(uidQ, 10, 64)
 	if err != nil {
 		respJSON(w, r, http.StatusNotFound, map[string]any{
 			"success": false,
