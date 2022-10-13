@@ -6,8 +6,50 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"io"
+	"strings"
 	"sync"
+
+	"github.com/pg9182/atlas/pkg/api/api0"
 )
+
+// AccountStore stores accounts in-memory.
+type AccountStore struct {
+	accounts sync.Map
+}
+
+// NewPdataStore creates a new MemoryPdataStore.
+func NewAccountStore() *AccountStore {
+	return &AccountStore{}
+}
+
+func (m *AccountStore) GetUIDsByUsername(username string) ([]uint64, error) {
+	var uids []uint64
+	if username != "" {
+		m.accounts.Range(func(_, v any) bool {
+			if u := v.(api0.Account); strings.EqualFold(u.Username, username) {
+				uids = append(uids, u.UID)
+			}
+			return true
+		})
+	}
+	return uids, nil
+}
+
+func (m *AccountStore) GetAccount(uid uint64) (*api0.Account, error) {
+	v, ok := m.accounts.Load(uid)
+	if !ok {
+		return nil, nil
+	}
+	a := v.(api0.Account)
+	return &a, nil
+}
+
+func (m *AccountStore) SaveAccount(a *api0.Account) error {
+	if a != nil {
+		m.accounts.Store(a.UID, *a)
+	}
+	return nil
+}
 
 // PdataStore stores pdata in-memory, with optional compression.
 type PdataStore struct {
