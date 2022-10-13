@@ -1,5 +1,7 @@
 package api0
 
+import "fmt"
+
 // ErrorCode represents a known Northstar error code.
 type ErrorCode string
 
@@ -58,4 +60,9 @@ func (n ErrorCode) Message() string {
 	default:
 		return string(n)
 	}
+}
+
+// Messagef returns Message() with additional text appended after ": ".
+func (n ErrorCode) Messagef(format string, a ...interface{}) string {
+	return n.Message() + ": " + fmt.Sprintf(format, a...)
 }
