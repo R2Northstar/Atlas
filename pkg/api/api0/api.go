@@ -47,6 +47,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/player/") {
 			// TODO: rate limit
 			h.handlePlayer(w, r)
+			return
 		}
 		if h.NotFound == nil {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
