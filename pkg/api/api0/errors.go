@@ -21,6 +21,7 @@ const (
 
 const (
 	ErrorCode_INTERNAL_SERVER_ERROR ErrorCode = "INTERNAL_SERVER_ERROR"
+	ErrorCode_BAD_REQUEST           ErrorCode = "BAD_REQUEST"
 )
 
 // Message returns the default message for error code n.
@@ -52,6 +53,8 @@ func (n ErrorCode) Message() string {
 		return "A server with this port already exists for your IP address"
 	case ErrorCode_INTERNAL_SERVER_ERROR:
 		return "Internal server error"
+	case ErrorCode_BAD_REQUEST:
+		return "Bad request"
 	default:
 		return string(n)
 	}
