@@ -20,7 +20,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/pg9182/atlas/pkg/origin"
 	"github.com/rs/zerolog/hlog"
 	"golang.org/x/mod/semver"
 )
@@ -32,6 +34,10 @@ type Handler struct {
 
 	// PdataStorage stores player data. It must be non-nil.
 	PdataStorage PdataStorage
+
+	// OriginAuthMgr manages Origin nucleus tokens (used for checking
+	// usernames). If not provided, usernames will not be updated.
+	OriginAuthMgr *origin.AuthMgr
 
 	// MainMenuPromos gets the main menu promos to return for a request.
 	MainMenuPromos func(*http.Request) MainMenuPromos
@@ -48,6 +54,10 @@ type Handler struct {
 	// to clients with at least this version, which must be valid semver. +dev
 	// versions are always allowed.
 	MinimumLauncherVersion string
+
+	// TokenExpiryTime controls the expiry of player masterserver auth tokens.
+	// If zero, a reasonable a default is used.
+	TokenExpiryTime time.Duration
 }
 
 // ServeHTTP routes requests to Handler.
@@ -57,6 +67,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/client/mainmenupromos":
 		h.handleMainMenuPromos(w, r)
+	case "/client/origin_auth":
+		h.handleClientOriginAuth(w, r)
 	case "/client/auth_with_self":
 		h.handleClientAuthWithSelf(w, r)
 	case "/accounts/write_persistence":
