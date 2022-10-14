@@ -37,7 +37,7 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		return
 	}
 
-	pf, pfHdr, err := r.FormFile("file.pdata")
+	pf, pfHdr, err := r.FormFile("pdata")
 	if err != nil {
 		respJSON(w, r, http.StatusNotFound, map[string]any{
 			"success": false,
