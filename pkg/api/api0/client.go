@@ -381,6 +381,21 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
+	acct.LastServerID = "self"
+
+	if err := h.AccountStorage.SaveAccount(acct); err != nil {
+		hlog.FromRequest(r).Error().
+			Err(err).
+			Uint64("uid", uid).
+			Msgf("failed to save account to storage")
+		respJSON(w, r, http.StatusInternalServerError, map[string]any{
+			"success": false,
+			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
+			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
+		})
+		return
+	}
+
 	obj := map[string]any{
 		"success": true,
 		"id":      strconv.FormatUint(acct.UID, 10),
