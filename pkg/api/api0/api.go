@@ -122,6 +122,7 @@ func respJSON(w http.ResponseWriter, r *http.Request, status int, obj any) {
 	if err != nil {
 		panic(err)
 	}
+	buf = append(buf, '\n')
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Length", strconv.Itoa(len(buf)))
 	w.WriteHeader(status)
