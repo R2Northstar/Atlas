@@ -25,7 +25,7 @@ var Base = "https://api1.origin.com"
 
 // UserInfo contains information about an Origin account.
 type UserInfo struct {
-	UserID    int
+	UserID    uint64
 	PersonaID string
 	EAID      string
 }
@@ -33,10 +33,10 @@ type UserInfo struct {
 // GetUserInfo gets information about Origin accounts by their Origin UserID.
 //
 // If errors.Is(err, ErrAuthRequired), you need a new NucleusToken.
-func GetUserInfo(ctx context.Context, token NucleusToken, uid ...int) ([]UserInfo, error) {
+func GetUserInfo(ctx context.Context, token NucleusToken, uid ...uint64) ([]UserInfo, error) {
 	uids := make([]string, len(uid))
 	for _, x := range uid {
-		uids = append(uids, strconv.Itoa(x))
+		uids = append(uids, strconv.FormatUint(x, 10))
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, Base+"/atom/users?userIds="+strings.Join(uids, ","), nil)
@@ -118,7 +118,7 @@ func parseUserInfo(buf []byte, root xml.Name) ([]UserInfo, error) {
 	res := make([]UserInfo, len(obj.User))
 	for i, x := range obj.User {
 		var v UserInfo
-		if uid, err := strconv.Atoi(x.UserID); err == nil {
+		if uid, err := strconv.ParseUint(x.UserID, 10, 64); err == nil {
 			v.UserID = uid
 		} else {
 			return nil, fmt.Errorf("parse userId %q: %w", x.UserID, err)
