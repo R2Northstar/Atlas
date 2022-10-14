@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/andybalholm/cascadia"
 	"golang.org/x/net/html"
@@ -400,11 +401,11 @@ func login3(_ context.Context, c *http.Client, r2 *http.Request) (string, error)
 	return code, nil
 }
 
-// GetNucleusToken generates a Nucleus SID/AuthToken from the active session.
-// Note that this token generally lasts ~4h.
+// GetNucleusToken generates a Nucleus AuthToken from the active session. Note
+// that this token generally lasts ~4h.
 //
 // If errors.Is(err, ErrAuthRequired), you need a new SID.
-func GetNucleusToken(ctx context.Context, sid SID) (NucleusToken, error) {
+func GetNucleusToken(ctx context.Context, sid SID) (NucleusToken, time.Time, error) {
 	jar, _ := cookiejar.New(nil)
 
 	c := &http.Client{
@@ -424,7 +425,7 @@ func GetNucleusToken(ctx context.Context, sid SID) (NucleusToken, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none&release_type=prod", nil)
 	if err != nil {
-		return "", err
+		return "", time.Time{}, err
 	}
 
 	req.Header.Set("Referrer", "https://www.origin.com/")
@@ -432,13 +433,13 @@ func GetNucleusToken(ctx context.Context, sid SID) (NucleusToken, error) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("get nucleus token: %w", err)
+		return "", time.Time{}, fmt.Errorf("get nucleus token: %w", err)
 	}
 	defer resp.Body.Close()
 
 	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("get nucleus token: %w", err)
+		return "", time.Time{}, fmt.Errorf("get nucleus token: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -448,12 +449,12 @@ func GetNucleusToken(ctx context.Context, sid SID) (NucleusToken, error) {
 			ErrorNumber json.Number `json:"error_number"`
 		}
 		if obj.ErrorCode == "login_required" {
-			return "", fmt.Errorf("get nucleus token: %w: login required", ErrAuthRequired)
+			return "", time.Time{}, fmt.Errorf("get nucleus token: %w: login required", ErrAuthRequired)
 		}
 		if err := json.Unmarshal(buf, &obj); err == nil && obj.Error != "" {
-			return "", fmt.Errorf("get nucleus token: %w: error %s: %s (%q)", ErrOrigin, obj.ErrorNumber, obj.ErrorCode, obj.Error)
+			return "", time.Time{}, fmt.Errorf("get nucleus token: %w: error %s: %s (%q)", ErrOrigin, obj.ErrorNumber, obj.ErrorCode, obj.Error)
 		}
-		return "", fmt.Errorf("get nucleus token: request %q: response status %d (%s)", resp.Request.URL.String(), resp.StatusCode, resp.Status)
+		return "", time.Time{}, fmt.Errorf("get nucleus token: request %q: response status %d (%s)", resp.Request.URL.String(), resp.StatusCode, resp.Status)
 	}
 
 	var obj struct {
@@ -462,12 +463,19 @@ func GetNucleusToken(ctx context.Context, sid SID) (NucleusToken, error) {
 		ExpiresIn   json.Number `json:"expires_in"`
 	}
 	if err := json.Unmarshal(buf, &obj); err != nil {
-		return "", fmt.Errorf("get nucleus token: %w", err)
+		return "", time.Time{}, fmt.Errorf("get nucleus token: %w", err)
 	}
-	if obj.AccessToken == "" {
-		return "", fmt.Errorf("get nucleus token: invalid response %q", string(buf))
+	if obj.AccessToken == "" || obj.ExpiresIn == "" {
+		return "", time.Time{}, fmt.Errorf("get nucleus token: invalid response %q", string(buf))
 	}
-	return NucleusToken(obj.AccessToken), nil
+
+	var expiry time.Time
+	if v, err := obj.ExpiresIn.Int64(); err == nil {
+		expiry = time.Now().Add(time.Duration(v) * time.Second)
+	} else {
+		return "", time.Time{}, fmt.Errorf("get nucleus token: invalid response %q: invalid expiry: %w", string(buf), err)
+	}
+	return NucleusToken(obj.AccessToken), expiry, nil
 }
 
 // generateCID generates a login nonce using the algorithm in the Origin login

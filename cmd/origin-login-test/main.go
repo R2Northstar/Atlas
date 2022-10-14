@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/cardigann/harhar"
 	"github.com/pg9182/atlas/pkg/origin"
@@ -76,12 +77,15 @@ func main() {
 	}
 
 	if !fail {
-		token, err := origin.GetNucleusToken(ctx, sid)
+		token, expiry, err := origin.GetNucleusToken(ctx, sid)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "origin: error: %v\n", err)
 			fail = true
 		} else {
 			fmt.Printf("NucleusToken=%s\n", token)
+			fmt.Printf("NucleusTokenExpiry=%d\n", expiry.Unix())
+			fmt.Printf("NucleusTokenExpirySecs=%.0f\n", time.Until(expiry).Seconds())
+			fmt.Printf("NucleusTokenExpiryDuration=%s\n", time.Until(expiry).Truncate(time.Second))
 		}
 	}
 
