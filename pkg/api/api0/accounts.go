@@ -114,16 +114,10 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		return
 	}
 
-	serverID := r.URL.Query().Get("serverId")
-	if serverID == "" {
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("serverId param is required"),
-		})
-		return
+	serverID := r.URL.Query().Get("serverId") // blank on listen server
+	if serverID != "" {
+		// TODO: check serverID
 	}
-	// TODO: check serverID
 
 	raddr, err := netip.ParseAddrPort(r.RemoteAddr)
 	if err != nil {
