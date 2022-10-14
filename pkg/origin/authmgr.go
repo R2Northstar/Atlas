@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+var ErrAuthMgrBackoff = errors.New("not refreshing token due to backoff")
+
 // AuthMgr manages Origin NucleusTokens. It is efficient and safe for concurrent
 // use.
 //
@@ -27,10 +29,17 @@ type AuthMgr struct {
 	// SID.
 	Credentials func() (email, password string, err error)
 
-	authMu  sync.Mutex     // guards authWg so only one goroutine can get it
-	authWg  sync.WaitGroup // guards auth/authErr and allows waiting for updates
-	authErr error          // stores the last auth error
-	auth    AuthState      // stores the current auth tokens
+	// Backoff, if provided, checks if another refresh is allowed after a
+	// failure. If it returns false, ErrAuthMgrBackoff will be returned
+	// immediately from OriginAuth.
+	Backoff func(err error, time time.Time, count int) bool
+
+	authMu       sync.Mutex     // guards authWg so only one goroutine can get it
+	authWg       sync.WaitGroup // guards the variables below and allows waiting for updates
+	authErr      error          // last auth error
+	authErrTime  time.Time      // last auth error time
+	authErrCount int            // consecutive auth errors
+	auth         AuthState      // current auth tokens
 }
 
 // AuthState contains the current authentication tokens.
@@ -81,6 +90,11 @@ func (a *AuthMgr) OriginAuth(refresh bool) (NucleusToken, bool, error) {
 		// another goroutine is refreshing
 		return a.OriginAuth(false)
 	}
+	if a.authErr != nil && a.Backoff != nil {
+		if !a.Backoff(a.authErr, a.authErrTime, a.authErrCount) {
+			return a.auth.NucleusToken, true, fmt.Errorf("%w (%d attempts, last error: %v)", ErrAuthMgrBackoff, a.authErrCount, a.authErrCount)
+		}
+	}
 	a.authErr = func() (err error) {
 		defer func() {
 			if p := recover(); p != nil {
@@ -129,6 +143,16 @@ func (a *AuthMgr) OriginAuth(refresh bool) (NucleusToken, bool, error) {
 		}
 		return
 	}()
+	if a.authErrCount != 0 {
+		a.authErr = fmt.Errorf("%w (attempt %d)", a.authErr, a.authErrCount)
+	}
+	if a.authErr != nil {
+		a.authErrCount++
+		a.authErrTime = time.Now()
+	} else {
+		a.authErrCount = 0
+		a.authErrTime = time.Time{}
+	}
 	if a.Updated != nil {
 		go a.Updated(a.auth, a.authErr)
 	}
