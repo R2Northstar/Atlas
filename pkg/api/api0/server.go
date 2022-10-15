@@ -245,10 +245,11 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 
 		if n, err := strconv.ParseUint(r.URL.Query().Get("playerCount"), 10, 8); err == nil {
 			if canCreate {
-				s.MaxPlayers = int(n)
+				s.PlayerCount = int(n)
 			}
 			if canUpdate {
-				s.MaxPlayers = int(n)
+				x := int(n)
+				u.PlayerCount = &x
 			}
 		}
 
@@ -257,7 +258,8 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 				s.MaxPlayers = int(n)
 			}
 			if canUpdate {
-				s.MaxPlayers = int(n)
+				x := int(n)
+				u.MaxPlayers = &x
 			}
 		}
 	}
