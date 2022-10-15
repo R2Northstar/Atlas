@@ -206,51 +206,6 @@ func (h *Handler) handleServerAddServer(w http.ResponseWriter, r *http.Request) 
 			Msgf("failed to parse modinfo")
 	}
 
-	verifyDeadline := time.Now().Add(time.Second * 10)
-	if err := func() error {
-		ctx, cancel := context.WithDeadline(r.Context(), verifyDeadline)
-		defer cancel()
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/verify", s.AuthAddr()), nil)
-		if err != nil {
-			return err
-		}
-		req.Header.Set("User-Agent", "Atlas")
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		buf, err := io.ReadAll(io.LimitReader(resp.Body, 100))
-		if err != nil {
-			return err
-		}
-		if string(bytes.TrimSpace(buf)) != "I am a northstar server!" {
-			return fmt.Errorf("unexpected response")
-		}
-		return nil
-	}(); err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			err = fmt.Errorf("request timed out")
-		}
-		respJSON(w, r, http.StatusBadGateway, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_GAMESERVER_RESPONSE,
-			"msg":     ErrorCode_BAD_GAMESERVER_RESPONSE.Messagef("failed to connect to auth port: %v", err),
-		})
-		return
-	}
-	if err := a2s.Probe(s.Addr, time.Until(verifyDeadline)); err != nil {
-		respJSON(w, r, http.StatusBadGateway, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_GAMESERVER_RESPONSE,
-			"msg":     ErrorCode_BAD_GAMESERVER_RESPONSE.Messagef("failed to connect to game port: %v", err),
-		})
-		return
-	}
-
 	var l ServerListLimit
 	if n := h.MaxServers; n > 0 {
 		l.MaxServers = n
@@ -290,6 +245,65 @@ func (h *Handler) handleServerAddServer(w http.ResponseWriter, r *http.Request) 
 			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
 		})
 		return
+	}
+
+	if !nsrv.VerificationDeadline.IsZero() {
+		if err := func() error {
+			ctx, cancel := context.WithDeadline(r.Context(), nsrv.VerificationDeadline)
+			defer cancel()
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/verify", s.AuthAddr()), nil)
+			if err != nil {
+				return err
+			}
+			req.Header.Set("User-Agent", "Atlas")
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+
+			buf, err := io.ReadAll(io.LimitReader(resp.Body, 100))
+			if err != nil {
+				return err
+			}
+			if string(bytes.TrimSpace(buf)) != "I am a northstar server!" {
+				return fmt.Errorf("unexpected response")
+			}
+			return nil
+		}(); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				err = fmt.Errorf("request timed out")
+			}
+			var code ErrorCode
+			if err.Error() == "unexpected response" {
+				code = ErrorCode_BAD_GAMESERVER_RESPONSE
+			} else {
+				code = ErrorCode_NO_GAMESERVER_RESPONSE
+			}
+			respJSON(w, r, http.StatusBadGateway, map[string]any{
+				"success": false,
+				"error":   code,
+				"msg":     code.Messagef("failed to connect to auth port: %v", err),
+			})
+			return
+		}
+		if err := a2s.Probe(s.Addr, time.Until(nsrv.VerificationDeadline)); err != nil {
+			respJSON(w, r, http.StatusBadGateway, map[string]any{
+				"success": false,
+				"error":   ErrorCode_BAD_GAMESERVER_RESPONSE,
+				"msg":     ErrorCode_BAD_GAMESERVER_RESPONSE.Messagef("failed to connect to game port: %v", err),
+			})
+			return
+		}
+		if !h.ServerList.VerifyServer(nsrv.ID) {
+			respJSON(w, r, http.StatusBadGateway, map[string]any{
+				"success": false,
+				"error":   ErrorCode_NO_GAMESERVER_RESPONSE,
+				"msg":     ErrorCode_NO_GAMESERVER_RESPONSE.Messagef("verification timed out"),
+			})
+		}
 	}
 
 	respJSON(w, r, http.StatusOK, map[string]any{
