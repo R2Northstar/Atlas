@@ -451,7 +451,7 @@ func (s *ServerList) PutServerByAddr(x *Server) (string, bool, error) {
 	// error if there's an existing server with a matching auth addr
 	if esrv, exists := s.servers3[nsrv.AuthAddr()]; exists {
 		if s.isServerAlive(esrv, t) {
-			return "", false, fmt.Errorf("%w %s", ErrServerListDuplicateAuthAddr, nsrv.AuthAddr())
+			return "", false, fmt.Errorf("%w %s (used for server %s)", ErrServerListDuplicateAuthAddr, nsrv.AuthAddr(), esrv.Addr)
 		}
 	}
 
