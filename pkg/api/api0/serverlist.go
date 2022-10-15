@@ -458,7 +458,7 @@ func (s *ServerList) UpdateServerByID(id string, u *ServerUpdate) bool {
 
 	// get the server if it's eligible for updates
 	esrv, exists := s.servers2[id]
-	if !exists || !s.isServerAlive(esrv, t) || !u.Heartbeat || !s.isServerGhost(esrv, t) {
+	if !(exists || s.isServerAlive(esrv, t) || (u.Heartbeat && s.isServerGhost(esrv, t))) {
 		if s.isServerGone(esrv, t) {
 			s.freeServer(esrv)
 		}
