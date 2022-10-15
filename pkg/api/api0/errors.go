@@ -7,7 +7,7 @@ type ErrorCode string
 
 // https://github.com/R2Northstar/NorthstarMasterServer/blob/b45ff0ef267712e8bff6cd718bb5dc1afcdec420/shared/errorcodes.js
 const (
-	ErrorCode_NO_GAMESERVER_RESPONSE     ErrorCode = "NO_GAMESERVER_RESPONS"      // Couldn't reach game server
+	ErrorCode_NO_GAMESERVER_RESPONSE     ErrorCode = "NO_GAMESERVER_RESPONSE"     // Couldn't reach game server
 	ErrorCode_BAD_GAMESERVER_RESPONSE    ErrorCode = "BAD_GAMESERVER_RESPONSE"    // Game server gave an invalid response
 	ErrorCode_UNAUTHORIZED_GAMESERVER    ErrorCode = "UNAUTHORIZED_GAMESERVER"    // Game server is not authorized to make that request
 	ErrorCode_UNAUTHORIZED_GAME          ErrorCode = "UNAUTHORIZED_GAME"          // Stryder couldn't confirm that this account owns Titanfall 2
