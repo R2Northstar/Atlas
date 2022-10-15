@@ -43,6 +43,10 @@ type Handler struct {
 	// usernames). If not provided, usernames will not be updated.
 	OriginAuthMgr *origin.AuthMgr
 
+	// CleanBadWords is used to filter bad words from server names and
+	// descriptions. If not provided, words will not be filtered.
+	CleanBadWords func(s string) string
+
 	// MainMenuPromos gets the main menu promos to return for a request.
 	MainMenuPromos func(*http.Request) MainMenuPromos
 

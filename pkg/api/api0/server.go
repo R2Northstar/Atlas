@@ -194,7 +194,9 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		} else {
-			// TODO: bad word censoring
+			if h.CleanBadWords != nil {
+				v = h.CleanBadWords(v)
+			}
 			if n := 256; len(v) > n { // NorthstarLauncher@v1.9.7 limits it to 63
 				v = v[:n]
 			}
@@ -207,7 +209,9 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if v := r.URL.Query().Get("description"); v != "" {
-			// TODO: bad word censoring
+			if h.CleanBadWords != nil {
+				v = h.CleanBadWords(v)
+			}
 			if n := 1024; len(v) > n { // NorthstarLauncher@v1.9.7 doesn't have a limit
 				v = v[:n]
 			}
