@@ -251,48 +251,36 @@ func (h *Handler) handleServerAddServer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if tok, err := cryptoRandHex(32); err != nil {
-		hlog.FromRequest(r).Error().
-			Err(err).
-			Msgf("failed to generate random token")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
-		return
-	} else {
-		s.ServerAuthToken = tok
+	var l ServerListLimit
+	if n := h.MaxServers; n > 0 {
+		l.MaxServers = n
+	} else if n == 0 {
+		l.MaxServers = 1000
+	}
+	if n := h.MaxServersPerIP; n > 0 {
+		l.MaxServersPerIP = n
+	} else if n == 0 {
+		l.MaxServersPerIP = 50
 	}
 
-	// these checks are racy, but it's meant to be a safety net, not a hard limit
-	if !checkLimit(h.MaxServers, 1000, h.ServerList.GetServerCountByIP(netip.Addr{})) {
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Messagef("game server limit reached"),
-		})
-		return
-	}
-	if !checkLimit(h.MaxServers, 50, h.ServerList.GetServerCountByIP(s.Addr.Addr())) {
-		respJSON(w, r, http.StatusTooManyRequests, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Messagef("game server per-ip limit reached"),
-		})
-		return
-	}
-
-	if sid, _, err := h.ServerList.PutServerByAddr(&s); err == nil {
-		s.ID = sid
-	} else if errors.Is(err, ErrServerListDuplicateAuthAddr) {
-		respJSON(w, r, http.StatusForbidden, map[string]any{
-			"success": false,
-			"error":   ErrorCode_DUPLICATE_SERVER,
-			"msg":     ErrorCode_DUPLICATE_SERVER.Messagef("%v", err),
-		})
-		return
-	} else {
+	nsrv, err := h.ServerList.ServerHybridUpdatePut(nil, &s, l)
+	if err != nil {
+		if errors.Is(err, ErrServerListDuplicateAuthAddr) {
+			respJSON(w, r, http.StatusForbidden, map[string]any{
+				"success": false,
+				"error":   ErrorCode_DUPLICATE_SERVER,
+				"msg":     ErrorCode_DUPLICATE_SERVER.Messagef("%v", err),
+			})
+			return
+		}
+		if errors.Is(err, ErrServerListLimitExceeded) {
+			respJSON(w, r, http.StatusInternalServerError, map[string]any{
+				"success": false,
+				"error":   ErrorCode_INTERNAL_SERVER_ERROR,
+				"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Messagef("%v", err),
+			})
+			return
+		}
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to add server to list")
@@ -306,7 +294,7 @@ func (h *Handler) handleServerAddServer(w http.ResponseWriter, r *http.Request) 
 
 	respJSON(w, r, http.StatusInternalServerError, map[string]any{
 		"success":         true,
-		"id":              s.ID,
-		"serverAuthToken": s.ServerAuthToken,
+		"id":              nsrv.ID,
+		"serverAuthToken": nsrv.ServerAuthToken,
 	})
 }

@@ -212,13 +212,3 @@ func marshalJSONBytesAsArray(b []byte) json.RawMessage {
 	e.WriteByte(']')
 	return json.RawMessage(e.Bytes())
 }
-
-func checkLimit(limit, def, cur int) bool {
-	if limit == -1 {
-		return true
-	}
-	if limit == 0 && cur < def {
-		return true
-	}
-	return cur < limit
-}
