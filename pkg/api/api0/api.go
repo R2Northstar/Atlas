@@ -84,6 +84,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleMainMenuPromos(w, r)
 	case "/client/origin_auth":
 		h.handleClientOriginAuth(w, r)
+	case "/client/auth_with_server":
+		h.handleClientAuthWithServer(w, r)
 	case "/client/auth_with_self":
 		h.handleClientAuthWithSelf(w, r)
 	case "/client/servers":

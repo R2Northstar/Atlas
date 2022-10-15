@@ -1,11 +1,15 @@
 package api0
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -298,6 +302,200 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodOptions && r.Method != http.MethodPost {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Cache-Control", "private, no-cache, no-store")
+	w.Header().Set("Expires", "0")
+	w.Header().Set("Pragma", "no-cache")
+
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Allow", "OPTIONS, POST")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if !h.checkLauncherVersion(r) {
+		respJSON(w, r, http.StatusBadRequest, map[string]any{
+			"success": false,
+			"error":   ErrorCode_UNSUPPORTED_VERSION,
+		})
+		return
+	}
+
+	uidQ := r.URL.Query().Get("id")
+	if uidQ == "" {
+		respJSON(w, r, http.StatusBadRequest, map[string]any{
+			"success": false,
+			"error":   ErrorCode_BAD_REQUEST,
+			"msg":     ErrorCode_BAD_REQUEST.Messagef("id param is required"),
+		})
+		return
+	}
+
+	uid, err := strconv.ParseUint(uidQ, 10, 64)
+	if err != nil {
+		respJSON(w, r, http.StatusNotFound, map[string]any{
+			"success": false,
+			"error":   ErrorCode_PLAYER_NOT_FOUND,
+		})
+		return
+	}
+
+	playerToken := r.URL.Query().Get("playerToken")
+	server := r.URL.Query().Get("server")
+	password := r.URL.Query().Get("password")
+
+	srv := h.ServerList.GetServerByID(server)
+	if srv == nil || srv.Password != password {
+		respJSON(w, r, http.StatusUnauthorized, map[string]any{
+			"success": false,
+			"error":   ErrorCode_UNAUTHORIZED_PWD,
+		})
+		return
+	}
+
+	acct, err := h.AccountStorage.GetAccount(uid)
+	if err != nil {
+		hlog.FromRequest(r).Error().
+			Err(err).
+			Uint64("uid", uid).
+			Msgf("failed to read account from storage")
+		respJSON(w, r, http.StatusInternalServerError, map[string]any{
+			"success": false,
+			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
+		})
+		return
+	}
+	if acct == nil {
+		respJSON(w, r, http.StatusNotFound, map[string]any{
+			"success": false,
+			"error":   ErrorCode_PLAYER_NOT_FOUND,
+		})
+		return
+	}
+
+	if !h.InsecureDevNoCheckPlayerAuth {
+		if playerToken != acct.AuthToken || !time.Now().Before(acct.AuthTokenExpiry) {
+			respJSON(w, r, http.StatusUnauthorized, map[string]any{
+				"success": false,
+				"error":   ErrorCode_INVALID_MASTERSERVER_TOKEN,
+			})
+			return
+		}
+	}
+
+	var authToken string
+	if v, err := cryptoRandHex(31); err != nil {
+		hlog.FromRequest(r).Error().
+			Err(err).
+			Msgf("failed to generate random token")
+		respJSON(w, r, http.StatusInternalServerError, map[string]any{
+			"success": false,
+			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
+		})
+		return
+	} else {
+		authToken = v
+	}
+
+	var pbuf []byte
+	if b, exists, err := h.PdataStorage.GetPdataCached(acct.UID, [sha256.Size]byte{}); err != nil {
+		hlog.FromRequest(r).Error().
+			Err(err).
+			Uint64("uid", acct.UID).
+			Msgf("failed to read pdata from storage")
+		respJSON(w, r, http.StatusInternalServerError, map[string]any{
+			"success": false,
+			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
+		})
+		return
+	} else if !exists {
+		pbuf = pdata.DefaultPdata
+	} else {
+		pbuf = b
+	}
+
+	if !func() bool {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
+		defer cancel()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("http://%s/authenticate_incoming_player?id=%d&authToken=%s&serverAuthToken=%s&username=%s", srv.AuthAddr(), acct.UID, authToken, srv.ServerAuthToken, url.QueryEscape(acct.Username)), bytes.NewReader(pbuf))
+		if err != nil {
+			hlog.FromRequest(r).Error().
+				Err(err).
+				Msgf("failed to make gameserver auth request")
+			respJSON(w, r, http.StatusInternalServerError, map[string]any{
+				"success": false,
+				"error":   ErrorCode_INTERNAL_SERVER_ERROR,
+			})
+			return false
+		}
+		req.Header.Set("User-Agent", "Atlas")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			hlog.FromRequest(r).Error().
+				Err(err).
+				Msgf("failed to make gameserver auth request")
+			respJSON(w, r, http.StatusInternalServerError, map[string]any{
+				"success": false,
+				"error":   ErrorCode_BAD_GAMESERVER_RESPONSE,
+			})
+			return false
+		}
+		defer resp.Body.Close()
+
+		var obj struct {
+			Success bool `json:"success"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&obj); err != nil {
+			hlog.FromRequest(r).Error().
+				Err(err).
+				Msgf("failed to read gameserver auth response")
+			respJSON(w, r, http.StatusInternalServerError, map[string]any{
+				"success": false,
+				"error":   ErrorCode_BAD_GAMESERVER_RESPONSE,
+			})
+			return false
+		}
+		if !obj.Success {
+			respJSON(w, r, http.StatusInternalServerError, map[string]any{
+				"success": false,
+				"error":   ErrorCode_JSON_PARSE_ERROR, // this is kind of misleading... but it's what the original master server did
+			})
+			return false
+		}
+		return true
+	}() {
+		return
+	}
+
+	acct.LastServerID = srv.ID
+
+	if err := h.AccountStorage.SaveAccount(acct); err != nil {
+		hlog.FromRequest(r).Error().
+			Err(err).
+			Uint64("uid", uid).
+			Msgf("failed to save account to storage")
+		respJSON(w, r, http.StatusInternalServerError, map[string]any{
+			"success": false,
+			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
+		})
+		return
+	}
+
+	respJSON(w, r, http.StatusOK, map[string]any{
+		"success":   true,
+		"ip":        srv.Addr.Addr().String(),
+		"port":      srv.Addr.Port(),
+		"authToken": authToken,
+	})
+}
+
 func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodOptions && r.Method != http.MethodPost {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
@@ -468,8 +666,3 @@ func (h *Handler) handleClientServers(w http.ResponseWriter, r *http.Request) {
 		w.Write(buf)
 	}
 }
-
-/*
-  /client/auth_with_server:
-    POST:
-*/
