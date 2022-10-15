@@ -610,8 +610,6 @@ func (s *ServerList) freeServer(x *Server) {
 	}
 }
 
-// TODO: backup/restore (remember to reset cs cache, ensure heartbeat times are not in the future, and set the order var)
-
 func (s *ServerList) isServerAlive(x *Server, t time.Time) bool {
 	if x == nil {
 		return false
