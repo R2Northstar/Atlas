@@ -375,6 +375,10 @@ func (s *ServerList) DeleteServerByID(id string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// force an update when we're finished
+	defer s.csForceUpdate()
+
+	// delete the server
 	var live bool
 	if s.servers2 != nil {
 		if esrv, exists := s.servers2[id]; exists {
