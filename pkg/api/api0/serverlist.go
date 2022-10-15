@@ -519,7 +519,7 @@ func (s *ServerList) ServerHybridUpdatePut(u *ServerUpdate, c *Server, l ServerL
 	}
 
 	// create/replace a server instead if we have s
-	if s != nil {
+	if c != nil {
 
 		// deep copy the new server info
 		nsrv := c.clone()
