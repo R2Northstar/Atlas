@@ -292,7 +292,7 @@ func (h *Handler) handleServerAddServer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	respJSON(w, r, http.StatusInternalServerError, map[string]any{
+	respJSON(w, r, http.StatusOK, map[string]any{
 		"success":         true,
 		"id":              nsrv.ID,
 		"serverAuthToken": nsrv.ServerAuthToken,
