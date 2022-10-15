@@ -49,6 +49,14 @@ type Handler struct {
 	// NotFound handles requests not handled by this Handler.
 	NotFound http.Handler
 
+	// MaxServers limits the number of registered servers. If -1, no limit is
+	// applied. If 0, a reasonable default is used.
+	MaxServers int
+
+	// MaxServersPerIP limits the number of registered servers per IP. If -1, no
+	// limit is applied. If 0, a reasonable default is used.
+	MaxServersPerIP int
+
 	// InsecureDevNoCheckPlayerAuth is an option you shouldn't use since it
 	// makes the server trust that clients are who they say they are. Blame
 	// @BobTheBob9 for this option even existing in the first place.
@@ -62,6 +70,9 @@ type Handler struct {
 	// TokenExpiryTime controls the expiry of player masterserver auth tokens.
 	// If zero, a reasonable a default is used.
 	TokenExpiryTime time.Duration
+
+	// AllowGameServerIPv6 controls whether to allow game servers to use IPv6.
+	AllowGameServerIPv6 bool
 }
 
 // ServeHTTP routes requests to Handler.
@@ -77,6 +88,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleClientAuthWithSelf(w, r)
 	case "/client/servers":
 		h.handleClientServers(w, r)
+	case "/server/add_server":
+		h.handleServerAddServer(w, r)
 	case "/accounts/write_persistence":
 		h.handleAccountsWritePersistence(w, r)
 	case "/accounts/get_username":
@@ -198,4 +211,14 @@ func marshalJSONBytesAsArray(b []byte) json.RawMessage {
 	}
 	e.WriteByte(']')
 	return json.RawMessage(e.Bytes())
+}
+
+func checkLimit(limit, def, cur int) bool {
+	if limit == -1 {
+		return true
+	}
+	if limit == 0 && cur < def {
+		return true
+	}
+	return cur < limit
 }
