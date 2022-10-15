@@ -212,6 +212,9 @@ func (s *ServerList) csGetJSON() []byte {
 	if s.servers1 != nil {
 		for _, srv := range s.servers1 {
 			if s.serverState(srv, t) == serverListStateAlive {
+				if srv.Map == "mp_lobby" && srv.Playlist != "private_match" {
+					continue // don't include non-private_match servers on lobby
+				}
 				ss = append(ss, srv)
 			}
 		}
