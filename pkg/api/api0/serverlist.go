@@ -48,13 +48,13 @@ type ServerList struct {
 }
 
 type Server struct {
-	Order uint64
-	ID    string         // unique, must not be modified after creation
-	Addr  netip.AddrPort // unique, must not be modified after creation
+	Order    uint64
+	ID       string         // unique, must not be modified after creation
+	Addr     netip.AddrPort // unique, must not be modified after creation
+	AuthPort uint16         // unique with Addr.Addr(), must not be modified after creation
 
 	Name        string
 	Description string
-	AuthPort    uint16
 	Password    string // blank for none
 
 	VerificationDeadline time.Time // zero once verified
