@@ -191,10 +191,6 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 
 	var username string
 	if h.OriginAuthMgr != nil {
-		// TODO: maybe just update this from a different thread since we don't
-		// actually need it during the auth process (doing it that way will
-		// speed up auth and also allow us to batch the Origin API calls)
-
 		if tok, ours, err := h.OriginAuthMgr.OriginAuth(false); err == nil {
 			var notfound bool
 			if ui, err := origin.GetUserInfo(r.Context(), tok, uid); err == nil {

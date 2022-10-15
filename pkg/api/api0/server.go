@@ -16,11 +16,6 @@ import (
 	"github.com/rs/zerolog/hlog"
 )
 
-/*
-  /server/remove_server:
-    DELETE:
-*/
-
 func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	// note: if the API is confusing, see:
 	//  - https://github.com/R2Northstar/NorthstarLauncher/commit/753dda6231bbb2adf585bbc916c0b220e816fcdc
