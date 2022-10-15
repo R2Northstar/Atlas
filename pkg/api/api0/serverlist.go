@@ -62,6 +62,8 @@ type Server struct {
 	Map           string
 	Playlist      string
 
+	ServerAuthToken string // used for authenticating the masterserver to the gameserver authserver
+
 	ModInfo []ServerModInfo
 }
 
