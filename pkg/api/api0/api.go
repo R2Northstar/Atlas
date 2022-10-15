@@ -88,8 +88,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleClientAuthWithSelf(w, r)
 	case "/client/servers":
 		h.handleClientServers(w, r)
-	case "/server/add_server":
-		h.handleServerAddServer(w, r)
+	case "/server/add_server", "/server/update_values", "/server/heartbeat":
+		h.handleServerUpsert(w, r)
 	case "/accounts/write_persistence":
 		h.handleAccountsWritePersistence(w, r)
 	case "/accounts/get_username":
