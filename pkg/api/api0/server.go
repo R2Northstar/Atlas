@@ -319,6 +319,14 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+		if errors.Is(err, ErrServerListUpdateServerDead) {
+			respJSON(w, r, http.StatusForbidden, map[string]any{
+				"success": false,
+				"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
+				"msg":     ErrorCode_UNAUTHORIZED_GAMESERVER.Messagef("no such server"),
+			})
+			return
+		}
 		if errors.Is(err, ErrServerListDuplicateAuthAddr) {
 			respJSON(w, r, http.StatusForbidden, map[string]any{
 				"success": false,
