@@ -388,7 +388,7 @@ func (s *ServerList) DeleteServerByID(id string) bool {
 
 // GetServerCountByIP gets the number of live servers for the given IP address.
 // If ip is the zero netip.Addr, the total number of live servers are returned.
-func (s *ServerList) GetServerByIP(ip netip.Addr) int {
+func (s *ServerList) GetServerCountByIP(ip netip.Addr) int {
 	// take a read lock on the server list
 	s.mu.RLock()
 	defer s.mu.RUnlock()
