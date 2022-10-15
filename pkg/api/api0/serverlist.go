@@ -494,10 +494,17 @@ func (s *ServerList) PutServerByAddr(x *Server) (string, bool, error) {
 	return nsrv.ID, replaced, nil
 }
 
-// UpdateServerByID updates values for the server with the provided ID,
-// returning false if it is dead (and couldn't be revived by the heartbeat, if
-// any).
-func (s *ServerList) UpdateServerByID(id string, u *ServerUpdate) bool {
+var (
+	ErrServerListUpdateServerDead = errors.New("no server found")
+	ErrServerListUpdateWrongIP    = errors.New("wrong server update ip")
+)
+
+// UpdateServerByID updates values for the server with the provided ID. If the
+// error nil, the server was updated. If no live server (or a ghost server which
+// could be made alive from u.Heartbeat) was found, errors.Is(err,
+// ErrServerListUpdateServerDead). If ip is valid and doesn't match the target
+// server, errors.Is(err, ErrServerListUpdateWrongIP).
+func (s *ServerList) UpdateServerByID(id string, ip netip.Addr, u *ServerUpdate) error {
 	t := s.now()
 
 	// take a write lock on the server list
@@ -506,7 +513,7 @@ func (s *ServerList) UpdateServerByID(id string, u *ServerUpdate) bool {
 
 	// if the map isn't initialized, we don't have any servers
 	if s.servers2 == nil {
-		return false
+		return ErrServerListUpdateServerDead
 	}
 
 	// force an update when we're finished
@@ -519,13 +526,17 @@ func (s *ServerList) UpdateServerByID(id string, u *ServerUpdate) bool {
 		if s.isServerGone(esrv, t) {
 			s.freeServer(esrv)
 		}
-		return false
+		return ErrServerListUpdateServerDead
 	}
 
 	// ensure another server hasn't already taken the auth port (which can
 	// happen if it was a ghost)
 	if osrv, exists := s.servers3[esrv.AuthAddr()]; exists && esrv != osrv {
-		return false
+		return ErrServerListUpdateServerDead
+	}
+
+	if ip.IsValid() && esrv.Addr.Addr() != ip {
+		return ErrServerListUpdateWrongIP
 	}
 
 	// do the update
@@ -552,7 +563,7 @@ func (s *ServerList) UpdateServerByID(id string, u *ServerUpdate) bool {
 		esrv.MaxPlayers = *u.MaxPlayers
 	}
 	s.csForceUpdate()
-	return true
+	return nil
 }
 
 // ReapServers deletes dead servers from memory.
