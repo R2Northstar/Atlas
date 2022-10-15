@@ -81,6 +81,7 @@ func (s Server) AuthAddr() netip.AddrPort {
 // clone returns a deep copy of s.
 func (s Server) clone() Server {
 	m := make([]ServerModInfo, len(s.ModInfo))
+	copy(m, s.ModInfo)
 	s.ModInfo = m
 	return s
 }
