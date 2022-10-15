@@ -342,14 +342,6 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 	}
 
 	playerToken := r.URL.Query().Get("playerToken")
-	if playerToken == "" {
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("playerToken param is required"),
-		})
-		return
-	}
 
 	acct, err := h.AccountStorage.GetAccount(uid)
 	if err != nil {
