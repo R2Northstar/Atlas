@@ -2,6 +2,7 @@ package api0
 
 import (
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"net/netip"
@@ -34,6 +35,12 @@ type ServerList struct {
 	csUpdateMu sync.Mutex                // ensures only one update runs at a time
 	csUpdateWg sync.WaitGroup            // allows other goroutines to wait for that update to complete
 	csBytes    atomic.Pointer[[]byte]    // contents of buffer must not be modified; only swapped
+
+	// /client/servers gzipped json
+	csgzUpdate   atomic.Pointer[*byte]  // pointer to the first byte of the last known json (works because it must be swapped, not modified)
+	csgzUpdateMu sync.Mutex             // ensures only one update runs at a time
+	csgzUpdateWg sync.WaitGroup         // allows other goroutines to wait for that update to complete
+	csgzBytes    atomic.Pointer[[]byte] // gzipped
 
 	// for unit tests
 	__clock func() time.Time
@@ -237,6 +244,54 @@ func (s *ServerList) csGetJSON() []byte {
 	s.csBytes.Store(&buf)
 
 	return b.Bytes()
+}
+
+// csGetJSONGzip is like csGetJSON, but returns it gzipped with true, or false
+// if an error occurs.
+func (s *ServerList) csGetJSONGzip() ([]byte, bool) {
+	buf := s.csGetJSON()
+	if len(buf) == 0 {
+		return nil, false
+	}
+	cur := &buf[0]
+
+	last := s.csgzUpdate.Load()
+	if last != nil && *last == cur {
+		if zbuf := s.csgzBytes.Load(); zbuf != nil && *zbuf != nil {
+			return *zbuf, true
+		}
+	}
+
+	if !s.csgzUpdateMu.TryLock() {
+		s.csgzUpdateWg.Wait()
+		if zbuf := s.csgzBytes.Load(); zbuf != nil && *zbuf != nil {
+			return *zbuf, true
+		}
+		return nil, false
+	} else {
+		defer s.csgzUpdateMu.Unlock()
+		s.csgzUpdateWg.Add(1)
+		defer s.csgzUpdateWg.Done()
+	}
+
+	var b bytes.Buffer
+	zw := gzip.NewWriter(&b)
+	if _, err := zw.Write(buf); err != nil {
+		s.csgzBytes.Store(nil)
+		s.csgzUpdate.Store(&cur)
+		return nil, false
+	}
+	if err := zw.Close(); err != nil {
+		s.csgzBytes.Store(nil)
+		s.csgzUpdate.Store(&cur)
+		return nil, false
+	}
+
+	zbuf := b.Bytes()
+	s.csgzBytes.Store(&zbuf)
+	s.csgzUpdate.Store(&cur)
+
+	return zbuf, true
 }
 
 // csUpdateNextUpdateTime updates the next update time for the cached

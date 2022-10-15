@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/netip"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pg9182/atlas/pkg/origin"
@@ -455,7 +456,25 @@ func (h *Handler) handleClientServers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	respMaybeCompress(w, r, http.StatusOK, h.ServerList.csGetJSON())
+
+	buf := h.ServerList.csGetJSON()
+	for _, e := range strings.Split(r.Header.Get("Accept-Encoding"), ",") {
+		if t, _, _ := strings.Cut(e, ";"); strings.TrimSpace(t) == "gzip" {
+			if zbuf, ok := h.ServerList.csGetJSONGzip(); ok {
+				buf = zbuf
+				w.Header().Set("Content-Encoding", "gzip")
+			} else {
+				hlog.FromRequest(r).Error().Msg("failed to gzip server list")
+			}
+			break
+		}
+	}
+
+	w.Header().Set("Content-Length", strconv.Itoa(len(buf)))
+	w.WriteHeader(http.StatusOK)
+	if r.Method != http.MethodHead {
+		w.Write(buf)
+	}
 }
 
 /*
