@@ -672,6 +672,9 @@ func (s *ServerList) freeServer(x *Server) {
 	// we need to ensure that we only delete a server from the indexes if the
 	// index is pointing to our specific server since a new server with the same
 	// address could have replaced it
+	if x == nil {
+		return
+	}
 	if s.servers1 != nil {
 		if esrv, exists := s.servers1[x.Addr]; exists && esrv == x {
 			delete(s.servers1, x.Addr)
