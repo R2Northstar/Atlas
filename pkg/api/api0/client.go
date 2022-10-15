@@ -438,10 +438,27 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 	respJSON(w, r, http.StatusOK, obj)
 }
 
+func (h *Handler) handleClientServers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodOptions && r.Method != http.MethodHead && r.Method != http.MethodGet {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Cache-Control", "private, no-cache, no-store")
+	w.Header().Set("Expires", "0")
+	w.Header().Set("Pragma", "no-cache")
+
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Allow", "OPTIONS, HEAD, GET")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	respMaybeCompress(w, r, http.StatusOK, h.ServerList.csGetJSON())
+}
+
 /*
   /client/auth_with_server:
     POST:
-
-  /client/servers:
-    GET:
 */

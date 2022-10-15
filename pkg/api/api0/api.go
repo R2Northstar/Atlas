@@ -9,6 +9,7 @@
 //   - More HTTP methods and features are supported (e.g., HEAD, OPTIONS, Content-Encoding).
 //   - Website split into a separate handler (set Handler.NotFound to http.HandlerFunc(web.ServeHTTP) for identical behaviour).
 //   - /accounts/write_persistence returns a error message for easier debugging.
+//   - Alive/dead servers can be replaced by a new successful registration from the same ip/port. This eliminates the main cause of the duplicate server error requiring retries, and doesn't add much risk since you need to custom fuckery to start another server when you're already listening on the port.
 package api0
 
 import (
@@ -29,6 +30,9 @@ import (
 
 // Handler serves requests for the original master server API.
 type Handler struct {
+	// ServerList stores registered servers.
+	ServerList *ServerList
+
 	// AccountStorage stores accounts. It must be non-nil.
 	AccountStorage AccountStorage
 
@@ -71,6 +75,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleClientOriginAuth(w, r)
 	case "/client/auth_with_self":
 		h.handleClientAuthWithSelf(w, r)
+	case "/client/servers":
+		h.handleClientServers(w, r)
 	case "/accounts/write_persistence":
 		h.handleAccountsWritePersistence(w, r)
 	case "/accounts/get_username":
