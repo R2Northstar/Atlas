@@ -420,3 +420,67 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 		"serverAuthToken": nsrv.ServerAuthToken,
 	})
 }
+
+func (h *Handler) handleServerRemove(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodOptions && r.Method != http.MethodDelete {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Cache-Control", "private, no-cache, no-store")
+	w.Header().Set("Expires", "0")
+	w.Header().Set("Pragma", "no-cache")
+
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Allow", "OPTIONS, DELETE")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	raddr, err := netip.ParseAddrPort(r.RemoteAddr)
+	if err != nil {
+		hlog.FromRequest(r).Error().
+			Err(err).
+			Msgf("failed to parse remote ip %q", r.RemoteAddr)
+		respJSON(w, r, http.StatusInternalServerError, map[string]any{
+			"success": false,
+			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
+			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
+		})
+		return
+	}
+
+	var id string
+	if v := r.URL.Query().Get("id"); v == "" {
+		respJSON(w, r, http.StatusBadRequest, map[string]any{
+			"success": false,
+			"error":   ErrorCode_BAD_REQUEST,
+			"msg":     ErrorCode_BAD_REQUEST.Messagef("id param is required"),
+		})
+		return
+	} else {
+		id = v
+	}
+
+	srv := h.ServerList.GetServerByID(id)
+	if srv == nil {
+		respJSON(w, r, http.StatusForbidden, map[string]any{
+			"success": false,
+			"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
+			"msg":     ErrorCode_UNAUTHORIZED_GAMESERVER.Messagef("no such game server"),
+		})
+		return
+	}
+	if srv.Addr.Addr() != raddr.Addr() {
+		respJSON(w, r, http.StatusForbidden, map[string]any{
+			"success": false,
+			"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
+		})
+		return
+	}
+	h.ServerList.DeleteServerByID(id)
+
+	respJSON(w, r, http.StatusForbidden, map[string]any{
+		"success": true,
+	})
+}
