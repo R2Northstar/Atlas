@@ -115,9 +115,6 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 	}
 
 	serverID := r.URL.Query().Get("serverId") // blank on listen server
-	if serverID != "" {
-		// TODO: check serverID
-	}
 
 	raddr, err := netip.ParseAddrPort(r.RemoteAddr)
 	if err != nil {
@@ -162,7 +159,29 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 			return
 		}
 	} else {
-		// TODO: check if gameserver ip matches and that account is on it
+		srv := h.ServerList.GetServerByID(serverID)
+		if srv == nil {
+			respJSON(w, r, http.StatusForbidden, map[string]any{
+				"success": false,
+				"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
+				"msg":     ErrorCode_UNAUTHORIZED_GAMESERVER.Messagef("no such game server"),
+			})
+			return
+		}
+		if srv.Addr.Addr() != raddr.Addr() {
+			respJSON(w, r, http.StatusForbidden, map[string]any{
+				"success": false,
+				"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
+			})
+			return
+		}
+		if acct.LastServerID != srv.ID {
+			respJSON(w, r, http.StatusForbidden, map[string]any{
+				"success": false,
+				"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
+			})
+			return
+		}
 	}
 
 	if err := h.PdataStorage.SetPdata(uid, buf); err != nil {
