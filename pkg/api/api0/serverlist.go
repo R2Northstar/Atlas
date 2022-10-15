@@ -404,25 +404,6 @@ func (s *ServerList) DeleteServerByID(id string) bool {
 	return live
 }
 
-// GetServerCountByIP gets the number of live servers for the given IP address.
-// If ip is the zero netip.Addr, the total number of live servers are returned.
-func (s *ServerList) GetServerCountByIP(ip netip.Addr) int {
-	// take a read lock on the server list
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	// count the servers
-	var n int
-	if s.servers1 != nil {
-		for _, srv := range s.servers1 {
-			if !ip.IsValid() || srv.Addr.Addr() != ip {
-				n++
-			}
-		}
-	}
-	return n
-}
-
 var (
 	ErrServerListDuplicateAuthAddr = errors.New("already have server with auth addr")
 	ErrServerListUpdateServerDead  = errors.New("no server found")
