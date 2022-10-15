@@ -112,7 +112,8 @@ type ServerListLimit struct {
 // NewServerList initializes a new server list.
 //
 // deadTime is the time since the last heartbeat after which a server is
-// considered dead. A dead server will not be listed on the server list.
+// considered dead. A dead server will not be listed on the server list. It must
+// be >= verifyTime if nonzero.
 //
 // ghostTime is the time since the last heartbeat after which a server cannot be
 // revived by the same ip/port combination. This allows restarted or crashed
@@ -197,7 +198,7 @@ func (s *ServerList) csGetJSON() []byte {
 	ss := make([]*Server, 0, len(s.servers1)) // up to the current size of the servers map
 	if s.servers1 != nil {
 		for _, srv := range s.servers1 {
-			if s.isServerAlive(srv, t) {
+			if s.serverState(srv, t) == serverListStateAlive {
 				ss = append(ss, srv)
 			}
 		}
@@ -352,7 +353,7 @@ func (s *ServerList) GetLiveServers(fn func(*Server) bool) {
 	// call fn for live servers
 	if s.servers1 != nil {
 		for _, srv := range s.servers1 {
-			if s.isServerAlive(srv, t) {
+			if s.serverState(srv, t) == serverListStateAlive {
 				if c := srv.clone(); !fn(&c) {
 					break
 				}
@@ -371,7 +372,7 @@ func (s *ServerList) GetServerByID(id string) *Server {
 	defer s.mu.RUnlock()
 
 	if s.servers2 != nil {
-		if srv, ok := s.servers2[id]; ok && s.isServerAlive(srv, t) {
+		if srv, ok := s.servers2[id]; ok && s.serverState(srv, t) == serverListStateAlive {
 			c := srv.clone()
 			return &c
 		}
@@ -395,7 +396,7 @@ func (s *ServerList) DeleteServerByID(id string) bool {
 	var live bool
 	if s.servers2 != nil {
 		if esrv, exists := s.servers2[id]; exists {
-			if s.isServerAlive(esrv, t) {
+			if s.serverState(esrv, t) == serverListStateAlive {
 				live = true
 			}
 			s.freeServer(esrv)
@@ -451,7 +452,7 @@ func (s *ServerList) ServerHybridUpdatePut(u *ServerUpdate, c *Server, l ServerL
 
 		// check if the server with the ID is alive or that u has a heartbeat
 		// and the server is a ghost
-		if esrv, exists := s.servers2[u.ID]; exists || s.isServerAlive(esrv, t) || (u.Heartbeat && s.isServerGhost(esrv, t)) {
+		if esrv, exists := s.servers2[u.ID]; exists || s.serverState(esrv, t) == serverListStateAlive || (u.Heartbeat && s.serverState(esrv, t) == serverListStateGhost) {
 
 			// ensure a live server hasn't already taken the auth port (which
 			// can happen if it was a ghost and a new server got registered)
@@ -495,7 +496,7 @@ func (s *ServerList) ServerHybridUpdatePut(u *ServerUpdate, c *Server, l ServerL
 				return &r, nil
 			}
 		} else {
-			if s.isServerGone(esrv, t) {
+			if s.serverState(esrv, t) == serverListStateGone {
 				s.freeServer(esrv) // if the server we found shouldn't exist anymore, clean it up
 			}
 		}
@@ -519,7 +520,7 @@ func (s *ServerList) ServerHybridUpdatePut(u *ServerUpdate, c *Server, l ServerL
 		// error if there's an existing server with a matching auth addr (note:
 		// same ip as gameserver, different port) but different gameserver addr
 		// (it's probably a config mistake on the server owner's side)
-		if esrv, exists := s.servers3[nsrv.AuthAddr()]; exists && s.isServerAlive(esrv, t) {
+		if esrv, exists := s.servers3[nsrv.AuthAddr()]; exists && s.serverState(esrv, t) == serverListStateAlive {
 
 			// we want to allow the server to be replaced if the gameserver and
 			// authserver addr are the same since it probably just restarted
@@ -535,7 +536,7 @@ func (s *ServerList) ServerHybridUpdatePut(u *ServerUpdate, c *Server, l ServerL
 		// address/port if it exists
 		var toReplace *Server
 		if esrv, exists := s.servers1[nsrv.Addr]; exists {
-			if s.isServerGone(esrv, t) {
+			if s.serverState(esrv, t) == serverListStateGone {
 				s.freeServer(esrv) // if the server we found shouldn't exist anymore, clean it up
 			} else {
 				toReplace = esrv
@@ -546,7 +547,7 @@ func (s *ServerList) ServerHybridUpdatePut(u *ServerUpdate, c *Server, l ServerL
 		if l.MaxServers != 0 || l.MaxServersPerIP != 0 {
 			nSrv, nSrvIP := 1, 1
 			for _, esrv := range s.servers1 {
-				if s.isServerAlive(esrv, t) && esrv != toReplace {
+				if s.serverState(esrv, t) == serverListStateAlive && esrv != toReplace {
 					if esrv.Addr.Addr() == nsrv.Addr.Addr() {
 						nSrvIP++
 					}
@@ -624,7 +625,7 @@ func (s *ServerList) ReapServers() {
 	// note: unlike a slice, it's safe to delete while looping over a map
 	if s.servers1 != nil {
 		for _, srv := range s.servers1 {
-			if s.isServerGone(srv, t) {
+			if s.serverState(srv, t) == serverListStateGone {
 				s.freeServer(srv)
 			}
 		}
@@ -654,37 +655,28 @@ func (s *ServerList) freeServer(x *Server) {
 	}
 }
 
-func (s *ServerList) isServerAlive(x *Server, t time.Time) bool {
-	if x == nil {
-		return false
-	}
-	if s.deadTime == 0 {
-		return true
-	}
-	d := t.Sub(x.LastHeartbeat)
-	return s.deadTime == 0 || d < s.deadTime
-}
+type serverListState int
 
-func (s *ServerList) isServerGhost(x *Server, t time.Time) bool {
-	if x == nil {
-		return false
-	}
-	if s.deadTime == 0 || s.ghostTime == 0 {
-		return true
-	}
-	d := t.Sub(x.LastHeartbeat)
-	return d >= s.deadTime && d < s.ghostTime
-}
+const (
+	serverListStatePending serverListState = iota
+	serverListStateAlive
+	serverListStateGhost
+	serverListStateGone
+)
 
-func (s *ServerList) isServerGone(x *Server, t time.Time) bool {
+func (s *ServerList) serverState(x *Server, t time.Time) serverListState {
 	if x == nil {
-		return false
+		return serverListStateGone
 	}
-	if s.deadTime == 0 || s.ghostTime == 0 {
-		return false
-	}
+
 	d := t.Sub(x.LastHeartbeat)
-	return d >= s.deadTime && d >= s.ghostTime
+	if s.deadTime == 0 || d < s.deadTime {
+		return serverListStateAlive
+	}
+	if s.ghostTime == 0 || d < s.ghostTime {
+		return serverListStateGhost
+	}
+	return serverListStateGone
 }
 
 func (s *ServerList) now() time.Time {
