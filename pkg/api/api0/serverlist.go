@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode/utf8"
+
+	"github.com/pg9182/atlas/pkg/nstypes"
 )
 
 // ServerList stores information about registered game servers. It does not do
@@ -357,6 +359,217 @@ func (s *ServerList) csUpdateNextUpdateTime() {
 // must be called after any value updates while holding a write lock on s.mu.
 func (s *ServerList) csForceUpdate() {
 	s.csForce.Store(true)
+}
+
+// GetMetrics gets Prometheus text format metrics about live servers in the
+// server list. All metrics begin with atlas_api0sl_.
+//
+// Note: Playlist/map metric labels are limited to known values, or "other".
+func (s *ServerList) GetMetrics() []byte {
+	t := s.now()
+
+	// take a read lock on the server list
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// init metric counters
+	type mod struct {
+		Name             string
+		Version          string
+		RequiredOnClient bool
+	}
+
+	type mpl struct {
+		Map      nstypes.Map
+		Playlist nstypes.Playlist
+	}
+	mpls := make([]mpl, 0, (len(nstypes.Maps())+1)*(len(nstypes.Playlists())+1))
+	for _, pl := range nstypes.Playlists() {
+		mpls = append(mpls, mpl{nstypes.Map(""), pl})
+	}
+	for _, m := range nstypes.Maps() {
+		for _, pl := range nstypes.Playlists() {
+			mpls = append(mpls, mpl{m, pl})
+		}
+		mpls = append(mpls, mpl{m, nstypes.Playlist("")})
+	}
+
+	var players, maxPlayers, servers int
+	mplPlayers := make(map[mpl]int, len(mpls))
+	mplMaxPlayers := make(map[mpl]int, len(mpls))
+	mplServers := make(map[mpl]int, len(mpls))
+	verServers := map[string]int{}
+	modServers := map[mod]int{}
+
+	// populate values
+	if s.servers1 != nil {
+		for _, srv := range s.servers1 {
+			if s.serverState(srv, t) == serverListStateAlive {
+				var mplv mpl
+				if m := nstypes.Map(srv.Map); m.Known() {
+					mplv.Map = m
+				}
+				if pl := nstypes.Playlist(srv.Playlist); pl.Known() {
+					mplv.Playlist = pl
+				}
+				players += srv.PlayerCount
+				maxPlayers += srv.MaxPlayers
+				servers++
+				mplPlayers[mplv] += srv.PlayerCount
+				mplMaxPlayers[mplv] += srv.MaxPlayers
+				mplServers[mplv]++
+				verServers[srv.LauncherVersion]++
+				for _, mi := range srv.ModInfo {
+					modServers[mod(mi)]++
+				}
+			}
+		}
+	}
+
+	// write metrics
+	var b bytes.Buffer
+
+	b.WriteString(`atlas_api0sl_map_info{map="_other",map_title="Other"}`)
+	b.WriteByte('\n')
+	for _, m := range nstypes.Maps() {
+		b.WriteString(`atlas_api0sl_map_info{map="`)
+		b.WriteString(string(m))
+		b.WriteString(`",map_title="`)
+		t, _ := m.Title()
+		b.WriteString(t)
+		b.WriteString(`"} 1`)
+		b.WriteByte('\n')
+	}
+	b.WriteByte('\n')
+
+	b.WriteString(`atlas_api0sl_playlist_info{playlist="_other",playlist_title="Other"}`)
+	b.WriteByte('\n')
+	for _, pl := range nstypes.Playlists() {
+		b.WriteString(`atlas_api0sl_playlist_info{playlist="`)
+		b.WriteString(string(pl))
+		b.WriteString(`",playlist_title="`)
+		t, _ := pl.Title()
+		b.WriteString(t)
+		b.WriteString(`"} 1`)
+		b.WriteByte('\n')
+	}
+	b.WriteByte('\n')
+
+	for _, mplv := range mpls {
+		if n := mplPlayers[mplv]; n != 0 {
+			b.WriteString(`atlas_api0sl_mpl_players{map="`)
+			if mplv.Map != "" {
+				b.WriteString(string(mplv.Map))
+			} else {
+				b.WriteString("_other")
+			}
+			b.WriteString(`",playlist="`)
+			if mplv.Playlist != "" {
+				b.WriteString(string(mplv.Playlist))
+			} else {
+				b.WriteString("_other")
+			}
+			b.WriteString(`"} `)
+			b.WriteString(strconv.Itoa(n))
+			b.WriteByte('\n')
+		}
+	}
+	b.WriteByte('\n')
+
+	for _, mplv := range mpls {
+		if n := mplMaxPlayers[mplv]; n != 0 {
+			b.WriteString(`atlas_api0sl_mpl_maxplayers{map="`)
+			if mplv.Map != "" {
+				b.WriteString(string(mplv.Map))
+			} else {
+				b.WriteString("_other")
+			}
+			b.WriteString(`",playlist="`)
+			if mplv.Playlist != "" {
+				b.WriteString(string(mplv.Playlist))
+			} else {
+				b.WriteString("_other")
+			}
+			b.WriteString(`"} `)
+			b.WriteString(strconv.Itoa(n))
+			b.WriteByte('\n')
+		}
+	}
+	b.WriteByte('\n')
+
+	for _, mplv := range mpls {
+		if n := mplServers[mplv]; n != 0 {
+			b.WriteString(`atlas_api0sl_mpl_servers{map="`)
+			if mplv.Map != "" {
+				b.WriteString(string(mplv.Map))
+			} else {
+				b.WriteString("_other")
+			}
+			b.WriteString(`",playlist="`)
+			if mplv.Playlist != "" {
+				b.WriteString(string(mplv.Playlist))
+			} else {
+				b.WriteString("_other")
+			}
+			b.WriteString(`"} `)
+			b.WriteString(strconv.Itoa(n))
+			b.WriteByte('\n')
+		}
+	}
+	b.WriteByte('\n')
+
+	var vers []string
+	for ver := range verServers {
+		vers = append(vers, ver)
+	}
+	sort.Strings(vers)
+
+	for _, ver := range vers {
+		b.WriteString(`atlas_api0sl_ver_servers{launcher_version=`)
+		b.WriteString(strconv.Quote(ver))
+		b.WriteString("} ")
+		b.WriteString(strconv.Itoa(verServers[ver]))
+		b.WriteByte('\n')
+	}
+	b.WriteByte('\n')
+
+	var mods []mod
+	for modv := range modServers {
+		mods = append(mods, modv)
+	}
+	sort.Slice(mods, func(i, j int) bool {
+		a, b := mods[i], mods[j]
+		return a.Name < b.Name ||
+			(a.Name == b.Name && (a.Version < b.Version ||
+				(a.Version == b.Version && !a.RequiredOnClient && b.RequiredOnClient)))
+	})
+
+	for _, modv := range mods {
+		b.WriteString(`atlas_api0sl_mod_servers{mod_name=`)
+		b.WriteString(strconv.Quote(modv.Name))
+		b.WriteString(`,mod_version=`)
+		b.WriteString(strconv.Quote(modv.Version))
+		if modv.RequiredOnClient {
+			b.WriteString(`,mod_required_on_client="true"} `)
+		} else {
+			b.WriteString(`,mod_required_on_client="false"} `)
+		}
+		b.WriteString(strconv.Itoa(modServers[modv]))
+		b.WriteByte('\n')
+	}
+	b.WriteByte('\n')
+
+	b.WriteString(`atlas_api0sl_players `)
+	b.WriteString(strconv.Itoa(players))
+	b.WriteByte('\n')
+	b.WriteString(`atlas_api0sl_maxplayers `)
+	b.WriteString(strconv.Itoa(maxPlayers))
+	b.WriteByte('\n')
+	b.WriteString(`atlas_api0sl_servers `)
+	b.WriteString(strconv.Itoa(servers))
+	b.WriteByte('\n')
+
+	return b.Bytes()
 }
 
 // GetLiveServers loops over live (i.e., not dead/ghost) servers until fn
