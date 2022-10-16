@@ -53,6 +53,8 @@ type Server struct {
 	Addr     netip.AddrPort // unique, must not be modified after creation
 	AuthPort uint16         // unique with Addr.Addr(), must not be modified after creation
 
+	LauncherVersion string // for metrics
+
 	Name        string
 	Description string
 	Password    string // blank for none

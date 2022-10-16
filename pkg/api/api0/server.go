@@ -85,7 +85,9 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 
 	var s *Server
 	if canCreate {
-		s = &Server{}
+		s = &Server{
+			LauncherVersion: h.extractLauncherVersion(r),
+		}
 	}
 
 	var u *ServerUpdate

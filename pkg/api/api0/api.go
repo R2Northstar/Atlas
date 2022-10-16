@@ -148,6 +148,25 @@ func (h *Handler) checkLauncherVersion(r *http.Request) bool {
 	return semver.Compare(rver, mver) >= 0
 }
 
+// extractLauncherVersion extracts the launcher version from r, returning an
+// empty string if it's missing or invalid.
+func (h *Handler) extractLauncherVersion(r *http.Request) string {
+	rver, _, _ := strings.Cut(r.Header.Get("User-Agent"), " ")
+	if x := strings.TrimPrefix(rver, "R2Northstar/"); rver != x {
+		if len(x) > 0 && x[0] != 'v' {
+			rver = "v" + x
+		} else {
+			rver = x
+		}
+	} else {
+		rver = ""
+	}
+	if rver != "" && semver.IsValid(rver) {
+		return rver[1:]
+	}
+	return ""
+}
+
 // respFail writes a {success:false,error:ErrorObj} response with the provided
 // response status.
 func respFail(w http.ResponseWriter, r *http.Request, status int, obj ErrorObj) {
