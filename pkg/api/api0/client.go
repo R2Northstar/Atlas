@@ -1,19 +1,17 @@
 package api0
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/netip"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/pg9182/atlas/pkg/api/api0/api0gameserver"
 	"github.com/pg9182/atlas/pkg/origin"
 	"github.com/pg9182/atlas/pkg/pdata"
 	"github.com/pg9182/atlas/pkg/stryder"
@@ -415,59 +413,39 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 		pbuf = b
 	}
 
-	if !func() bool {
+	{
 		ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
 		defer cancel()
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("http://%s/authenticate_incoming_player?id=%d&authToken=%s&serverAuthToken=%s&username=%s", srv.AuthAddr(), acct.UID, authToken, srv.ServerAuthToken, url.QueryEscape(acct.Username)), bytes.NewReader(pbuf))
-		if err != nil {
-			hlog.FromRequest(r).Error().
-				Err(err).
-				Msgf("failed to make gameserver auth request")
-			respJSON(w, r, http.StatusInternalServerError, map[string]any{
-				"success": false,
-				"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			})
-			return false
+		if err := api0gameserver.AuthenticateIncomingPlayer(ctx, srv.AuthAddr(), acct.UID, acct.Username, authToken, srv.ServerAuthToken, pbuf); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				err = fmt.Errorf("request timed out")
+			}
+			switch {
+			case errors.Is(err, api0gameserver.ErrAuthFailed):
+				respJSON(w, r, http.StatusInternalServerError, map[string]any{
+					"success": false,
+					"error":   ErrorCode_JSON_PARSE_ERROR, // this is kind of misleading... but it's what the original master server did
+				})
+			case errors.Is(err, api0gameserver.ErrInvalidResponse):
+				hlog.FromRequest(r).Error().
+					Err(err).
+					Msgf("failed to make gameserver auth request")
+				respJSON(w, r, http.StatusInternalServerError, map[string]any{
+					"success": false,
+					"error":   ErrorCode_BAD_GAMESERVER_RESPONSE,
+				})
+			default:
+				hlog.FromRequest(r).Error().
+					Err(err).
+					Msgf("failed to make gameserver auth request")
+				respJSON(w, r, http.StatusInternalServerError, map[string]any{
+					"success": false,
+					"error":   ErrorCode_INTERNAL_SERVER_ERROR,
+				})
+			}
+			return
 		}
-		req.Header.Set("User-Agent", "Atlas")
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			hlog.FromRequest(r).Error().
-				Err(err).
-				Msgf("failed to make gameserver auth request")
-			respJSON(w, r, http.StatusInternalServerError, map[string]any{
-				"success": false,
-				"error":   ErrorCode_BAD_GAMESERVER_RESPONSE,
-			})
-			return false
-		}
-		defer resp.Body.Close()
-
-		var obj struct {
-			Success bool `json:"success"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&obj); err != nil {
-			hlog.FromRequest(r).Error().
-				Err(err).
-				Msgf("failed to read gameserver auth response")
-			respJSON(w, r, http.StatusInternalServerError, map[string]any{
-				"success": false,
-				"error":   ErrorCode_BAD_GAMESERVER_RESPONSE,
-			})
-			return false
-		}
-		if !obj.Success {
-			respJSON(w, r, http.StatusInternalServerError, map[string]any{
-				"success": false,
-				"error":   ErrorCode_JSON_PARSE_ERROR, // this is kind of misleading... but it's what the original master server did
-			})
-			return false
-		}
-		return true
-	}() {
-		return
 	}
 
 	acct.LastServerID = srv.ID

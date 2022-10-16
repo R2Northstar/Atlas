@@ -1,18 +1,17 @@
 package api0
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/netip"
 	"strconv"
 	"time"
 
 	"github.com/pg9182/atlas/pkg/a2s"
+	"github.com/pg9182/atlas/pkg/api/api0/api0gameserver"
 	"github.com/rs/zerolog/hlog"
 )
 
@@ -356,36 +355,15 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !nsrv.VerificationDeadline.IsZero() {
-		if err := func() error {
-			ctx, cancel := context.WithDeadline(r.Context(), nsrv.VerificationDeadline)
-			defer cancel()
+		ctx, cancel := context.WithDeadline(r.Context(), nsrv.VerificationDeadline)
+		defer cancel()
 
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/verify", s.AuthAddr()), nil)
-			if err != nil {
-				return err
-			}
-			req.Header.Set("User-Agent", "Atlas")
-
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				return err
-			}
-			defer resp.Body.Close()
-
-			buf, err := io.ReadAll(io.LimitReader(resp.Body, 100))
-			if err != nil {
-				return err
-			}
-			if string(bytes.TrimSpace(buf)) != "I am a northstar server!" {
-				return fmt.Errorf("unexpected response")
-			}
-			return nil
-		}(); err != nil {
+		if err := api0gameserver.Verify(ctx, s.AuthAddr()); err != nil {
 			if errors.Is(err, context.DeadlineExceeded) {
 				err = fmt.Errorf("request timed out")
 			}
 			var code ErrorCode
-			if err.Error() == "unexpected response" {
+			if errors.Is(err, api0gameserver.ErrInvalidResponse) {
 				code = ErrorCode_BAD_GAMESERVER_RESPONSE
 			} else {
 				code = ErrorCode_NO_GAMESERVER_RESPONSE
@@ -397,6 +375,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+
 		if err := a2s.Probe(s.Addr, time.Until(nsrv.VerificationDeadline)); err != nil {
 			respJSON(w, r, http.StatusBadGateway, map[string]any{
 				"success": false,
@@ -405,6 +384,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+
 		if !h.ServerList.VerifyServer(nsrv.ID) {
 			respJSON(w, r, http.StatusBadGateway, map[string]any{
 				"success": false,
