@@ -104,12 +104,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleAccountsGetUsername(w, r)
 	case "/accounts/lookup_uid":
 		h.handleAccountsLookupUID(w, r)
+	case "/player/pdata", "/player/info", "/player/stats", "/player/loadout":
+		h.handlePlayer(w, r)
 	default:
-		if strings.HasPrefix(r.URL.Path, "/player/") {
-			// TODO: rate limit
-			h.handlePlayer(w, r)
-			return
-		}
 		if h.NotFound == nil {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		} else {
