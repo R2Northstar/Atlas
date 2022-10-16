@@ -151,6 +151,23 @@ func (h *Handler) checkLauncherVersion(r *http.Request) bool {
 	return semver.Compare(rver, mver) >= 0
 }
 
+// respFail writes a {success:false,error:ErrorObj} response with the provided
+// response status.
+func respFail(w http.ResponseWriter, r *http.Request, status int, obj ErrorObj) {
+	if rid, ok := hlog.IDFromRequest(r); ok {
+		respJSON(w, r, status, map[string]any{
+			"success":    false,
+			"error":      obj,
+			"request_id": rid.String(),
+		})
+	} else {
+		respJSON(w, r, status, map[string]any{
+			"success": false,
+			"error":   obj,
+		})
+	}
+}
+
 // respJSON writes the JSON encoding of obj with the provided response status.
 func respJSON(w http.ResponseWriter, r *http.Request, status int, obj any) {
 	if r.Method == http.MethodHead {

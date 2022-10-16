@@ -84,29 +84,19 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 	}
 
 	if !h.checkLauncherVersion(r) {
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_UNSUPPORTED_VERSION,
-		})
+		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return
 	}
 
 	uidQ := r.URL.Query().Get("id")
 	if uidQ == "" {
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("id param is required"),
-		})
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("id param is required"))
 		return
 	}
 
 	uid, err := strconv.ParseUint(uidQ, 10, 64)
 	if err != nil {
-		respJSON(w, r, http.StatusNotFound, map[string]any{
-			"success": false,
-			"error":   ErrorCode_PLAYER_NOT_FOUND,
-		})
+		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
 		return
 	}
 
@@ -115,22 +105,14 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to parse remote ip %q", r.RemoteAddr)
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
 	if !h.InsecureDevNoCheckPlayerAuth {
 		token := r.URL.Query().Get("token")
 		if token == "" {
-			respJSON(w, r, http.StatusBadRequest, map[string]any{
-				"success": false,
-				"error":   ErrorCode_BAD_REQUEST,
-				"msg":     ErrorCode_BAD_REQUEST.Messagef("token param is required"),
-			})
+			respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("token param is required"))
 			return
 		}
 
@@ -151,11 +133,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 					Str("stryder_token", string(token)).
 					Str("stryder_resp", string(stryderRes)).
 					Msgf("invalid stryder token")
-				respJSON(w, r, http.StatusForbidden, map[string]any{
-					"success": false,
-					"error":   ErrorCode_UNAUTHORIZED_GAME,
-					"msg":     ErrorCode_UNAUTHORIZED_GAME.Message(),
-				})
+				respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAME.MessageObj())
 				return
 			case errors.Is(err, stryder.ErrStryder):
 				hlog.FromRequest(r).Error().
@@ -164,11 +142,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 					Str("stryder_token", string(token)).
 					Str("stryder_resp", string(stryderRes)).
 					Msgf("unexpected stryder error")
-				respJSON(w, r, http.StatusInternalServerError, map[string]any{
-					"success": false,
-					"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-					"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-				})
+				respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 				return
 			default:
 				hlog.FromRequest(r).Error().
@@ -177,11 +151,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 					Str("stryder_token", string(token)).
 					Str("stryder_resp", string(stryderRes)).
 					Msgf("unexpected stryder error")
-				respJSON(w, r, http.StatusInternalServerError, map[string]any{
-					"success": false,
-					"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-					"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Messagef("stryder is down: %v", err),
-				})
+				respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObjf("stryder is down: %v", err))
 				return
 			}
 		}
@@ -261,11 +231,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to generate random token")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	} else {
 		acct.AuthToken = t
@@ -282,11 +248,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to save account to storage")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
@@ -313,29 +275,19 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 	}
 
 	if !h.checkLauncherVersion(r) {
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_UNSUPPORTED_VERSION,
-		})
+		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return
 	}
 
 	uidQ := r.URL.Query().Get("id")
 	if uidQ == "" {
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("id param is required"),
-		})
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("id param is required"))
 		return
 	}
 
 	uid, err := strconv.ParseUint(uidQ, 10, 64)
 	if err != nil {
-		respJSON(w, r, http.StatusNotFound, map[string]any{
-			"success": false,
-			"error":   ErrorCode_PLAYER_NOT_FOUND,
-		})
+		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
 		return
 	}
 
@@ -345,10 +297,7 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 
 	srv := h.ServerList.GetServerByID(server)
 	if srv == nil || srv.Password != password {
-		respJSON(w, r, http.StatusUnauthorized, map[string]any{
-			"success": false,
-			"error":   ErrorCode_UNAUTHORIZED_PWD,
-		})
+		respFail(w, r, http.StatusUnauthorized, ErrorCode_UNAUTHORIZED_PWD.MessageObj())
 		return
 	}
 
@@ -358,26 +307,17 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to read account from storage")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 	if acct == nil {
-		respJSON(w, r, http.StatusNotFound, map[string]any{
-			"success": false,
-			"error":   ErrorCode_PLAYER_NOT_FOUND,
-		})
+		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
 		return
 	}
 
 	if !h.InsecureDevNoCheckPlayerAuth {
 		if playerToken != acct.AuthToken || !time.Now().Before(acct.AuthTokenExpiry) {
-			respJSON(w, r, http.StatusUnauthorized, map[string]any{
-				"success": false,
-				"error":   ErrorCode_INVALID_MASTERSERVER_TOKEN,
-			})
+			respFail(w, r, http.StatusUnauthorized, ErrorCode_INVALID_MASTERSERVER_TOKEN.MessageObj())
 			return
 		}
 	}
@@ -387,10 +327,7 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to generate random token")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	} else {
 		authToken = v
@@ -402,10 +339,7 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 			Err(err).
 			Uint64("uid", acct.UID).
 			Msgf("failed to read pdata from storage")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	} else if !exists {
 		pbuf = pdata.DefaultPdata
@@ -423,26 +357,17 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 			}
 			switch {
 			case errors.Is(err, api0gameserver.ErrAuthFailed):
-				respJSON(w, r, http.StatusInternalServerError, map[string]any{
-					"success": false,
-					"error":   ErrorCode_JSON_PARSE_ERROR, // this is kind of misleading... but it's what the original master server did
-				})
+				respFail(w, r, http.StatusInternalServerError, ErrorCode_JSON_PARSE_ERROR.MessageObj()) // this is kind of misleading... but it's what the original master server did
 			case errors.Is(err, api0gameserver.ErrInvalidResponse):
 				hlog.FromRequest(r).Error().
 					Err(err).
 					Msgf("failed to make gameserver auth request")
-				respJSON(w, r, http.StatusInternalServerError, map[string]any{
-					"success": false,
-					"error":   ErrorCode_BAD_GAMESERVER_RESPONSE,
-				})
+				respFail(w, r, http.StatusInternalServerError, ErrorCode_BAD_GAMESERVER_RESPONSE.MessageObj())
 			default:
 				hlog.FromRequest(r).Error().
 					Err(err).
 					Msgf("failed to make gameserver auth request")
-				respJSON(w, r, http.StatusInternalServerError, map[string]any{
-					"success": false,
-					"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-				})
+				respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 			}
 			return
 		}
@@ -455,10 +380,7 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to save account to storage")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
@@ -487,29 +409,19 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 	}
 
 	if !h.checkLauncherVersion(r) {
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_UNSUPPORTED_VERSION,
-		})
+		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return
 	}
 
 	uidQ := r.URL.Query().Get("id")
 	if uidQ == "" {
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("id param is required"),
-		})
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("id param is required"))
 		return
 	}
 
 	uid, err := strconv.ParseUint(uidQ, 10, 64)
 	if err != nil {
-		respJSON(w, r, http.StatusNotFound, map[string]any{
-			"success": false,
-			"error":   ErrorCode_PLAYER_NOT_FOUND,
-		})
+		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
 		return
 	}
 
@@ -521,27 +433,17 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to read account from storage")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 	if acct == nil {
-		respJSON(w, r, http.StatusNotFound, map[string]any{
-			"success": false,
-			"error":   ErrorCode_PLAYER_NOT_FOUND,
-		})
+		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
 		return
 	}
 
 	if !h.InsecureDevNoCheckPlayerAuth {
 		if playerToken != acct.AuthToken || !time.Now().Before(acct.AuthTokenExpiry) {
-			respJSON(w, r, http.StatusUnauthorized, map[string]any{
-				"success": false,
-				"error":   ErrorCode_INVALID_MASTERSERVER_TOKEN,
-			})
+			respFail(w, r, http.StatusUnauthorized, ErrorCode_INVALID_MASTERSERVER_TOKEN.MessageObj())
 			return
 		}
 	}
@@ -553,11 +455,7 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to save account to storage")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
@@ -572,11 +470,7 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 			Err(err).
 			Uint64("uid", acct.UID).
 			Msgf("failed to read pdata from storage")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	} else if !exists {
 		obj["persistentData"] = marshalJSONBytesAsArray(pdata.DefaultPdata)
@@ -590,11 +484,7 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to generate random token")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	} else {
 		obj["authToken"] = v

@@ -29,31 +29,19 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 	}
 
 	if err := r.ParseMultipartForm(2 << 20); err != nil {
-		respJSON(w, r, http.StatusNotFound, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("failed to parse multipart form: %v", err),
-		})
+		respFail(w, r, http.StatusNotFound, ErrorCode_BAD_REQUEST.MessageObjf("failed to parse multipart form: %v", err))
 		return
 	}
 
 	pf, pfHdr, err := r.FormFile("pdata")
 	if err != nil {
-		respJSON(w, r, http.StatusNotFound, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("missing pdata file: %v", err),
-		})
+		respFail(w, r, http.StatusNotFound, ErrorCode_BAD_REQUEST.MessageObjf("missing pdata file: %v", err))
 		return
 	}
 	defer pf.Close()
 
 	if pfHdr.Size > (2 << 20) {
-		respJSON(w, r, http.StatusNotFound, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("pdata file is too large"),
-		})
+		respFail(w, r, http.StatusNotFound, ErrorCode_BAD_REQUEST.MessageObjf("pdata file is too large"))
 		return
 	}
 
@@ -62,11 +50,7 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to read uploaded data file (size: %d)", pfHdr.Size)
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
@@ -75,11 +59,7 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		hlog.FromRequest(r).Warn().
 			Err(err).
 			Msgf("invalid pdata rejected")
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("invalid pdata"),
-		})
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("invalid pdata"))
 		return
 	}
 
@@ -87,30 +67,19 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		hlog.FromRequest(r).Warn().
 			Err(err).
 			Msgf("pdata with too much trailing junk rejected")
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("invalid pdata"),
-		})
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("invalid pdata"))
 		return
 	}
 
 	uidQ := r.URL.Query().Get("id")
 	if uidQ == "" {
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("id param is required"),
-		})
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("id param is required"))
 		return
 	}
 
 	uid, err := strconv.ParseUint(uidQ, 10, 64)
 	if err != nil {
-		respJSON(w, r, http.StatusNotFound, map[string]any{
-			"success": false,
-			"error":   ErrorCode_PLAYER_NOT_FOUND,
-		})
+		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
 		return
 	}
 
@@ -121,11 +90,7 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to parse remote ip %q", r.RemoteAddr)
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
@@ -135,51 +100,31 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to read account from storage")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 	if acct == nil {
-		respJSON(w, r, http.StatusNotFound, map[string]any{
-			"success": false,
-			"error":   ErrorCode_PLAYER_NOT_FOUND,
-		})
+		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
 		return
 	}
 
 	if acct.IsOnOwnServer() {
 		if acct.AuthIP != raddr.Addr() {
-			respJSON(w, r, http.StatusForbidden, map[string]any{
-				"success": false,
-				"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
-			})
+			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObj())
 			return
 		}
 	} else {
 		srv := h.ServerList.GetServerByID(serverID)
 		if srv == nil {
-			respJSON(w, r, http.StatusForbidden, map[string]any{
-				"success": false,
-				"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
-				"msg":     ErrorCode_UNAUTHORIZED_GAMESERVER.Messagef("no such game server"),
-			})
+			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObjf("no such game server"))
 			return
 		}
 		if srv.Addr.Addr() != raddr.Addr() {
-			respJSON(w, r, http.StatusForbidden, map[string]any{
-				"success": false,
-				"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
-			})
+			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObj())
 			return
 		}
 		if acct.LastServerID != srv.ID {
-			respJSON(w, r, http.StatusForbidden, map[string]any{
-				"success": false,
-				"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
-			})
+			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObj())
 			return
 		}
 	}
@@ -189,11 +134,7 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to save pdata")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
@@ -223,8 +164,7 @@ func (h *Handler) handleAccountsLookupUID(w http.ResponseWriter, r *http.Request
 			"success":  false,
 			"username": "",
 			"matches":  []uint64{},
-			"error":    ErrorCode_BAD_REQUEST,
-			"msg":      ErrorCode_BAD_REQUEST.Messagef("username param is required"),
+			"error":    ErrorCode_BAD_REQUEST.MessageObjf("username param is required"),
 		})
 		return
 	}
@@ -243,8 +183,7 @@ func (h *Handler) handleAccountsLookupUID(w http.ResponseWriter, r *http.Request
 			"success":  false,
 			"username": username,
 			"matches":  []uint64{},
-			"error":    ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":      ErrorCode_INTERNAL_SERVER_ERROR.Message(),
+			"error":    ErrorCode_INTERNAL_SERVER_ERROR.MessageObj(),
 		})
 		return
 	}
@@ -279,8 +218,7 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 			"success": false,
 			"uid":     "",
 			"matches": []string{},
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("uid param is required"),
+			"error":   ErrorCode_BAD_REQUEST.MessageObjf("uid param is required"),
 		})
 		return
 	}
@@ -291,7 +229,7 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 			"success": false,
 			"uid":     strconv.FormatUint(uid, 10),
 			"matches": []string{},
-			"error":   ErrorCode_PLAYER_NOT_FOUND,
+			"error":   ErrorCode_PLAYER_NOT_FOUND.MessageObj(),
 		})
 		return
 	}
@@ -304,8 +242,9 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 			Msgf("failed to read account from storage")
 		respJSON(w, r, http.StatusInternalServerError, map[string]any{
 			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
+			"uid":     strconv.FormatUint(uid, 10),
+			"matches": []string{},
+			"error":   ErrorCode_INTERNAL_SERVER_ERROR.MessageObj(),
 		})
 		return
 	}
@@ -314,7 +253,7 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 			"success": false,
 			"uid":     strconv.FormatUint(uid, 10),
 			"matches": []string{},
-			"error":   ErrorCode_PLAYER_NOT_FOUND,
+			"error":   ErrorCode_PLAYER_NOT_FOUND.MessageObj(),
 		})
 		return
 	}

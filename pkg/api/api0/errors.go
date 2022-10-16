@@ -1,6 +1,8 @@
 package api0
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // ErrorCode represents a known Northstar error code.
 type ErrorCode string
@@ -25,6 +27,35 @@ const (
 	ErrorCode_INTERNAL_SERVER_ERROR ErrorCode = "INTERNAL_SERVER_ERROR"
 	ErrorCode_BAD_REQUEST           ErrorCode = "BAD_REQUEST"
 )
+
+// ErrorObj contains an error code and a message for API responses.
+type ErrorObj struct {
+	Code    ErrorCode `json:"enum"`
+	Message string    `json:"msg"` // note: no omitempty
+}
+
+// Obj returns an ErrorObj.
+func (n ErrorCode) Obj() ErrorObj {
+	return ErrorObj{
+		Code: n,
+	}
+}
+
+// MessageObj is like Message, but returns an ErrorObj.
+func (n ErrorCode) MessageObj() ErrorObj {
+	return ErrorObj{
+		Code:    n,
+		Message: n.Message(),
+	}
+}
+
+// MessageObjf is like Messagef, but returns an ErrorObj.
+func (n ErrorCode) MessageObjf(format string, a ...interface{}) ErrorObj {
+	return ErrorObj{
+		Code:    n,
+		Message: n.Messagef(format, a...),
+	}
+}
 
 // Message returns the default message for error code n.
 func (n ErrorCode) Message() string {
@@ -64,5 +95,8 @@ func (n ErrorCode) Message() string {
 
 // Messagef returns Message() with additional text appended after ": ".
 func (n ErrorCode) Messagef(format string, a ...interface{}) string {
+	if format == "" {
+		return n.Message()
+	}
 	return n.Message() + ": " + fmt.Sprintf(format, a...)
 }

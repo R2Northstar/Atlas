@@ -51,10 +51,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !h.checkLauncherVersion(r) {
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_UNSUPPORTED_VERSION,
-		})
+		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return
 	}
 
@@ -63,21 +60,13 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to parse remote ip %q", r.RemoteAddr)
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
 	if !h.AllowGameServerIPv6 {
 		if raddr.Addr().Is6() {
-			respJSON(w, r, http.StatusBadRequest, map[string]any{
-				"success": false,
-				"error":   ErrorCode_NO_GAMESERVER_RESPONSE,
-				"msg":     ErrorCode_NO_GAMESERVER_RESPONSE.Messagef("ipv6 is not currently supported (ip %s)", raddr.Addr()),
-			})
+			respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("ipv6 is not currently supported (ip %s)", raddr.Addr()))
 			return
 		}
 	}
@@ -110,11 +99,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	if canUpdate {
 		if v := r.URL.Query().Get("id"); v == "" {
 			if isUpdate {
-				respJSON(w, r, http.StatusBadRequest, map[string]any{
-					"success": false,
-					"error":   ErrorCode_BAD_REQUEST,
-					"msg":     ErrorCode_BAD_REQUEST.Messagef("id param is required"),
-				})
+				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("port param is required"))
 				return
 			}
 		} else {
@@ -125,19 +110,11 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	if canCreate {
 		if v := r.URL.Query().Get("port"); v == "" {
 			if isCreate {
-				respJSON(w, r, http.StatusBadRequest, map[string]any{
-					"success": false,
-					"error":   ErrorCode_BAD_REQUEST,
-					"msg":     ErrorCode_BAD_REQUEST.Messagef("port param is required"),
-				})
+				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("port param is required"))
 				return
 			}
 		} else if n, err := strconv.ParseUint(v, 10, 16); err != nil {
-			respJSON(w, r, http.StatusBadRequest, map[string]any{
-				"success": false,
-				"error":   ErrorCode_BAD_REQUEST,
-				"msg":     ErrorCode_BAD_REQUEST.Messagef("port param is invalid: %v", err),
-			})
+			respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("port param is invalid: %v", err))
 			return
 		} else {
 			s.Addr = netip.AddrPortFrom(raddr.Addr(), uint16(n))
@@ -145,19 +122,11 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 
 		if v := r.URL.Query().Get("authPort"); v == "" {
 			if isCreate {
-				respJSON(w, r, http.StatusBadRequest, map[string]any{
-					"success": false,
-					"error":   ErrorCode_BAD_REQUEST,
-					"msg":     ErrorCode_BAD_REQUEST.Messagef("authPort param is required"),
-				})
+				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("authPort param is required"))
+				return
 			}
-			return
 		} else if n, err := strconv.ParseUint(v, 10, 16); err != nil {
-			respJSON(w, r, http.StatusBadRequest, map[string]any{
-				"success": false,
-				"error":   ErrorCode_BAD_REQUEST,
-				"msg":     ErrorCode_BAD_REQUEST.Messagef("authPort param is invalid: %v", err),
-			})
+			respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("authPort param is invalid: %v", err))
 			return
 		} else {
 			s.AuthPort = uint16(n)
@@ -165,11 +134,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 
 		if v := r.URL.Query().Get("password"); len(v) > 128 {
 			if isCreate {
-				respJSON(w, r, http.StatusBadRequest, map[string]any{
-					"success": false,
-					"error":   ErrorCode_BAD_REQUEST,
-					"msg":     ErrorCode_BAD_REQUEST.Messagef("password is too long"),
-				})
+				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("password is too long"))
 				return
 			}
 		} else {
@@ -180,11 +145,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	if canCreate || canUpdate {
 		if v := r.URL.Query().Get("name"); v == "" {
 			if isCreate {
-				respJSON(w, r, http.StatusBadRequest, map[string]any{
-					"success": false,
-					"error":   ErrorCode_BAD_REQUEST,
-					"msg":     ErrorCode_BAD_REQUEST.Messagef("name param must not be empty"),
-				})
+				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("name param must not be empty"))
 				return
 			}
 		} else {
@@ -312,45 +273,25 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	nsrv, err := h.ServerList.ServerHybridUpdatePut(u, s, l)
 	if err != nil {
 		if errors.Is(err, ErrServerListUpdateWrongIP) {
-			respJSON(w, r, http.StatusForbidden, map[string]any{
-				"success": false,
-				"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
-				"msg":     ErrorCode_UNAUTHORIZED_GAMESERVER.Messagef("%v", err),
-			})
+			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObjf("%v", err))
 			return
 		}
 		if errors.Is(err, ErrServerListUpdateServerDead) {
-			respJSON(w, r, http.StatusForbidden, map[string]any{
-				"success": false,
-				"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
-				"msg":     ErrorCode_UNAUTHORIZED_GAMESERVER.Messagef("no such server"),
-			})
+			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObjf("no such server"))
 			return
 		}
 		if errors.Is(err, ErrServerListDuplicateAuthAddr) {
-			respJSON(w, r, http.StatusForbidden, map[string]any{
-				"success": false,
-				"error":   ErrorCode_DUPLICATE_SERVER,
-				"msg":     ErrorCode_DUPLICATE_SERVER.Messagef("%v", err),
-			})
+			respFail(w, r, http.StatusForbidden, ErrorCode_DUPLICATE_SERVER.MessageObjf("%v", err))
 			return
 		}
 		if errors.Is(err, ErrServerListLimitExceeded) {
-			respJSON(w, r, http.StatusInternalServerError, map[string]any{
-				"success": false,
-				"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-				"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Messagef("%v", err),
-			})
+			respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObjf("%v", err))
 			return
 		}
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to update server list")
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
@@ -368,29 +309,17 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			} else {
 				code = ErrorCode_NO_GAMESERVER_RESPONSE
 			}
-			respJSON(w, r, http.StatusBadGateway, map[string]any{
-				"success": false,
-				"error":   code,
-				"msg":     code.Messagef("failed to connect to auth port: %v", err),
-			})
+			respFail(w, r, http.StatusBadGateway, code.MessageObjf("failed to connect to auth port: %v", err))
 			return
 		}
 
 		if err := a2s.Probe(s.Addr, time.Until(nsrv.VerificationDeadline)); err != nil {
-			respJSON(w, r, http.StatusBadGateway, map[string]any{
-				"success": false,
-				"error":   ErrorCode_BAD_GAMESERVER_RESPONSE,
-				"msg":     ErrorCode_BAD_GAMESERVER_RESPONSE.Messagef("failed to connect to game port: %v", err),
-			})
+			respFail(w, r, http.StatusBadGateway, ErrorCode_BAD_GAMESERVER_RESPONSE.MessageObjf("failed to connect to game port: %v", err))
 			return
 		}
 
 		if !h.ServerList.VerifyServer(nsrv.ID) {
-			respJSON(w, r, http.StatusBadGateway, map[string]any{
-				"success": false,
-				"error":   ErrorCode_NO_GAMESERVER_RESPONSE,
-				"msg":     ErrorCode_NO_GAMESERVER_RESPONSE.Messagef("verification timed out"),
-			})
+			respFail(w, r, http.StatusBadGateway, ErrorCode_NO_GAMESERVER_RESPONSE.MessageObjf("verification timed out"))
 			return
 		}
 	}
@@ -423,21 +352,13 @@ func (h *Handler) handleServerRemove(w http.ResponseWriter, r *http.Request) {
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to parse remote ip %q", r.RemoteAddr)
-		respJSON(w, r, http.StatusInternalServerError, map[string]any{
-			"success": false,
-			"error":   ErrorCode_INTERNAL_SERVER_ERROR,
-			"msg":     ErrorCode_INTERNAL_SERVER_ERROR.Message(),
-		})
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
 	var id string
 	if v := r.URL.Query().Get("id"); v == "" {
-		respJSON(w, r, http.StatusBadRequest, map[string]any{
-			"success": false,
-			"error":   ErrorCode_BAD_REQUEST,
-			"msg":     ErrorCode_BAD_REQUEST.Messagef("id param is required"),
-		})
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("id param is required"))
 		return
 	} else {
 		id = v
@@ -445,18 +366,11 @@ func (h *Handler) handleServerRemove(w http.ResponseWriter, r *http.Request) {
 
 	srv := h.ServerList.GetServerByID(id)
 	if srv == nil {
-		respJSON(w, r, http.StatusForbidden, map[string]any{
-			"success": false,
-			"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
-			"msg":     ErrorCode_UNAUTHORIZED_GAMESERVER.Messagef("no such game server"),
-		})
+		respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObjf("no such game server"))
 		return
 	}
 	if srv.Addr.Addr() != raddr.Addr() {
-		respJSON(w, r, http.StatusForbidden, map[string]any{
-			"success": false,
-			"error":   ErrorCode_UNAUTHORIZED_GAMESERVER,
-		})
+		respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObj())
 		return
 	}
 	h.ServerList.DeleteServerByID(id)
