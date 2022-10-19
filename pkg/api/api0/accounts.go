@@ -220,7 +220,7 @@ func (h *Handler) handleAccountsLookupUID(w http.ResponseWriter, r *http.Request
 		h.m().accounts_lookupuid_requests_total.success_multimatch.Inc()
 	}
 	respJSON(w, r, http.StatusOK, map[string]any{
-		"success":  false,
+		"success":  true,
 		"username": username,
 		"matches":  uids,
 	})
