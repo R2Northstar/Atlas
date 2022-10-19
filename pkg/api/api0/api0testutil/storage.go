@@ -219,7 +219,7 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 				uacct.Username = "user" + strconv.Itoa(rand.Intn(users/8)) // generate a username with overlap
 				uacct.AuthIP = netip.MustParseAddr("127.0.0.1")
 				uacct.AuthToken = "dummy"
-				uacct.AuthTokenExpiry = time.Now().Add(time.Minute * 30)
+				uacct.AuthTokenExpiry = time.Now().Add(time.Minute * 30).Truncate(time.Second)
 				uacct.LastServerID = "self"
 
 				// update the account
