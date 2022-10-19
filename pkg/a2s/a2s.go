@@ -8,13 +8,17 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"net/netip"
+	"os"
 	"time"
 )
 
 const ProbeUID uint64 = 1000000001337
+
+var ErrTimeout = errors.New("connection timed out")
 
 func Probe(addr netip.AddrPort, timeout time.Duration) error {
 	conn, err := net.DialUDP("udp", nil, net.UDPAddrFromAddrPort(addr))
@@ -32,11 +36,17 @@ func Probe(addr netip.AddrPort, timeout time.Duration) error {
 		return fmt.Errorf("encrypt connection packet: %w", err)
 	}
 	if _, err := conn.Write(pkt); err != nil {
+		if errors.Is(err, os.ErrDeadlineExceeded) {
+			err = fmt.Errorf("%w: %v", ErrTimeout, err)
+		}
 		return fmt.Errorf("send connection packet: %w", err)
 	}
 
 	resp := make([]byte, 1500)
 	if n, err := conn.Read(resp); err != nil {
+		if errors.Is(err, os.ErrDeadlineExceeded) {
+			err = fmt.Errorf("%w: %v", ErrTimeout, err)
+		}
 		return fmt.Errorf("receive packet: %w", err)
 	} else {
 		resp = resp[:n]
