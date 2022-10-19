@@ -24,7 +24,7 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 	// test basic functionality
 	{
 		uid0 := uint64(999999)
-		uid1 := uint64(math.MaxUint64)
+		uid1 := uint64(math.MaxUint64 >> 1)
 		act0 := &api0.Account{
 			UID:      uid0,
 			Username: "act0",
@@ -322,7 +322,7 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 	// test basic functionality
 	{
-		user1 := uint64(math.MaxUint64) // to ensure the full uid range is supported
+		user1 := uint64(math.MaxUint64 >> 1) // to ensure the full uid range is supported
 		pdata1 := seqBytes(56306, 0)
 		pdata2 := seqBytes(56306, 6)
 		zeroSHA := [sha256.Size]byte{}
