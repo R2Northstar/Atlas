@@ -316,7 +316,14 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := a2s.Probe(s.Addr, time.Until(nsrv.VerificationDeadline)); err != nil {
-			respFail(w, r, http.StatusBadGateway, ErrorCode_BAD_GAMESERVER_RESPONSE.MessageObjf("failed to connect to game port: %v", err))
+			var code ErrorCode
+			switch {
+			case errors.Is(err, a2s.ErrTimeout):
+				code = ErrorCode_NO_GAMESERVER_RESPONSE
+			default:
+				code = ErrorCode_BAD_GAMESERVER_RESPONSE
+			}
+			respFail(w, r, http.StatusBadGateway, code.MessageObjf("failed to connect to game port: %v", err))
 			return
 		}
 
