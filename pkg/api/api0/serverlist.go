@@ -572,6 +572,11 @@ func (s *ServerList) GetMetrics() []byte {
 	return b.Bytes()
 }
 
+// WritePrometheus writes metrics for s to w.
+func (s *ServerList) WritePrometheus(w io.Writer) {
+	w.Write(s.GetMetrics())
+}
+
 // GetLiveServers loops over live (i.e., not dead/ghost) servers until fn
 // returns false. The order of the servers is non-deterministic.
 func (s *ServerList) GetLiveServers(fn func(*Server) bool) {
