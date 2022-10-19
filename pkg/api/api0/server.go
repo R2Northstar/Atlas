@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/netip"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pg9182/atlas/pkg/a2s"
@@ -20,15 +21,16 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	//  - https://github.com/R2Northstar/NorthstarLauncher/commit/753dda6231bbb2adf585bbc916c0b220e816fcdc
 	//  - https://github.com/R2Northstar/NorthstarLauncher/blob/v1.9.7/NorthstarDLL/masterserver.cpp
 
+	var action string
 	var isCreate, canCreate, isUpdate, canUpdate bool
-	switch r.URL.Path {
-	case "/server/add_server":
+	switch action = strings.TrimPrefix(r.URL.Path, "/server/"); action {
+	case "add_server":
 		isCreate = true
 		canCreate = true
-	case "/server/update_values":
+	case "update_values":
 		canCreate = true
 		fallthrough
-	case "/server/heartbeat":
+	case "heartbeat":
 		isUpdate = true
 		canUpdate = true
 	default:
@@ -36,6 +38,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != http.MethodOptions && r.Method != http.MethodPost {
+		h.m().server_upsert_requests_total.http_method_not_allowed(action).Inc()
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
@@ -51,6 +54,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !h.checkLauncherVersion(r) {
+		h.m().server_upsert_requests_total.reject_versiongate(action).Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return
 	}
@@ -60,12 +64,14 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to parse remote ip %q", r.RemoteAddr)
+		h.m().server_upsert_requests_total.fail_other_error(action).Inc()
 		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
 	if !h.AllowGameServerIPv6 {
 		if raddr.Addr().Is6() {
+			h.m().server_upsert_requests_total.reject_ipv6(action).Inc()
 			respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("ipv6 is not currently supported (ip %s)", raddr.Addr()))
 			return
 		}
@@ -101,6 +107,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	if canUpdate {
 		if v := r.URL.Query().Get("id"); v == "" {
 			if isUpdate {
+				h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("port param is required"))
 				return
 			}
@@ -112,10 +119,12 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	if canCreate {
 		if v := r.URL.Query().Get("port"); v == "" {
 			if isCreate {
+				h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("port param is required"))
 				return
 			}
 		} else if n, err := strconv.ParseUint(v, 10, 16); err != nil {
+			h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 			respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("port param is invalid: %v", err))
 			return
 		} else {
@@ -124,10 +133,12 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 
 		if v := r.URL.Query().Get("authPort"); v == "" {
 			if isCreate {
+				h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("authPort param is required"))
 				return
 			}
 		} else if n, err := strconv.ParseUint(v, 10, 16); err != nil {
+			h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 			respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("authPort param is invalid: %v", err))
 			return
 		} else {
@@ -136,6 +147,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 
 		if v := r.URL.Query().Get("password"); len(v) > 128 {
 			if isCreate {
+				h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("password is too long"))
 				return
 			}
@@ -147,6 +159,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	if canCreate || canUpdate {
 		if v := r.URL.Query().Get("name"); v == "" {
 			if isCreate {
+				h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("name param must not be empty"))
 				return
 			}
@@ -266,6 +279,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if modInfoErr != nil {
+			h.m().server_upsert_modinfo_parse_errors_total(action).Inc()
 			hlog.FromRequest(r).Warn().
 				Err(err).
 				Msgf("failed to parse modinfo")
@@ -275,42 +289,54 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	nsrv, err := h.ServerList.ServerHybridUpdatePut(u, s, l)
 	if err != nil {
 		if errors.Is(err, ErrServerListUpdateWrongIP) {
+			h.m().server_upsert_requests_total.reject_unauthorized_ip(action).Inc()
 			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObjf("%v", err))
 			return
 		}
 		if errors.Is(err, ErrServerListUpdateServerDead) {
+			h.m().server_upsert_requests_total.reject_server_not_found(action).Inc()
 			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObjf("no such server"))
 			return
 		}
 		if errors.Is(err, ErrServerListDuplicateAuthAddr) {
+			h.m().server_upsert_requests_total.reject_duplicate_auth_addr(action).Inc()
 			respFail(w, r, http.StatusForbidden, ErrorCode_DUPLICATE_SERVER.MessageObjf("%v", err))
 			return
 		}
 		if errors.Is(err, ErrServerListLimitExceeded) {
+			h.m().server_upsert_requests_total.reject_limits_exceeded(action).Inc()
 			respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObjf("%v", err))
 			return
 		}
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to update server list")
+		h.m().server_upsert_requests_total.fail_serverlist_error(action).Inc()
 		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
 	if !nsrv.VerificationDeadline.IsZero() {
+		verifyStart := time.Now()
+
 		ctx, cancel := context.WithDeadline(r.Context(), nsrv.VerificationDeadline)
 		defer cancel()
 
 		if err := api0gameserver.Verify(ctx, s.AuthAddr()); err != nil {
-			if errors.Is(err, context.DeadlineExceeded) {
-				err = fmt.Errorf("request timed out")
-			}
 			var code ErrorCode
-			if errors.Is(err, api0gameserver.ErrInvalidResponse) {
-				code = ErrorCode_BAD_GAMESERVER_RESPONSE
-			} else {
+			switch {
+			case errors.Is(err, context.DeadlineExceeded):
+				err = fmt.Errorf("request timed out")
 				code = ErrorCode_NO_GAMESERVER_RESPONSE
+				h.m().server_upsert_requests_total.reject_verify_authtimeout(action).Inc()
+			case errors.Is(err, api0gameserver.ErrInvalidResponse):
+				code = ErrorCode_BAD_GAMESERVER_RESPONSE
+				h.m().server_upsert_requests_total.reject_verify_authresp(action).Inc()
+			default:
+				code = ErrorCode_NO_GAMESERVER_RESPONSE
+				h.m().server_upsert_requests_total.reject_verify_autherr(action).Inc()
 			}
+			h.m().server_upsert_verify_time_seconds.failure.UpdateDuration(verifyStart)
 			respFail(w, r, http.StatusBadGateway, code.MessageObjf("failed to connect to auth port: %v", err))
 			return
 		}
@@ -319,20 +345,28 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			var code ErrorCode
 			switch {
 			case errors.Is(err, a2s.ErrTimeout):
+				h.m().server_upsert_requests_total.reject_verify_udptimeout(action).Inc()
 				code = ErrorCode_NO_GAMESERVER_RESPONSE
 			default:
+				h.m().server_upsert_requests_total.reject_verify_udperr(action).Inc()
 				code = ErrorCode_BAD_GAMESERVER_RESPONSE
 			}
+			h.m().server_upsert_verify_time_seconds.failure.UpdateDuration(verifyStart)
 			respFail(w, r, http.StatusBadGateway, code.MessageObjf("failed to connect to game port: %v", err))
 			return
 		}
+		h.m().server_upsert_verify_time_seconds.success.UpdateDuration(verifyStart)
 
 		if !h.ServerList.VerifyServer(nsrv.ID) {
+			h.m().server_upsert_requests_total.reject_verify_udptimeout(action).Inc()
 			respFail(w, r, http.StatusBadGateway, ErrorCode_NO_GAMESERVER_RESPONSE.MessageObjf("verification timed out"))
 			return
 		}
-	}
 
+		h.m().server_upsert_requests_total.success_verified(action).Inc()
+	} else {
+		h.m().server_upsert_requests_total.success_updated(action).Inc()
+	}
 	respJSON(w, r, http.StatusOK, map[string]any{
 		"success":         true,
 		"id":              nsrv.ID,
@@ -342,6 +376,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleServerRemove(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodOptions && r.Method != http.MethodDelete {
+		h.m().server_remove_requests_total.http_method_not_allowed.Inc()
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
@@ -361,12 +396,14 @@ func (h *Handler) handleServerRemove(w http.ResponseWriter, r *http.Request) {
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to parse remote ip %q", r.RemoteAddr)
+		h.m().server_remove_requests_total.fail_other_error.Inc()
 		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
 	var id string
 	if v := r.URL.Query().Get("id"); v == "" {
+		h.m().server_remove_requests_total.reject_bad_request.Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("id param is required"))
 		return
 	} else {
@@ -375,15 +412,18 @@ func (h *Handler) handleServerRemove(w http.ResponseWriter, r *http.Request) {
 
 	srv := h.ServerList.GetServerByID(id)
 	if srv == nil {
+		h.m().server_remove_requests_total.reject_server_not_found.Inc()
 		respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObjf("no such game server"))
 		return
 	}
 	if srv.Addr.Addr() != raddr.Addr() {
+		h.m().server_remove_requests_total.reject_unauthorized_ip.Inc()
 		respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObj())
 		return
 	}
 	h.ServerList.DeleteServerByID(id)
 
+	h.m().server_remove_requests_total.success.Inc()
 	respJSON(w, r, http.StatusOK, map[string]any{
 		"success": true,
 	})

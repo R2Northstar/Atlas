@@ -12,6 +12,7 @@ import (
 
 func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodOptions && r.Method != http.MethodPost {
+		h.m().accounts_writepersistence_requests_total.http_method_not_allowed.Inc()
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
@@ -29,18 +30,21 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 	}
 
 	if err := r.ParseMultipartForm(2 << 20); err != nil {
+		h.m().accounts_writepersistence_requests_total.reject_bad_request.Inc()
 		respFail(w, r, http.StatusNotFound, ErrorCode_BAD_REQUEST.MessageObjf("failed to parse multipart form: %v", err))
 		return
 	}
 
 	pf, pfHdr, err := r.FormFile("pdata")
 	if err != nil {
+		h.m().accounts_writepersistence_requests_total.reject_bad_request.Inc()
 		respFail(w, r, http.StatusNotFound, ErrorCode_BAD_REQUEST.MessageObjf("missing pdata file: %v", err))
 		return
 	}
 	defer pf.Close()
 
 	if pfHdr.Size > (2 << 20) {
+		h.m().accounts_writepersistence_requests_total.reject_too_large.Inc()
 		respFail(w, r, http.StatusNotFound, ErrorCode_BAD_REQUEST.MessageObjf("pdata file is too large"))
 		return
 	}
@@ -50,6 +54,7 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to read uploaded data file (size: %d)", pfHdr.Size)
+		h.m().accounts_writepersistence_requests_total.fail_other_error.Inc()
 		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
@@ -59,6 +64,7 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		hlog.FromRequest(r).Warn().
 			Err(err).
 			Msgf("invalid pdata rejected")
+		h.m().accounts_writepersistence_requests_total.reject_invalid_pdata.Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("invalid pdata"))
 		return
 	}
@@ -67,18 +73,23 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		hlog.FromRequest(r).Warn().
 			Err(err).
 			Msgf("pdata with too much trailing junk rejected")
+		h.m().accounts_writepersistence_requests_total.reject_too_much_extradata.Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("invalid pdata"))
 		return
 	}
 
+	h.m().accounts_writepersistence_extradata_size_bytes.Update(float64(len(pd.ExtraData)))
+
 	uidQ := r.URL.Query().Get("id")
 	if uidQ == "" {
+		h.m().accounts_writepersistence_requests_total.reject_bad_request.Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("id param is required"))
 		return
 	}
 
 	uid, err := strconv.ParseUint(uidQ, 10, 64)
 	if err != nil {
+		h.m().accounts_writepersistence_requests_total.reject_bad_request.Inc()
 		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
 		return
 	}
@@ -90,6 +101,7 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to parse remote ip %q", r.RemoteAddr)
+		h.m().accounts_writepersistence_requests_total.fail_other_error.Inc()
 		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
@@ -100,30 +112,36 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to read account from storage")
+		h.m().accounts_writepersistence_requests_total.fail_storage_error_account.Inc()
 		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 	if acct == nil {
+		h.m().accounts_writepersistence_requests_total.reject_player_not_found.Inc()
 		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
 		return
 	}
 
 	if acct.IsOnOwnServer() {
 		if acct.AuthIP != raddr.Addr() {
+			h.m().accounts_writepersistence_requests_total.reject_unauthorized.Inc()
 			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObj())
 			return
 		}
 	} else {
 		srv := h.ServerList.GetServerByID(serverID)
 		if srv == nil {
+			h.m().accounts_writepersistence_requests_total.reject_unauthorized.Inc()
 			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObjf("no such game server"))
 			return
 		}
 		if srv.Addr.Addr() != raddr.Addr() {
+			h.m().accounts_writepersistence_requests_total.reject_unauthorized.Inc()
 			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObj())
 			return
 		}
 		if acct.LastServerID != srv.ID {
+			h.m().accounts_writepersistence_requests_total.reject_unauthorized.Inc()
 			respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObj())
 			return
 		}
@@ -134,15 +152,18 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to save pdata")
+		h.m().accounts_writepersistence_requests_total.fail_storage_error_pdata.Inc()
 		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 
+	h.m().accounts_writepersistence_requests_total.success.Inc()
 	respJSON(w, r, http.StatusOK, nil)
 }
 
 func (h *Handler) handleAccountsLookupUID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodOptions && r.Method != http.MethodHead && r.Method != http.MethodGet {
+		h.m().accounts_lookupuid_requests_total.http_method_not_allowed.Inc()
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
@@ -160,6 +181,7 @@ func (h *Handler) handleAccountsLookupUID(w http.ResponseWriter, r *http.Request
 
 	username := r.URL.Query().Get("username")
 	if username == "" {
+		h.m().accounts_lookupuid_requests_total.reject_bad_request.Inc()
 		respJSON(w, r, http.StatusBadRequest, map[string]any{
 			"success":  false,
 			"username": "",
@@ -179,6 +201,7 @@ func (h *Handler) handleAccountsLookupUID(w http.ResponseWriter, r *http.Request
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Msgf("failed to find account uids from storage for %q", username)
+		h.m().accounts_lookupuid_requests_total.fail_storage_error_account.Inc()
 		respJSON(w, r, http.StatusInternalServerError, map[string]any{
 			"success":  false,
 			"username": username,
@@ -188,6 +211,14 @@ func (h *Handler) handleAccountsLookupUID(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	switch len(uids) {
+	case 0:
+		h.m().accounts_lookupuid_requests_total.success_nomatch.Inc()
+	case 1:
+		h.m().accounts_lookupuid_requests_total.success_singlematch.Inc()
+	default:
+		h.m().accounts_lookupuid_requests_total.success_multimatch.Inc()
+	}
 	respJSON(w, r, http.StatusOK, map[string]any{
 		"success":  false,
 		"username": username,
@@ -197,6 +228,7 @@ func (h *Handler) handleAccountsLookupUID(w http.ResponseWriter, r *http.Request
 
 func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodOptions && r.Method != http.MethodHead && r.Method != http.MethodGet {
+		h.m().accounts_getusername_requests_total.http_method_not_allowed.Inc()
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
@@ -214,6 +246,7 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 
 	uidQ := r.URL.Query().Get("uid")
 	if uidQ == "" {
+		h.m().accounts_getusername_requests_total.reject_bad_request.Inc()
 		respJSON(w, r, http.StatusBadRequest, map[string]any{
 			"success": false,
 			"uid":     "",
@@ -225,6 +258,7 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 
 	uid, err := strconv.ParseUint(uidQ, 10, 64)
 	if err != nil {
+		h.m().accounts_getusername_requests_total.reject_bad_request.Inc()
 		respJSON(w, r, http.StatusNotFound, map[string]any{
 			"success": false,
 			"uid":     strconv.FormatUint(uid, 10),
@@ -240,6 +274,7 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to read account from storage")
+		h.m().accounts_getusername_requests_total.fail_storage_error_account.Inc()
 		respJSON(w, r, http.StatusInternalServerError, map[string]any{
 			"success": false,
 			"uid":     strconv.FormatUint(uid, 10),
@@ -252,6 +287,11 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 	var username string
 	if acct != nil {
 		username = acct.Username
+	}
+	if username == "" {
+		h.m().accounts_getusername_requests_total.success_match.Inc()
+	} else {
+		h.m().accounts_getusername_requests_total.success_missing.Inc()
 	}
 	respJSON(w, r, http.StatusOK, map[string]any{
 		"success": true,

@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pg9182/atlas/pkg/origin"
@@ -77,10 +78,20 @@ type Handler struct {
 
 	// AllowGameServerIPv6 controls whether to allow game servers to use IPv6.
 	AllowGameServerIPv6 bool
+
+	metricsInit sync.Once
+	metricsObj  apiMetrics
 }
 
 // ServeHTTP routes requests to Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var notPanicked bool // this lets us catch panics without swallowing them
+	defer func() {
+		if !notPanicked {
+			h.m().request_panics_total.Inc()
+		}
+	}()
+
 	w.Header().Set("Server", "Atlas")
 
 	switch r.URL.Path {
@@ -110,9 +121,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if h.NotFound == nil {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		} else {
+			notPanicked = true
 			h.NotFound.ServeHTTP(w, r)
 		}
 	}
+	notPanicked = true
 }
 
 // checkLauncherVersion checks if the r was made by NorthstarLauncher and if it
@@ -126,6 +139,7 @@ func (h *Handler) checkLauncherVersion(r *http.Request) bool {
 			rver = x
 		}
 	} else {
+		h.m().versiongate_checks_total.reject_notns.Inc()
 		return false // deny: not R2Northstar
 	}
 
@@ -135,17 +149,31 @@ func (h *Handler) checkLauncherVersion(r *http.Request) bool {
 			mver = "v" + mver
 		}
 	} else {
+		h.m().versiongate_checks_total.success_ok.Inc()
 		return true // allow: no minimum version
 	}
 	if !semver.IsValid(mver) {
 		hlog.FromRequest(r).Warn().Msgf("not checking invalid minimum version %q", mver)
+		h.m().versiongate_checks_total.success_ok.Inc()
 		return true // allow: invalid minimum version
 	}
 
 	if strings.HasSuffix(rver, "+dev") {
+		h.m().versiongate_checks_total.success_dev.Inc()
 		return true // allow: dev versions
 	}
-	return semver.Compare(rver, mver) >= 0
+	if !semver.IsValid(rver) {
+		h.m().versiongate_checks_total.reject_invalid.Inc()
+		return false // deny: invalid version
+	}
+
+	if semver.Compare(rver, mver) < 0 {
+		h.m().versiongate_checks_total.reject_old.Inc()
+		return false // deny: too old
+	}
+
+	h.m().versiongate_checks_total.success_ok.Inc()
+	return true
 }
 
 // extractLauncherVersion extracts the launcher version from r, returning an
@@ -194,6 +222,7 @@ func respJSON(w http.ResponseWriter, r *http.Request, status int, obj any) {
 	if err != nil {
 		panic(err)
 	}
+	hlog.FromRequest(r).Trace().Msgf("json api response %.2048s", string(buf))
 	buf = append(buf, '\n')
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Length", strconv.Itoa(len(buf)))

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pg9182/atlas/pkg/pdata"
@@ -42,20 +43,22 @@ func pdataFilterLoadout(path ...string) bool {
 
 func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 	var pdataFilter func(...string) bool
-	switch r.URL.Path {
-	case "/player/pdata":
+	var pdataFilterName string
+	switch pdataFilterName := strings.TrimPrefix(r.URL.Path, "/player/"); pdataFilterName {
+	case "pdata":
 		pdataFilter = nil
-	case "/player/info":
+	case "info":
 		pdataFilter = pdataFilterInfo
-	case "/player/stats":
+	case "stats":
 		pdataFilter = pdataFilterStats
-	case "/player/loadout":
+	case "loadout":
 		pdataFilter = pdataFilterLoadout
 	default:
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
 	if r.Method != http.MethodOptions && r.Method != http.MethodGet && r.Method != http.MethodHead {
+		h.m().player_pdata_requests_total.http_method_not_allowed.Inc()
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
@@ -80,12 +83,14 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 
 	uidQ := r.URL.Query().Get("id")
 	if uidQ == "" {
+		h.m().player_pdata_requests_total.reject_bad_request.Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("id param is required"))
 		return
 	}
 
 	uid, err := strconv.ParseUint(uidQ, 10, 64)
 	if err != nil {
+		h.m().player_pdata_requests_total.reject_bad_request.Inc()
 		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
 		return
 	}
@@ -98,13 +103,16 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 				Err(err).
 				Uint64("uid", uid).
 				Msgf("failed to read pdata hash from storage")
+			h.m().player_pdata_requests_total.fail_storage_error_pdata.Inc()
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		if !exists {
+			h.m().player_pdata_requests_total.reject_player_not_found.Inc()
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		h.m().player_pdata_requests_total.success(pdataFilterName).Inc()
 		w.Header().Set("ETag", `W/"`+hex.EncodeToString(hash[:])+`"`)
 		w.WriteHeader(http.StatusOK)
 		return
@@ -116,10 +124,12 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 			Err(err).
 			Uint64("uid", uid).
 			Msgf("failed to read pdata from storage")
+		h.m().player_pdata_requests_total.fail_storage_error_pdata.Inc()
 		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
 	}
 	if !exists {
+		h.m().player_pdata_requests_total.reject_player_not_found.Inc()
 		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
 		return
 	}
@@ -134,6 +144,7 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 			Uint64("uid", uid).
 			Str("pdata_sha256", hex.EncodeToString(hash[:])).
 			Msgf("failed to parse pdata from storage")
+		h.m().player_pdata_requests_total.fail_pdata_invalid.Inc()
 		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObjf("failed to parse stored pdata"))
 		return
 	}
@@ -145,11 +156,13 @@ func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 			Uint64("uid", uid).
 			Str("pdata_sha256", hex.EncodeToString(hash[:])).
 			Msgf("failed to encode pdata as json")
+		h.m().player_pdata_requests_total.fail_other_error.Inc()
 		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObjf("failed to encode pdata as json"))
 		return
 	}
 	jbuf = append(jbuf, '\n')
 
+	h.m().player_pdata_requests_total.success(pdataFilterName).Inc()
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	respMaybeCompress(w, r, http.StatusOK, jbuf)
 }
