@@ -248,19 +248,14 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 		})
 		return
 	}
-	if acct == nil {
-		respJSON(w, r, http.StatusNotFound, map[string]any{
-			"success": false,
-			"uid":     strconv.FormatUint(uid, 10),
-			"matches": []string{},
-			"error":   ErrorCode_PLAYER_NOT_FOUND.MessageObj(),
-		})
-		return
-	}
 
+	var username string
+	if acct != nil {
+		username = acct.Username
+	}
 	respJSON(w, r, http.StatusOK, map[string]any{
 		"success": true,
 		"uid":     strconv.FormatUint(uid, 10),
-		"matches": []string{acct.Username}, // yes, this may be an empty string if we don't know what it is
+		"matches": []string{username}, // yes, this may be an empty string if we don't know what it is
 	})
 }
