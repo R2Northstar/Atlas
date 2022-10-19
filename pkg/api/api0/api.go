@@ -120,7 +120,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) checkLauncherVersion(r *http.Request) bool {
 	rver, _, _ := strings.Cut(r.Header.Get("User-Agent"), " ")
 	if x := strings.TrimPrefix(rver, "R2Northstar/"); rver != x {
-		if x[0] != 'v' {
+		if len(x) > 0 && x[0] != 'v' {
 			rver = "v" + x
 		} else {
 			rver = x
