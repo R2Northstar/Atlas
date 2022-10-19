@@ -384,7 +384,7 @@ func (h *Handler) handleServerRemove(w http.ResponseWriter, r *http.Request) {
 	}
 	h.ServerList.DeleteServerByID(id)
 
-	respJSON(w, r, http.StatusForbidden, map[string]any{
+	respJSON(w, r, http.StatusOK, map[string]any{
 		"success": true,
 	})
 }
