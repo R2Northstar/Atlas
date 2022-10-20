@@ -147,7 +147,7 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		}
 	}
 
-	if _, err := h.PdataStorage.SetPdata(uid, buf); err != nil {
+	if n, err := h.PdataStorage.SetPdata(uid, buf); err != nil {
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Uint64("uid", uid).
@@ -155,6 +155,8 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		h.m().accounts_writepersistence_requests_total.fail_storage_error_pdata.Inc()
 		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 		return
+	} else {
+		h.m().accounts_writepersistence_stored_size_bytes.Update(float64(n))
 	}
 
 	h.m().accounts_writepersistence_requests_total.success.Inc()

@@ -21,6 +21,7 @@ type apiMetrics struct {
 		reject_notns   *metrics.Counter
 	}
 	accounts_writepersistence_extradata_size_bytes *metrics.Histogram // only includes successful updates
+	accounts_writepersistence_stored_size_bytes    *metrics.Histogram
 	accounts_writepersistence_requests_total       struct {
 		success                    *metrics.Counter
 		reject_too_much_extradata  *metrics.Counter
@@ -178,6 +179,7 @@ func (h *Handler) m() *apiMetrics {
 		mo.versiongate_checks_total.reject_invalid = mo.set.NewCounter(`atlas_api0_versiongate_checks_total{result="reject_invalid"}`)
 		mo.versiongate_checks_total.reject_notns = mo.set.NewCounter(`atlas_api0_versiongate_checks_total{result="reject_notns"}`)
 		mo.accounts_writepersistence_extradata_size_bytes = mo.set.NewHistogram(`atlas_api0_accounts_writepersistence_extradata_size_bytes`)
+		mo.accounts_writepersistence_stored_size_bytes = mo.set.NewHistogram(`atlas_api0_accounts_writepersistence_stored_size_bytes`)
 		mo.accounts_writepersistence_requests_total.success = mo.set.NewCounter(`atlas_api0_accounts_writepersistence_requests_total{result="success"}`)
 		mo.accounts_writepersistence_requests_total.reject_too_much_extradata = mo.set.NewCounter(`atlas_api0_accounts_writepersistence_requests_total{result="reject_too_much_extradata"}`)
 		mo.accounts_writepersistence_requests_total.reject_too_large = mo.set.NewCounter(`atlas_api0_accounts_writepersistence_requests_total{result="reject_too_large"}`)
