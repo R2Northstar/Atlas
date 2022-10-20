@@ -44,7 +44,7 @@ func pdataFilterLoadout(path ...string) bool {
 func (h *Handler) handlePlayer(w http.ResponseWriter, r *http.Request) {
 	var pdataFilter func(...string) bool
 	var pdataFilterName string
-	switch pdataFilterName := strings.TrimPrefix(r.URL.Path, "/player/"); pdataFilterName {
+	switch pdataFilterName = strings.TrimPrefix(r.URL.Path, "/player/"); pdataFilterName {
 	case "pdata":
 		pdataFilter = nil
 	case "info":
