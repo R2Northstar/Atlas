@@ -132,7 +132,7 @@ func (db *DB) SetPdata(uid uint64, buf []byte) (n int, err error) {
 	pdataHash := hex.EncodeToString(hash[:])
 
 	var b bytes.Buffer
-	b.Grow(500)
+	b.Grow(2000)
 
 	zw := gzip.NewWriter(&b)
 	if _, err := zw.Write(buf); err != nil {
