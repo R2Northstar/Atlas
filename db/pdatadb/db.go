@@ -127,7 +127,7 @@ func (db *DB) GetPdataCached(uid uint64, sha [sha256.Size]byte) (buf []byte, exi
 	return obj.Pdata, true, nil
 }
 
-func (db *DB) SetPdata(uid uint64, buf []byte) (err error) {
+func (db *DB) SetPdata(uid uint64, buf []byte) (n int, err error) {
 	hash := sha256.Sum256(buf)
 	pdataHash := hex.EncodeToString(hash[:])
 
@@ -136,10 +136,10 @@ func (db *DB) SetPdata(uid uint64, buf []byte) (err error) {
 
 	zw := gzip.NewWriter(&b)
 	if _, err := zw.Write(buf); err != nil {
-		return fmt.Errorf("compress pdata: %w", err)
+		return 0, fmt.Errorf("compress pdata: %w", err)
 	}
 	if err := zw.Close(); err != nil {
-		return fmt.Errorf("compress pdata: %w", err)
+		return 0, fmt.Errorf("compress pdata: %w", err)
 	}
 
 	var pdataComp string
@@ -158,7 +158,7 @@ func (db *DB) SetPdata(uid uint64, buf []byte) (err error) {
 		"pdata_hash": pdataHash,
 		"pdata":      buf,
 	}); err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return len(buf), nil
 }

@@ -103,16 +103,16 @@ func (m *PdataStore) GetPdataCached(uid uint64, sha [sha256.Size]byte) ([]byte, 
 	return b, ok, nil
 }
 
-func (m *PdataStore) SetPdata(uid uint64, buf []byte) error {
+func (m *PdataStore) SetPdata(uid uint64, buf []byte) (int, error) {
 	var b []byte
 	if m.gzip {
 		var f bytes.Buffer
 		w := gzip.NewWriter(&f)
 		if _, err := w.Write(buf); err != nil {
-			return err
+			return 0, err
 		}
 		if err := w.Close(); err != nil {
-			return err
+			return 0, err
 		}
 		b = f.Bytes()
 	} else {
@@ -123,5 +123,5 @@ func (m *PdataStore) SetPdata(uid uint64, buf []byte) error {
 		Hash: sha256.Sum256(buf),
 		Data: b,
 	})
-	return nil
+	return len(b), nil
 }

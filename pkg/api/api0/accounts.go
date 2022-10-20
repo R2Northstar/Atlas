@@ -147,7 +147,7 @@ func (h *Handler) handleAccountsWritePersistence(w http.ResponseWriter, r *http.
 		}
 	}
 
-	if err := h.PdataStorage.SetPdata(uid, buf); err != nil {
+	if _, err := h.PdataStorage.SetPdata(uid, buf); err != nil {
 		hlog.FromRequest(r).Error().
 			Err(err).
 			Uint64("uid", uid).

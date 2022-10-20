@@ -364,7 +364,7 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 			}
 		})
 		t.Run("PutUser1Pdata1", func(t *testing.T) {
-			if err := s.SetPdata(user1, pdata1); err != nil {
+			if _, err := s.SetPdata(user1, pdata1); err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		})
@@ -416,7 +416,7 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 			}
 		})
 		t.Run("PutUser1Pdata2", func(t *testing.T) {
-			if err := s.SetPdata(user1, pdata2); err != nil {
+			if _, err := s.SetPdata(user1, pdata2); err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		})
@@ -504,7 +504,7 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 				}
 				randSched()
 
-				if err := s.SetPdata(uid, data1); err != nil {
+				if _, err := s.SetPdata(uid, data1); err != nil {
 					fail.Store(3)
 					return
 				}
@@ -528,7 +528,7 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 				}
 				randSched()
 
-				if err := s.SetPdata(uid, data2); err != nil {
+				if _, err := s.SetPdata(uid, data2); err != nil {
 					fail.Store(7)
 					return
 				}

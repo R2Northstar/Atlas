@@ -61,6 +61,6 @@ type PdataStorage interface {
 	// matches, buf is nil. If another error occurs, err is non-nil.
 	GetPdataCached(uid uint64, sha [sha256.Size]byte) (buf []byte, exists bool, err error)
 
-	// SetPdata sets the raw pdata for uid.
-	SetPdata(uid uint64, buf []byte) (err error)
+	// SetPdata sets the raw pdata for uid, returning the actual size stored.
+	SetPdata(uid uint64, buf []byte) (n int, err error)
 }
