@@ -430,7 +430,7 @@ func (s *ServerList) GetMetrics() []byte {
 	// write metrics
 	var b bytes.Buffer
 
-	b.WriteString(`atlas_api0sl_map_info{map="_other",map_title="Other"}`)
+	b.WriteString(`atlas_api0sl_map_info{map="_other",map_title="Other"} 1`)
 	b.WriteByte('\n')
 	for _, m := range nstypes.Maps() {
 		b.WriteString(`atlas_api0sl_map_info{map="`)
@@ -443,7 +443,7 @@ func (s *ServerList) GetMetrics() []byte {
 	}
 	b.WriteByte('\n')
 
-	b.WriteString(`atlas_api0sl_playlist_info{playlist="_other",playlist_title="Other"}`)
+	b.WriteString(`atlas_api0sl_playlist_info{playlist="_other",playlist_title="Other"} 1`)
 	b.WriteByte('\n')
 	for _, pl := range nstypes.Playlists() {
 		b.WriteString(`atlas_api0sl_playlist_info{playlist="`)
