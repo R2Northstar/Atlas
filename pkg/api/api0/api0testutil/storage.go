@@ -181,6 +181,8 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 		)
 		var wg sync.WaitGroup
 		var fail atomic.Int32
+		var nfail atomic.Int32
+		nfail.Store(200)
 		sem := make(chan struct{}, concurrency)
 		for uid := uint64(0); uid < users; uid++ {
 			wg.Add(1)
@@ -196,6 +198,9 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 
 				// ensure the account doesn't exist
 				if acct, err := s.GetAccount(uid); err != nil || acct != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(1)
 					return
 				}
@@ -203,6 +208,9 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 
 				// create the account
 				if err := s.SaveAccount(uacct); err != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(2)
 					return
 				}
@@ -210,6 +218,9 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 
 				// ensure the account is saved
 				if acct, err := s.GetAccount(uid); err != nil || acct == nil || !reflect.DeepEqual(*acct, *uacct) {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(3)
 					return
 				}
@@ -224,6 +235,9 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 
 				// update the account
 				if err := s.SaveAccount(uacct); err != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(4)
 					return
 				}
@@ -231,6 +245,9 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 
 				// ensure the account is up-to-date
 				if acct, err := s.GetAccount(uid); err != nil || acct == nil || !reflect.DeepEqual(*acct, *uacct) {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(5)
 					return
 				}
@@ -238,6 +255,9 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 
 				// ensure the uid is found for the username
 				if uids, err := s.GetUIDsByUsername(uacct.Username); err != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(6)
 					return
 				} else {
@@ -261,6 +281,9 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 
 				// update the account
 				if err := s.SaveAccount(uacct); err != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(8)
 					return
 				}
@@ -268,6 +291,9 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 
 				// ensure the old username is not returned for the uid
 				if uids, err := s.GetUIDsByUsername(oldu); err != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(9)
 					return
 				} else {
@@ -287,6 +313,9 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 
 				// ensure the new username is returned for the uid
 				if uids, err := s.GetUIDsByUsername(uacct.Username); err != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(11)
 					return
 				} else {
@@ -305,6 +334,9 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 
 				// ensure the entire account is up-to-date
 				if acct, err := s.GetAccount(uid); err != nil || acct == nil || !reflect.DeepEqual(*acct, *uacct) {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(12)
 					return
 				}
@@ -478,6 +510,8 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 		)
 		var wg sync.WaitGroup
 		var fail atomic.Int32
+		var nfail atomic.Int32
+		nfail.Store(200)
 		sem := make(chan struct{}, concurrency)
 		for uid := uint64(0); uid < users; uid++ {
 			wg.Add(1)
@@ -493,60 +527,90 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 				data2sha := sha256.Sum256(data2)
 
 				if buf, exists, err := s.GetPdataCached(uid, zeroSHA); err != nil || exists || buf != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(1)
 					return
 				}
 				randSched()
 
 				if buf, exists, err := s.GetPdataCached(uid, data1sha); err != nil || exists || buf != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(2)
 					return
 				}
 				randSched()
 
 				if _, err := s.SetPdata(uid, data1); err != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(3)
 					return
 				}
 				randSched()
 
 				if hash, exists, err := s.GetPdataHash(uid); err != nil || !exists || hash != data1sha {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(4)
 					return
 				}
 				randSched()
 
 				if buf, exists, err := s.GetPdataCached(uid, data1sha); err != nil || !exists || buf != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(5)
 					return
 				}
 				randSched()
 
 				if buf, exists, err := s.GetPdataCached(uid, data2sha); err != nil || !exists || !bytes.Equal(buf, data1) {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(6)
 					return
 				}
 				randSched()
 
 				if _, err := s.SetPdata(uid, data2); err != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(7)
 					return
 				}
 				randSched()
 
 				if hash, exists, err := s.GetPdataHash(uid); err != nil || !exists || hash != data2sha {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(8)
 					return
 				}
 				randSched()
 
 				if buf, exists, err := s.GetPdataCached(uid, data2sha); err != nil || !exists || buf != nil {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(9)
 					return
 				}
 				randSched()
 
 				if buf, exists, err := s.GetPdataCached(uid, data1sha); err != nil || !exists || !bytes.Equal(buf, data2) {
+					if nfail.Add(-1) > 0 {
+						t.Logf("error: %v", err)
+					}
 					fail.Store(10)
 					return
 				}
