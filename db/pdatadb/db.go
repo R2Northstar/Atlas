@@ -26,7 +26,7 @@ func Open(name string) (*DB, error) {
 		Path: name,
 		RawQuery: (url.Values{
 			"_journal":      {"WAL"},
-			"_busy_timeout": {"4000"},
+			"_busy_timeout": {"6000"},
 		}).Encode(),
 	}).String())
 	if err != nil {
