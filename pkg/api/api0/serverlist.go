@@ -36,14 +36,14 @@ type ServerList struct {
 	// /client/servers json caching
 	csNext     atomic.Pointer[time.Time] // latest next update time for the /client/servers response
 	csForce    atomic.Bool               // flag to force an update
-	csUpdateMu sync.Mutex                // ensures only one update runs at a time
-	csUpdateWg sync.WaitGroup            // allows other goroutines to wait for that update to complete
+	csUpdatePf bool                      // ensures only one update runs at a time
+	csUpdateCv *sync.Cond                // allows other goroutines to wait for that update to complete
 	csBytes    atomic.Pointer[[]byte]    // contents of buffer must not be modified; only swapped
 
 	// /client/servers gzipped json
 	csgzUpdate   atomic.Pointer[*byte]  // pointer to the first byte of the last known json (works because it must be swapped, not modified)
-	csgzUpdateMu sync.Mutex             // ensures only one update runs at a time
-	csgzUpdateWg sync.WaitGroup         // allows other goroutines to wait for that update to complete
+	csgzUpdatePf bool                   // ensures only one update runs at a time
+	csgzUpdateCv *sync.Cond             // allows other goroutines to wait for that update to complete
 	csgzBytes    atomic.Pointer[[]byte] // gzipped
 
 	// for unit tests
@@ -150,9 +150,11 @@ func NewServerList(deadTime, ghostTime, verifyTime time.Duration) *ServerList {
 		panic("api0: serverlist: deadTime must be <= ghostTime")
 	}
 	return &ServerList{
-		verifyTime: verifyTime,
-		deadTime:   deadTime,
-		ghostTime:  ghostTime,
+		verifyTime:   verifyTime,
+		deadTime:     deadTime,
+		ghostTime:    ghostTime,
+		csUpdateCv:   sync.NewCond(new(sync.Mutex)),
+		csgzUpdateCv: sync.NewCond(new(sync.Mutex)),
 	}
 }
 
@@ -195,17 +197,26 @@ func (s *ServerList) csGetJSON() []byte {
 
 	// ensure only one update runs at once; otherwise wait for the existing one
 	// to finish so we don't waste cpu cycles
-	if !s.csUpdateMu.TryLock() {
+
+	if s.csUpdateCv.L.Lock(); s.csUpdatePf {
 		// wait for the existing update to finish, then return the list (which
 		// will be non-nil unless the update did something stupid like
 		// panicking, in which case we have bigger problems)
-		s.csUpdateWg.Wait()
+		for s.csUpdatePf {
+			s.csUpdateCv.Wait()
+		}
+		s.csUpdateCv.L.Unlock()
 		return *s.csBytes.Load()
 	} else {
 		// we've been selected to perform the update
-		defer s.csUpdateMu.Unlock()
-		s.csUpdateWg.Add(1)
-		defer s.csUpdateWg.Done()
+		s.csUpdatePf = true
+		s.csUpdateCv.L.Unlock()
+		defer func() {
+			s.csUpdateCv.L.Lock()
+			s.csUpdateCv.Broadcast()
+			s.csUpdatePf = false
+			s.csUpdateCv.L.Unlock()
+		}()
 	}
 
 	// when we're done, clear the force update flag and schedule the next update
@@ -299,17 +310,24 @@ func (s *ServerList) csGetJSONGzip() ([]byte, bool) {
 			return *zbuf, true
 		}
 	}
-
-	if !s.csgzUpdateMu.TryLock() {
-		s.csgzUpdateWg.Wait()
+	if s.csgzUpdateCv.L.Lock(); s.csgzUpdatePf {
+		for s.csgzUpdatePf {
+			s.csgzUpdateCv.Wait()
+		}
+		s.csgzUpdateCv.L.Unlock()
 		if zbuf := s.csgzBytes.Load(); zbuf != nil && *zbuf != nil {
 			return *zbuf, true
 		}
 		return nil, false
 	} else {
-		defer s.csgzUpdateMu.Unlock()
-		s.csgzUpdateWg.Add(1)
-		defer s.csgzUpdateWg.Done()
+		s.csgzUpdatePf = true
+		s.csgzUpdateCv.L.Unlock()
+		defer func() {
+			s.csgzUpdateCv.L.Lock()
+			s.csgzUpdateCv.Broadcast()
+			s.csgzUpdatePf = false
+			s.csgzUpdateCv.L.Unlock()
+		}()
 	}
 
 	var b bytes.Buffer
