@@ -185,12 +185,7 @@ func NewServer(c *Config) (*Server, error) {
 	}
 
 	m.Add(hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
-		var e *zerolog.Event
-		if r.URL.Path == "/server/update_values" || r.URL.Path == "/server/heartbeat" || r.URL.Path == "/client/servers" {
-			e = s.Logger.Debug().Str("component", "http")
-		} else {
-			e = s.Logger.Info().Str("component", "http")
-		}
+		e := s.Logger.Info()
 		if rid, ok := hlog.IDFromRequest(r); ok {
 			e = e.Stringer("rid", rid)
 		}
