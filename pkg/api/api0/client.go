@@ -572,6 +572,10 @@ func (h *Handler) handleClientServers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Expires", "0")
 	w.Header().Set("Pragma", "no-cache")
 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, GET, HEAD")
+	w.Header().Set("Access-Control-Max-Age", "86400")
+
 	if r.Method == http.MethodOptions {
 		w.Header().Set("Allow", "OPTIONS, HEAD, GET")
 		w.WriteHeader(http.StatusNoContent)
