@@ -13,10 +13,10 @@ import (
 	"time"
 	_ "unsafe"
 
-	"github.com/pg9182/atlas/pkg/cloudflare"
+	"github.com/r2northstar/atlas/pkg/cloudflare"
 )
 
-//go:linkname iplist github.com/pg9182/atlas/pkg/cloudflare.iplist
+//go:linkname iplist github.com/r2northstar/atlas/pkg/cloudflare.iplist
 var iplist []netip.Prefix
 
 func main() {

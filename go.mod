@@ -1,4 +1,4 @@
-module github.com/pg9182/atlas
+module github.com/r2northstar/atlas
 
 go 1.19
 

@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pg9182/atlas/pkg/api/api0/api0gameserver"
-	"github.com/pg9182/atlas/pkg/origin"
-	"github.com/pg9182/atlas/pkg/pdata"
-	"github.com/pg9182/atlas/pkg/stryder"
+	"github.com/r2northstar/atlas/pkg/api/api0/api0gameserver"
+	"github.com/r2northstar/atlas/pkg/origin"
+	"github.com/r2northstar/atlas/pkg/pdata"
+	"github.com/r2northstar/atlas/pkg/stryder"
 	"github.com/rs/zerolog/hlog"
 )
 

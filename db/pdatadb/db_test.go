@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/pg9182/atlas/pkg/api/api0/api0testutil"
+	"github.com/r2northstar/atlas/pkg/api/api0/api0testutil"
 )
 
 func TestPdataStorage(t *testing.T) {

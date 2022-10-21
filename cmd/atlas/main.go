@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/go-envparse"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/pg9182/atlas/pkg/atlas"
+	"github.com/r2northstar/atlas/pkg/atlas"
 	"github.com/spf13/pflag"
 )
 

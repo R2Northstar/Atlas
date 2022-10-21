@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pg9182/atlas/pkg/a2s"
-	"github.com/pg9182/atlas/pkg/api/api0/api0gameserver"
+	"github.com/r2northstar/atlas/pkg/a2s"
+	"github.com/r2northstar/atlas/pkg/api/api0/api0gameserver"
 	"github.com/rs/zerolog/hlog"
 )
 

@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pg9182/atlas/pkg/origin"
+	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/rs/zerolog/hlog"
 	"golang.org/x/mod/semver"
 )

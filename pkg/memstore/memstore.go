@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pg9182/atlas/pkg/api/api0"
+	"github.com/r2northstar/atlas/pkg/api/api0"
 )
 
 // AccountStore stores accounts in-memory.

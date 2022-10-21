@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pg9182/atlas/pkg/api/api0"
+	"github.com/r2northstar/atlas/pkg/api/api0"
 )
 
 // TestAccountStorage tests whether an EMPTY account storage instance implements

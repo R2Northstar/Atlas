@@ -13,7 +13,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/pg9182/atlas/pkg/pdef"
+	"github.com/r2northstar/atlas/pkg/pdef"
 )
 
 var self string

@@ -11,10 +11,10 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/pg9182/atlas/db/atlasdb"
-	"github.com/pg9182/atlas/db/pdatadb"
-	"github.com/pg9182/atlas/pkg/api/api0"
-	"github.com/pg9182/atlas/pkg/pdata"
+	"github.com/r2northstar/atlas/db/atlasdb"
+	"github.com/r2northstar/atlas/db/pdatadb"
+	"github.com/r2northstar/atlas/pkg/api/api0"
+	"github.com/r2northstar/atlas/pkg/pdata"
 	"github.com/spf13/pflag"
 )
 

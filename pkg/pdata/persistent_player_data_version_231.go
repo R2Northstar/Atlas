@@ -7,7 +7,7 @@
 // and trailing data after the pdata root struct are preserved.
 package pdata
 
-//go:generate go run github.com/pg9182/atlas/pkg/pdef/pdefgen 231
+//go:generate go run github.com/r2northstar/atlas/pkg/pdef/pdefgen 231
 
 import (
 	"bytes"

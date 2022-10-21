@@ -14,7 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/pg9182/atlas/pkg/nstypes"
+	"github.com/r2northstar/atlas/pkg/nstypes"
 )
 
 // ServerList stores information about registered game servers. It does not do

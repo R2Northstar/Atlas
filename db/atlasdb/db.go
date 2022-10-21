@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/pg9182/atlas/pkg/api/api0"
+	"github.com/r2northstar/atlas/pkg/api/api0"
 )
 
 // DB stores atlas data in a sqlite3 database.

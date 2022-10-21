@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pg9182/atlas/pkg/a2s"
+	"github.com/r2northstar/atlas/pkg/a2s"
 	"github.com/spf13/pflag"
 )
 

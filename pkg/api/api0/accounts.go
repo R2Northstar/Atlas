@@ -6,7 +6,7 @@ import (
 	"net/netip"
 	"strconv"
 
-	"github.com/pg9182/atlas/pkg/pdata"
+	"github.com/r2northstar/atlas/pkg/pdata"
 	"github.com/rs/zerolog/hlog"
 )
 
