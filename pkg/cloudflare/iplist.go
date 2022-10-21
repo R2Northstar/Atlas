@@ -32,8 +32,8 @@ func HasIP(ip netip.Addr) bool {
 func UpdateIPs(ctx context.Context) error {
 	var ps []netip.Prefix
 	for _, v := range []int{4, 6} {
-		if v, err := fetchIPs(ctx, "https://www.cloudflare.com/ips-v"+strconv.Itoa(v)); err == nil {
-			ps = append(ps, v...)
+		if x, err := fetchIPs(ctx, "https://www.cloudflare.com/ips-v"+strconv.Itoa(v)); err == nil {
+			ps = append(ps, x...)
 		} else {
 			fmt.Fprintf(os.Stderr, "error: fetch ipv%d list: %v\n", v, err)
 			os.Exit(1)
