@@ -395,7 +395,7 @@ func (s *ServerList) GetMetrics() []byte {
 		mpls = append(mpls, mpl{m, nstypes.Playlist("")})
 	}
 
-	var players, maxPlayers, servers, serversWithPlayers int
+	var players, maxPlayers, servers, serversWithPlayers, fullServers int
 	mplPlayers := make(map[mpl]int, len(mpls))
 	mplMaxPlayers := make(map[mpl]int, len(mpls))
 	mplServers := make(map[mpl]int, len(mpls))
@@ -418,6 +418,9 @@ func (s *ServerList) GetMetrics() []byte {
 				servers++
 				if srv.PlayerCount > 0 {
 					serversWithPlayers++
+				}
+				if srv.PlayerCount == srv.MaxPlayers {
+					fullServers++
 				}
 				mplPlayers[mplv] += srv.PlayerCount
 				mplMaxPlayers[mplv] += srv.MaxPlayers
@@ -574,6 +577,9 @@ func (s *ServerList) GetMetrics() []byte {
 	b.WriteByte('\n')
 	b.WriteString(`atlas_api0sl_serverswithplayers `)
 	b.WriteString(strconv.Itoa(serversWithPlayers))
+	b.WriteByte('\n')
+	b.WriteString(`atlas_api0sl_fullservers `)
+	b.WriteString(strconv.Itoa(fullServers))
 	b.WriteByte('\n')
 
 	return b.Bytes()
