@@ -3,13 +3,18 @@ package atlas
 
 import (
 	"fmt"
+	"io/fs"
+	"os/user"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
 )
+
+type UIDGID [2]int
 
 // Config contains the configuration for Atlas. The env struct tag contains the
 // environment variable name and the default value if missing, or empty (if not
@@ -61,6 +66,12 @@ type Config struct {
 
 	// The minimum log level for the log file.
 	LogFileLevel zerolog.Level `env:"ATLAS_LOG_FILE_LEVEL=info"`
+
+	// The permissions for the log file.
+	LogFileChmod fs.FileMode `env:"ATLAS_LOG_FILE_CHMOD"`
+
+	// The owner for the log file. Not supported on Windows.
+	LogFileChown *UIDGID `env:"ATLAS_LOG_FILE_CHOWN"`
 
 	// Maps source IP prefixes to another IP (useful for controlling server
 	// registration IPs when running within a LAN and port forwarding during
@@ -209,6 +220,22 @@ func (c *Config) UnmarshalEnv(es []string, incremental bool) error {
 			} else {
 				return fmt.Errorf("env %s (%T): parse %q: %w", key, cvf.Interface(), val, err)
 			}
+		case fs.FileMode:
+			if val == "" {
+				cvf.Set(reflect.ValueOf(fs.FileMode(0)))
+			} else if v, err := strconv.ParseUint(val, 8, 32); err == nil {
+				cvf.Set(reflect.ValueOf(fs.FileMode(v)))
+			} else {
+				return fmt.Errorf("env %s (%T): parse %q: %w", key, cvf.Interface(), val, err)
+			}
+		case *UIDGID:
+			if val == "" {
+				cvf.Set(reflect.ValueOf((*UIDGID)(nil)))
+			} else if v, err := parseUIDGID(val); err == nil {
+				cvf.Set(reflect.ValueOf(&v))
+			} else {
+				return fmt.Errorf("env %s (%T): parse %q: %w", key, cvf.Interface(), val, err)
+			}
 		default:
 			return fmt.Errorf("unhandled type %T (%s)", cvf.Interface(), env)
 		}
@@ -219,4 +246,59 @@ func (c *Config) UnmarshalEnv(es []string, incremental bool) error {
 		}
 	}
 	return nil
+}
+
+func parseUIDGID(s string) (UIDGID, error) {
+	var u UIDGID
+
+	if runtime.GOOS == "windows" {
+		return u, fmt.Errorf("not supported on windows")
+	}
+	if s == "" {
+		return u, fmt.Errorf("must not be empty")
+	}
+
+	su, sg, hg := strings.Cut(s, ":")
+
+	if su == "" || sg == "" {
+		if x, err := user.Current(); err != nil {
+			return u, fmt.Errorf("get current user: %w", err)
+		} else if uid, err := strconv.ParseInt(x.Uid, 10, 64); err != nil {
+			return u, fmt.Errorf("get current user: parse uid %q: %w", x.Uid, err)
+		} else if gid, err := strconv.ParseInt(x.Gid, 10, 64); err != nil {
+			return u, fmt.Errorf("get current user: parse gid %q: %w", x.Gid, err)
+		} else {
+			u = UIDGID{int(uid), int(gid)}
+		}
+	}
+	if su != "" {
+		if uid, err := strconv.ParseInt(su, 10, 64); err == nil {
+			u[0] = int(uid)
+		} else if x, err := user.Lookup(su); err != nil {
+			return u, fmt.Errorf("get user: %w", err)
+		} else if uid, err := strconv.ParseInt(x.Uid, 10, 64); err != nil {
+			return u, fmt.Errorf("get user: parse uid %q: %w", x.Uid, err)
+		} else {
+			if !hg && sg == "" && x.Gid != "" {
+				if gid, err := strconv.ParseInt(x.Gid, 10, 64); err != nil {
+					return u, fmt.Errorf("get user: parse gid %q: %w", x.Gid, err)
+				} else {
+					u[1] = int(gid)
+				}
+			}
+			u[0] = int(uid)
+		}
+	}
+	if sg != "" {
+		if gid, err := strconv.ParseInt(sg, 10, 64); err == nil {
+			u[1] = int(gid)
+		} else if x, err := user.LookupGroup(sg); err != nil {
+			return u, fmt.Errorf("lookup group: %w", err)
+		} else if gid, err := strconv.ParseInt(x.Gid, 10, 64); err != nil {
+			return u, fmt.Errorf("lookup group: parse gid %q: %w", x.Gid, err)
+		} else {
+			u[1] = int(gid)
+		}
+	}
+	return u, nil
 }

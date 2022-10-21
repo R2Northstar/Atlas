@@ -355,6 +355,16 @@ func configureLogging(c *Config) (l zerolog.Logger, reopen func(), err error) {
 					o.Close()
 				}
 				if f, err := os.OpenFile(fn, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666); err == nil {
+					if c.LogFileChown != nil {
+						if err := f.Chown((*c.LogFileChown)[0], (*c.LogFileChown)[1]); err != nil {
+							fmt.Fprintf(os.Stderr, "error: chown log file: %v\n", err)
+						}
+					}
+					if c.LogFileChmod != 0 {
+						if err := f.Chmod(c.LogFileChmod); err != nil {
+							fmt.Fprintf(os.Stderr, "error: chmod log file: %v\n", err)
+						}
+					}
 					return f
 				} else {
 					fmt.Fprintf(os.Stderr, "error: failed to open log file: %v\n", err)
