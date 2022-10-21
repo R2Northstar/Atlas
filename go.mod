@@ -6,6 +6,7 @@ require (
 	github.com/VictoriaMetrics/metrics v1.22.2
 	github.com/andybalholm/cascadia v1.3.1
 	github.com/cardigann/harhar v0.0.0-20161005032312-acb91b7a8682
+	github.com/hashicorp/go-envparse v0.1.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/rs/zerolog v1.28.0
