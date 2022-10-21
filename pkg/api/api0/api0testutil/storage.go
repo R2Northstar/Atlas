@@ -175,10 +175,13 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 	// test that it still functions properly with large numbers of users and
 	// randomly ordered concurrent writers
 	t.Run("Stress", func(t *testing.T) {
-		const (
-			concurrency = 32
-			users       = 16384
+		var (
+			concurrency int    = 32
+			users       uint64 = 16384
 		)
+		if runtime.GOOS != "linux" {
+			concurrency = 16 // doesn't perform as well for database locking, and it's not our primary target anyways
+		}
 		var wg sync.WaitGroup
 		var fail atomic.Int32
 		var nfail atomic.Int32
@@ -227,7 +230,7 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 				randSched()
 
 				// simulate auth
-				uacct.Username = "user" + strconv.Itoa(rand.Intn(users/8)) // generate a username with overlap
+				uacct.Username = "user" + strconv.Itoa(rand.Intn(int(users/8))) // generate a username with overlap
 				uacct.AuthIP = netip.MustParseAddr("127.0.0.1")
 				uacct.AuthToken = "dummy"
 				uacct.AuthTokenExpiry = time.Now().Add(time.Minute * 30).Truncate(time.Second)
@@ -277,7 +280,7 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 
 				// generate a new username
 				oldu := uacct.Username
-				uacct.Username = "user" + strconv.Itoa(rand.Intn(users/8)) + "new"
+				uacct.Username = "user" + strconv.Itoa(rand.Intn(int(users/8))) + "new"
 
 				// update the account
 				if err := s.SaveAccount(uacct); err != nil {
@@ -504,10 +507,13 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 	// test that it still functions properly with large numbers of users and
 	// randomly ordered concurrent writers
 	t.Run("Stress", func(t *testing.T) {
-		const (
-			concurrency = 32
-			users       = 4096
+		var (
+			concurrency int    = 32
+			users       uint64 = 16384
 		)
+		if runtime.GOOS != "linux" {
+			concurrency = 16 // doesn't perform as well for database locking, and it's not our primary target anyways
+		}
 		var wg sync.WaitGroup
 		var fail atomic.Int32
 		var nfail atomic.Int32
