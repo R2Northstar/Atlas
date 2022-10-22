@@ -205,7 +205,9 @@ func NewServer(c *Config) (*Server, error) {
 	m.Add(hlog.RequestIDHandler("rid", ""))
 
 	s.API0 = &api0.Handler{
-		ServerList:                   api0.NewServerList(c.API0_ServerList_DeadTime, c.API0_ServerList_GhostTime, c.API0_ServerList_VerifyTime),
+		ServerList: api0.NewServerList(c.API0_ServerList_DeadTime, c.API0_ServerList_GhostTime, c.API0_ServerList_VerifyTime, api0.ServerListConfig{
+			ExperimentalDeterministicServerIDSecret: c.API0_ServerList_ExperimentalDeterministicServerIDSecret,
+		}),
 		OriginAuthMgr:                configureOrigin(c, s.Logger.With().Str("component", "origin").Logger()),
 		MaxServers:                   c.API0_MaxServers,
 		MaxServersPerIP:              c.API0_MaxServersPerIP,

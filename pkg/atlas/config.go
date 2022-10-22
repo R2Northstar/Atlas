@@ -111,6 +111,11 @@ type Config struct {
 	// it can't be added again without re-verifying).
 	API0_ServerList_GhostTime time.Duration `env:"ATLAS_API0_SERVERLIST_GHOST_TIME=2m"`
 
+	// Experimental option to use deterministic server ID generation based on
+	// the provided secret and the server info. The secret is used to prevent
+	// brute-forcing server IDs from the ID and known server info.
+	API0_ServerList_ExperimentalDeterministicServerIDSecret string `env:"ATLAS_API0_SERVERLIST_EXPERIMENTAL_DETERMINISTIC_SERVER_ID_SECRET"`
+
 	// The storage to use for accounts:
 	//  - memory
 	//  - sqlite3:/path/to/atlas.db
