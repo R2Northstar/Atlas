@@ -5,9 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+
+	"net/http/pprof"
 
 	"github.com/hashicorp/go-envparse"
 	_ "github.com/mattn/go-sqlite3"
@@ -49,6 +53,15 @@ func main() {
 		}
 	}
 
+	if dbgAddr, _ := getEnvList("INSECURE_DEBUG_SERVER_ADDR", e, os.Environ()); dbgAddr != "" {
+		go func() {
+			fmt.Fprintf(os.Stderr, "warning: running insecure debug server on %q\n", dbgAddr)
+			if err := runDebugServer(dbgAddr); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: failed to start debug server: %v\n", err)
+			}
+		}()
+	}
+
 	var c atlas.Config
 	if err := c.UnmarshalEnv(e, false); err != nil {
 		fmt.Fprintf(os.Stderr, "error: parse config: %v\n", err)
@@ -78,6 +91,27 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error: run server: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func runDebugServer(addr string) error {
+	m := http.NewServeMux()
+	m.HandleFunc("/debug/pprof/", pprof.Index)
+	m.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	m.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	m.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	m.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	return http.ListenAndServe(addr, m)
+}
+
+func getEnvList(k string, e ...[]string) (string, bool) {
+	for _, l := range e {
+		for _, x := range l {
+			if xk, xv, ok := strings.Cut(x, "="); ok && xk == k {
+				return xv, true
+			}
+		}
+	}
+	return "", false
 }
 
 func readEnv(name string) ([]string, error) {
