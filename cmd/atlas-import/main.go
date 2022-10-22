@@ -4,6 +4,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"net/netip"
 	"os"
@@ -163,7 +165,7 @@ func insertP(n *nsacct, p *pdatadb.DB) (bool, error) {
 	var pd pdata.Pdata
 	if err := pd.UnmarshalBinary(n.PersistentDataBaseline); err == nil {
 		if len(pd.ExtraData) < 140 {
-			if !bytes.Equal(n.PersistentDataBaseline, pdata.DefaultPdata) {
+			if !bytes.Equal(n.PersistentDataBaseline, pdata.DefaultPdata) && isOldDefaultPdata(n.PersistentDataBaseline) {
 				if sz, err := p.SetPdata(n.ID, n.PersistentDataBaseline); err != nil {
 					return false, err
 				} else if sz > 2200 {
@@ -178,4 +180,9 @@ func insertP(n *nsacct, p *pdatadb.DB) (bool, error) {
 		fmt.Fprintf(os.Stderr, "warning: uid %d (%s): invalid pdata (%v), discarding\n", n.ID, n.Username, err)
 	}
 	return false, nil
+}
+
+func isOldDefaultPdata(b []byte) bool {
+	ss := sha1.Sum(b)
+	return hex.EncodeToString(ss[:]) == "9dab70c01c475bf976689d4af525aa39db6d73bc"
 }
