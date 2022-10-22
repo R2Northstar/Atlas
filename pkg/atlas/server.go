@@ -538,6 +538,20 @@ func (s *Server) Run(ctx context.Context) error {
 		return http.ErrServerClosed
 	}
 
+	go func() {
+		tk := time.NewTicker(time.Minute * 5)
+		defer tk.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tk.C:
+				s.API0.ServerList.ReapServers()
+			}
+		}
+	}()
+
 	var hs []*http.Server
 	for _, a := range s.Addr {
 		hs = append(hs, &http.Server{
