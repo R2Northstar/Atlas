@@ -25,6 +25,7 @@ type ServerList struct {
 	verifyTime time.Duration
 	deadTime   time.Duration
 	ghostTime  time.Duration
+	cfg        ServerListConfig
 
 	// servers
 	mu       sync.RWMutex               // must be held while modifying the order and maps below
@@ -48,6 +49,9 @@ type ServerList struct {
 
 	// for unit tests
 	__clock func() time.Time
+}
+
+type ServerListConfig struct {
 }
 
 type Server struct {
@@ -133,7 +137,7 @@ type ServerListLimit struct {
 //
 // If both are nonzero, they must be positive, and deadTime must be less than
 // ghostTime. Otherwise, NewServerList will panic.
-func NewServerList(deadTime, ghostTime, verifyTime time.Duration) *ServerList {
+func NewServerList(deadTime, ghostTime, verifyTime time.Duration, cfg ServerListConfig) *ServerList {
 	if verifyTime < 0 {
 		panic("api0: serverlist: verifyTime must be >= 0")
 	}
@@ -153,6 +157,7 @@ func NewServerList(deadTime, ghostTime, verifyTime time.Duration) *ServerList {
 		verifyTime:   verifyTime,
 		deadTime:     deadTime,
 		ghostTime:    ghostTime,
+		cfg:          cfg,
 		csUpdateCv:   sync.NewCond(new(sync.Mutex)),
 		csgzUpdateCv: sync.NewCond(new(sync.Mutex)),
 	}
