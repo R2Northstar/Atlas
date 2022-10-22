@@ -3,6 +3,9 @@ package api0
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -52,6 +55,18 @@ type ServerList struct {
 }
 
 type ServerListConfig struct {
+	// ExperimentalDeterministicServerIDSecret, if provided, is a secret to
+	// combine with the server metadata upon registration to deterministically
+	// generate a server ID. The secret is used to prevent brute-forcing server
+	// IDs from the ID and known server info.
+	//
+	// This is NOT to be used for uniquely and/or persistently identifying
+	// servers, and may change at any time. It is intended to allow servers to
+	// have the same IDs on a best-effort basis when re-registering after
+	// masterserver (this will reduce pdata update unauthorized errors after
+	// restarting the masterserver) or server restart. Notable, if a server
+	// changes their name or description, the ID will not be the same anymore.
+	ExperimentalDeterministicServerIDSecret string
 }
 
 type Server struct {
@@ -843,17 +858,42 @@ func (s *ServerList) ServerHybridUpdatePut(u *ServerUpdate, c *Server, l ServerL
 			nsrv.ServerAuthToken = tok
 		}
 
-		// allocate a new server ID, skipping any which already exist
-		for {
-			sid, err := cryptoRandHex(32)
-			if err != nil {
-				return nil, fmt.Errorf("generate new server id: %w", err)
+		// we'll allocate a new server ID
+		nsrv.ID = ""
+
+		// attempt to generate a deterministic server ID
+		if s.cfg.ExperimentalDeterministicServerIDSecret != "" {
+			ss := sha256.New()
+			if x, err := nsrv.Addr.Addr().MarshalBinary(); err == nil {
+				binary.Write(ss, binary.LittleEndian, x)
 			}
-			if _, exists := s.servers2[sid]; exists {
-				continue // try another id since another server already used it
+			binary.Write(ss, binary.LittleEndian, nsrv.Addr.Port())
+			binary.Write(ss, binary.LittleEndian, nsrv.AuthPort)
+			binary.Write(ss, binary.LittleEndian, uint64(len(nsrv.Name)))
+			ss.Write([]byte(nsrv.Name))
+			binary.Write(ss, binary.LittleEndian, uint64(len(nsrv.Description)))
+			ss.Write([]byte(nsrv.Description))
+			binary.Write(ss, binary.LittleEndian, uint64(len(s.cfg.ExperimentalDeterministicServerIDSecret)))
+			ss.Write([]byte(s.cfg.ExperimentalDeterministicServerIDSecret))
+			sid := hex.EncodeToString(ss.Sum(nil))[:32]
+			if _, exists := s.servers2[sid]; !exists {
+				nsrv.ID = sid
 			}
-			nsrv.ID = sid
-			break
+		}
+
+		// fall back to a random one
+		if nsrv.ID == "" {
+			for {
+				sid, err := cryptoRandHex(32)
+				if err != nil {
+					return nil, fmt.Errorf("generate new server id: %w", err)
+				}
+				if _, exists := s.servers2[sid]; exists {
+					continue // try another id since another server already used it
+				}
+				nsrv.ID = sid
+				break
+			}
 		}
 
 		// set the server order
