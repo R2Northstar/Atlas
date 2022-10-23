@@ -8,6 +8,7 @@ require (
 	github.com/cardigann/harhar v0.0.0-20161005032312-acb91b7a8682
 	github.com/hashicorp/go-envparse v0.1.0
 	github.com/jmoiron/sqlx v1.3.5
+	github.com/klauspost/compress v1.15.11
 	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/pflag v1.0.5

@@ -14,7 +14,6 @@ package api0
 
 import (
 	"bytes"
-	"compress/gzip"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -24,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/klauspost/compress/gzip"
 	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/rs/zerolog/hlog"
 	"golang.org/x/mod/semver"

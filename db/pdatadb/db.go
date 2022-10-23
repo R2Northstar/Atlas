@@ -3,7 +3,6 @@ package pdatadb
 
 import (
 	"bytes"
-	"compress/gzip"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -12,6 +11,7 @@ import (
 	"net/url"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/klauspost/compress/gzip"
 )
 
 // DB stores player data in a sqlite3 database.

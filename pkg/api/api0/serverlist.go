@@ -2,7 +2,6 @@ package api0
 
 import (
 	"bytes"
-	"compress/gzip"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -17,6 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/klauspost/compress/gzip"
 	"github.com/r2northstar/atlas/pkg/nstypes"
 )
 

@@ -3,12 +3,12 @@ package memstore
 
 import (
 	"bytes"
-	"compress/gzip"
 	"crypto/sha256"
 	"io"
 	"strings"
 	"sync"
 
+	"github.com/klauspost/compress/gzip"
 	"github.com/r2northstar/atlas/pkg/api/api0"
 )
 
