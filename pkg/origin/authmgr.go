@@ -34,12 +34,13 @@ type AuthMgr struct {
 	// immediately from OriginAuth.
 	Backoff func(err error, time time.Time, count int) bool
 
-	authMu       sync.Mutex     // guards authWg so only one goroutine can get it
-	authWg       sync.WaitGroup // guards the variables below and allows waiting for updates
-	authErr      error          // last auth error
-	authErrTime  time.Time      // last auth error time
-	authErrCount int            // consecutive auth errors
-	auth         AuthState      // current auth tokens
+	authInit     sync.Once
+	authPf       bool       // ensures only one update runs at a time
+	authCv       *sync.Cond // allows other goroutines to wait for that update to complete
+	authErr      error      // last auth error
+	authErrTime  time.Time  // last auth error time
+	authErrCount int        // consecutive auth errors
+	auth         AuthState  // current auth tokens
 }
 
 // AuthState contains the current authentication tokens.
@@ -49,15 +50,23 @@ type AuthState struct {
 	NucleusTokenExpiry time.Time    `json:"nucleus_token_expiry,omitempty"`
 }
 
+func (a *AuthMgr) init() {
+	a.authInit.Do(func() {
+		a.authCv = sync.NewCond(new(sync.Mutex))
+	})
+}
+
 // SetAuth sets the current Origin credentials. If authentication is in
 // progress, it will block.
 func (a *AuthMgr) SetAuth(auth AuthState) {
-	a.authMu.Lock()
-	defer a.authMu.Unlock()
-	a.authWg.Add(1)
-	defer a.authWg.Done()
+	a.init()
+	a.authCv.L.Lock()
+	for a.authPf {
+		a.authCv.Wait()
+	}
 	a.auth = auth
 	a.authErr = nil
+	a.authCv.L.Unlock()
 }
 
 // OriginAuth gets the current NucleusToken. If refresh is true or the nucleus
@@ -69,26 +78,27 @@ func (a *AuthMgr) SetAuth(auth AuthState) {
 // In general, OriginAuth(false) should be used first, then if an API call error
 // is ErrAuthRequired, try it again with the token from OriginAuth(true).
 func (a *AuthMgr) OriginAuth(refresh bool) (NucleusToken, bool, error) {
-	if a.auth.NucleusToken == "" || !time.Now().Before(a.auth.NucleusTokenExpiry) {
-		refresh = true
-	}
-	if !refresh {
-		// wait for an in-progress auth, if any, to complete
-		a.authWg.Wait()
+	a.init()
+	if a.authCv.L.Lock(); a.authPf {
+		for a.authPf {
+			a.authCv.Wait()
+		}
+		defer a.authCv.L.Unlock()
 		return a.auth.NucleusToken, false, a.authErr
-	}
-	if a.authMu.TryLock() {
-		// refresh the auth
-		defer a.authMu.Unlock()
-		// if another goroutine gets scheduled in between us locking and adding
-		// to the waitgroup, they'll get outdated auth, but it isn't a big deal
-		// since if they try to refresh it right after, they'll end up waiting
-		// on us to complete
-		a.authWg.Add(1)
-		defer a.authWg.Done()
 	} else {
-		// another goroutine is refreshing
-		return a.OriginAuth(false)
+		if refresh || a.auth.NucleusToken == "" || !time.Now().Before(a.auth.NucleusTokenExpiry) {
+			a.authPf = true
+			a.authCv.L.Unlock()
+			defer func() {
+				a.authCv.L.Lock()
+				a.authCv.Broadcast()
+				a.authPf = false
+				a.authCv.L.Unlock()
+			}()
+		} else {
+			defer a.authCv.L.Unlock()
+			return a.auth.NucleusToken, false, a.authErr
+		}
 	}
 	if a.authErr != nil && a.Backoff != nil {
 		if !a.Backoff(a.authErr, a.authErrTime, a.authErrCount) {
