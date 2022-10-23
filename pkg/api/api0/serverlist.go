@@ -45,6 +45,7 @@ type ServerList struct {
 	csBytes    atomic.Pointer[[]byte]    // contents of buffer must not be modified; only swapped
 
 	// /client/servers gzipped json
+	csgzPool     sync.Pool              // gzip writer pool
 	csgzUpdate   atomic.Pointer[*byte]  // pointer to the first byte of the last known json (works because it must be swapped, not modified)
 	csgzUpdatePf bool                   // ensures only one update runs at a time
 	csgzUpdateCv *sync.Cond             // allows other goroutines to wait for that update to complete
@@ -351,7 +352,14 @@ func (s *ServerList) csGetJSONGzip() ([]byte, bool) {
 	}
 
 	var b bytes.Buffer
-	zw := gzip.NewWriter(&b)
+	var zw *gzip.Writer
+	if o := s.csgzPool.Get(); o == nil {
+		zw = gzip.NewWriter(&b)
+	} else {
+		zw = o.(*gzip.Writer)
+		zw.Reset(&b)
+	}
+	defer s.csgzPool.Put(zw)
 	if _, err := zw.Write(buf); err != nil {
 		s.csgzBytes.Store(nil)
 		s.csgzUpdate.Store(&cur)
