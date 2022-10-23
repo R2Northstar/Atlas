@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sync"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/klauspost/compress/gzip"
@@ -16,7 +17,9 @@ import (
 
 // DB stores player data in a sqlite3 database.
 type DB struct {
-	x *sqlx.DB
+	x     *sqlx.DB
+	gzipW sync.Pool
+	gzipR sync.Pool
 }
 
 // Open opens a DB from the provided sqlite3 uri.
@@ -35,7 +38,7 @@ func Open(name string) (*DB, error) {
 	if _, err := x.Exec(`PRAGMA page_size = 8192`); err != nil {
 		panic(err)
 	}
-	return &DB{x}, nil
+	return &DB{x: x}, nil
 }
 
 func (db *DB) Close() error {
@@ -100,7 +103,15 @@ func (db *DB) GetPdataCached(uid uint64, sha [sha256.Size]byte) (buf []byte, exi
 	case "":
 	case "gzip":
 		var b bytes.Buffer
-		zr, err := gzip.NewReader(bytes.NewReader(obj.Pdata))
+		var zr *gzip.Reader
+		var err error
+		if o := db.gzipR.Get(); o == nil {
+			zr, err = gzip.NewReader(bytes.NewReader(obj.Pdata))
+		} else {
+			zr = o.(*gzip.Reader)
+			err = zr.Reset(bytes.NewReader(obj.Pdata))
+		}
+		defer db.gzipR.Put(zr)
 		if err != nil {
 			return nil, false, fmt.Errorf("decompress gzip: %w", err)
 		}
@@ -134,7 +145,14 @@ func (db *DB) SetPdata(uid uint64, buf []byte) (n int, err error) {
 	var b bytes.Buffer
 	b.Grow(2000)
 
-	zw := gzip.NewWriter(&b)
+	var zw *gzip.Writer
+	if o := db.gzipW.Get(); o == nil {
+		zw = gzip.NewWriter(&b)
+	} else {
+		zw = o.(*gzip.Writer)
+		zw.Reset(&b)
+	}
+	defer db.gzipW.Put(zw)
 	if _, err := zw.Write(buf); err != nil {
 		return 0, fmt.Errorf("compress pdata: %w", err)
 	}
