@@ -403,6 +403,9 @@ func login2(ctx context.Context, c *http.Client, r1 *http.Request) (*http.Reques
 	m := login2re.FindSubmatch(buf)
 	if m == nil {
 		if doc, err := html.Parse(bytes.NewReader(buf)); err == nil {
+			if form := cascadia.Query(doc, cascadia.MustCompile(`form#loginForm #tfa-login`)); form != nil {
+				return nil, false, fmt.Errorf("submit login form: needs 2fa code")
+			}
 			if form := cascadia.Query(doc, cascadia.MustCompile(`form#tosForm`)); form != nil {
 				submitURL := &url.URL{
 					Scheme:   "https",
