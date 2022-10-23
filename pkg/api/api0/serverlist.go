@@ -43,6 +43,7 @@ type ServerList struct {
 	csUpdatePf bool                      // ensures only one update runs at a time
 	csUpdateCv *sync.Cond                // allows other goroutines to wait for that update to complete
 	csBytes    atomic.Pointer[[]byte]    // contents of buffer must not be modified; only swapped
+	csEst      atomic.Uint64             // estimated per-server json size
 
 	// /client/servers gzipped json
 	csgzPool     sync.Pool              // gzip writer pool
@@ -260,60 +261,98 @@ func (s *ServerList) csGetJSON() []byte {
 		return ss[i].Order < ss[j].Order
 	})
 
-	// generate the json
+	// generate the json and cache it
 	//
 	// note: we write it manually to avoid copying the entire list and to avoid the perf overhead of reflection
-	var b bytes.Buffer
-	b.WriteByte('[')
+	buf, est := csJSON(ss, int(s.csEst.Load()))
+	s.csBytes.Store(&buf)
+	s.csEst.Store(uint64(est))
+
+	return buf
+}
+
+func csJSON(ss []*Server, est int) ([]byte, int) {
+	if len(ss) == 0 {
+		return []byte(`[]`), est
+	}
+
+	const (
+		estMin  = 256
+		estInit = 384
+		estMax  = 512
+	)
+	switch {
+	case est == 0:
+		est = estInit
+	case est < estMin:
+		est = estMin
+	case est > estMax:
+		est = estMax
+	}
+
+	// note: we use a custom buffer so we can control allocations
+
+	b := make([]byte, 0, len(ss)*est+2)
+	b = append(b, '[')
 	for i, srv := range ss {
+		if r := len(ss) - i - 1; r >= 0 && cap(b)-len(b) < est*r {
+			bn := make([]byte, len(b), cap(b)+est*r)
+			copy(bn, b)
+			b = bn
+		}
 		if i != 0 {
-			b.WriteByte(',')
+			b = append(b, ',')
 		}
-		b.WriteString(`{"lastHeartbeat":`)
-		b.WriteString(strconv.FormatInt(srv.LastHeartbeat.UnixMilli(), 10))
-		b.WriteString(`,"id":`)
-		encodeJSONString(&b, []byte(srv.ID))
-		b.WriteString(`,"name":`)
-		encodeJSONString(&b, []byte(srv.Name))
-		b.WriteString(`,"description":`)
-		encodeJSONString(&b, []byte(srv.Description))
-		b.WriteString(`,"playerCount":`)
-		b.WriteString(strconv.FormatInt(int64(srv.PlayerCount), 10))
-		b.WriteString(`,"maxPlayers":`)
-		b.WriteString(strconv.FormatInt(int64(srv.MaxPlayers), 10))
-		b.WriteString(`,"map":`)
-		encodeJSONString(&b, []byte(srv.Map))
-		b.WriteString(`,"playlist":`)
-		encodeJSONString(&b, []byte(srv.Playlist))
+		b = append(b, `{"lastHeartbeat":`...)
+		b = strconv.AppendInt(b, srv.LastHeartbeat.UnixMilli(), 10)
+		b = append(b, `,"id":"`...)
+		b = append(b, srv.ID...)
+		b = append(b, `","name":`...)
+		b = appendJSONString(b, srv.Name)
+		b = append(b, `,"description":`...)
+		b = appendJSONString(b, srv.Description)
+		b = append(b, `,"playerCount":`...)
+		b = strconv.AppendInt(b, int64(srv.PlayerCount), 10)
+		b = append(b, `,"maxPlayers":`...)
+		b = strconv.AppendInt(b, int64(srv.MaxPlayers), 10)
+		b = append(b, `,"map":`...)
+		b = appendJSONString(b, srv.Map)
+		b = append(b, `,"playlist":`...)
+		b = appendJSONString(b, srv.Playlist)
 		if srv.Password != "" {
-			b.WriteString(`,"hasPassword":true`)
+			b = append(b, `,"hasPassword":true`...)
 		} else {
-			b.WriteString(`,"hasPassword":false`)
+			b = append(b, `,"hasPassword":false`...)
 		}
-		b.WriteString(`,"modInfo":{"Mods":[`)
+		b = append(b, `,"modInfo":{"Mods":[`...)
 		for j, mi := range srv.ModInfo {
 			if j != 0 {
-				b.WriteByte(',')
+				b = append(b, ',')
 			}
-			b.WriteString(`{"Name":`)
-			encodeJSONString(&b, []byte(mi.Name))
-			b.WriteString(`,"Version":`)
-			encodeJSONString(&b, []byte(mi.Version))
+			b = append(b, `{"Name":`...)
+			b = appendJSONString(b, mi.Name)
+			b = append(b, `,"Version":`...)
+			b = appendJSONString(b, mi.Version)
 			if mi.RequiredOnClient {
-				b.WriteString(`,"RequiredOnClient":true}`)
+				b = append(b, `,"RequiredOnClient":true}`...)
 			} else {
-				b.WriteString(`,"RequiredOnClient":false}`)
+				b = append(b, `,"RequiredOnClient":false}`...)
 			}
 		}
-		b.WriteString(`]}}`)
+		b = append(b, `]}}`...)
 	}
-	b.WriteByte(']')
+	b = append(b, ']')
 
-	// cache it
-	buf := b.Bytes()
-	s.csBytes.Store(&buf)
-
-	return b.Bytes()
+	est = (len(b) - 2 + (len(ss) - 1)) / len(ss) // note: round up
+	switch {
+	case est == 0:
+		est = estInit
+	case est < estMin:
+		est = estMin
+	case est > estMax:
+		est = estMax
+	}
+	return b, est
 }
 
 // csGetJSONGzip is like csGetJSON, but returns it gzipped with true, or false
@@ -1136,11 +1175,11 @@ var jsonSafeSet = [utf8.RuneSelf]bool{
 	'\u007f': true,
 }
 
-// encodeJSONString is based on encoding/json.encodeState.stringBytes.
-func encodeJSONString(e *bytes.Buffer, s []byte) {
+// appendJSONString is based on encoding/json.encodeState.stringBytes.
+func appendJSONString(e []byte, s string) []byte {
 	const hex = "0123456789abcdef"
 
-	e.WriteByte('"')
+	e = append(e, '"')
 	start := 0
 	for i := 0; i < len(s); {
 		if b := s[i]; b < utf8.RuneSelf {
@@ -1149,38 +1188,38 @@ func encodeJSONString(e *bytes.Buffer, s []byte) {
 				continue
 			}
 			if start < i {
-				e.Write(s[start:i])
+				e = append(e, s[start:i]...)
 			}
-			e.WriteByte('\\')
+			e = append(e, '\\')
 			switch b {
 			case '\\', '"':
-				e.WriteByte(b)
+				e = append(e, b)
 			case '\n':
-				e.WriteByte('n')
+				e = append(e, 'n')
 			case '\r':
-				e.WriteByte('r')
+				e = append(e, 'r')
 			case '\t':
-				e.WriteByte('t')
+				e = append(e, 't')
 			default:
 				// This encodes bytes < 0x20 except for \t, \n and \r.
 				// If escapeHTML is set, it also escapes <, >, and &
 				// because they can lead to security holes when
 				// user-controlled strings are rendered into JSON
 				// and served to some browsers.
-				e.WriteString(`u00`)
-				e.WriteByte(hex[b>>4])
-				e.WriteByte(hex[b&0xF])
+				e = append(e, `u00`...)
+				e = append(e, hex[b>>4])
+				e = append(e, hex[b&0xF])
 			}
 			i++
 			start = i
 			continue
 		}
-		c, size := utf8.DecodeRune(s[i:])
+		c, size := utf8.DecodeRune([]byte(s[i:]))
 		if c == utf8.RuneError && size == 1 {
 			if start < i {
-				e.Write(s[start:i])
+				e = append(e, s[start:i]...)
 			}
-			e.WriteString(`\ufffd`)
+			e = append(e, `\ufffd`...)
 			i += size
 			start = i
 			continue
@@ -1194,10 +1233,10 @@ func encodeJSONString(e *bytes.Buffer, s []byte) {
 		// See http://timelessrepo.com/json-isnt-a-javascript-subset for discussion.
 		if c == '\u2028' || c == '\u2029' {
 			if start < i {
-				e.Write(s[start:i])
+				e = append(e, s[start:i]...)
 			}
-			e.WriteString(`\u202`)
-			e.WriteByte(hex[c&0xF])
+			e = append(e, `\u202`...)
+			e = append(e, hex[c&0xF])
 			i += size
 			start = i
 			continue
@@ -1205,7 +1244,8 @@ func encodeJSONString(e *bytes.Buffer, s []byte) {
 		i += size
 	}
 	if start < len(s) {
-		e.Write(s[start:])
+		e = append(e, s[start:]...)
 	}
-	e.WriteByte('"')
+	e = append(e, '"')
+	return e
 }
