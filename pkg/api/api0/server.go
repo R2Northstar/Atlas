@@ -104,8 +104,10 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	q := r.URL.Query()
+
 	if canUpdate {
-		if v := r.URL.Query().Get("id"); v == "" {
+		if v := q.Get("id"); v == "" {
 			if isUpdate {
 				h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("port param is required"))
@@ -117,7 +119,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if canCreate {
-		if v := r.URL.Query().Get("port"); v == "" {
+		if v := q.Get("port"); v == "" {
 			if isCreate {
 				h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("port param is required"))
@@ -131,7 +133,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			s.Addr = netip.AddrPortFrom(raddr.Addr(), uint16(n))
 		}
 
-		if v := r.URL.Query().Get("authPort"); v == "" {
+		if v := q.Get("authPort"); v == "" {
 			if isCreate {
 				h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("authPort param is required"))
@@ -145,7 +147,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			s.AuthPort = uint16(n)
 		}
 
-		if v := r.URL.Query().Get("password"); len(v) > 128 {
+		if v := q.Get("password"); len(v) > 128 {
 			if isCreate {
 				h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("password is too long"))
@@ -157,7 +159,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if canCreate || canUpdate {
-		if v := r.URL.Query().Get("name"); v == "" {
+		if v := q.Get("name"); v == "" {
 			if isCreate {
 				h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("name param must not be empty"))
@@ -178,7 +180,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if v := r.URL.Query().Get("description"); v != "" {
+		if v := q.Get("description"); v != "" {
 			if h.CleanBadWords != nil {
 				v = h.CleanBadWords(v)
 			}
@@ -193,7 +195,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if v := r.URL.Query().Get("map"); v != "" {
+		if v := q.Get("map"); v != "" {
 			if n := 64; len(v) > n { // NorthstarLauncher@v1.9.7 limits it to 31
 				v = v[:n]
 			}
@@ -205,7 +207,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if v := r.URL.Query().Get("playlist"); v != "" {
+		if v := q.Get("playlist"); v != "" {
 			if n := 64; len(v) > n { // NorthstarLauncher@v1.9.7 limits it to 15
 				v = v[:n]
 			}
@@ -217,7 +219,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if n, err := strconv.ParseUint(r.URL.Query().Get("playerCount"), 10, 8); err == nil {
+		if n, err := strconv.ParseUint(q.Get("playerCount"), 10, 8); err == nil {
 			if canCreate {
 				s.PlayerCount = int(n)
 			}
@@ -227,7 +229,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if n, err := strconv.ParseUint(r.URL.Query().Get("maxPlayers"), 10, 8); err == nil {
+		if n, err := strconv.ParseUint(q.Get("maxPlayers"), 10, 8); err == nil {
 			if canCreate {
 				s.MaxPlayers = int(n)
 			}
