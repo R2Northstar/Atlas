@@ -134,6 +134,8 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		h.m().client_originauth_stryder_auth_duration_seconds.UpdateDuration(stryderStart)
 		if err != nil {
 			switch {
+			case errors.Is(err, context.Canceled):
+				// ignore
 			case errors.Is(err, stryder.ErrInvalidGame):
 				h.m().client_originauth_requests_total.reject_stryder_invalidgame.Inc()
 			case errors.Is(err, stryder.ErrInvalidToken):
@@ -169,12 +171,14 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 				respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 				return
 			default:
-				hlog.FromRequest(r).Error().
-					Err(err).
-					Uint64("uid", uid).
-					Str("stryder_token", string(token)).
-					Str("stryder_resp", string(stryderRes)).
-					Msgf("unexpected stryder error")
+				if !errors.Is(err, context.Canceled) {
+					hlog.FromRequest(r).Error().
+						Err(err).
+						Uint64("uid", uid).
+						Str("stryder_token", string(token)).
+						Str("stryder_resp", string(stryderRes)).
+						Msgf("unexpected stryder error")
+				}
 				respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObjf("stryder is down: %v", err))
 				return
 			}
@@ -211,7 +215,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 						Msgf("origin auth token refresh failure")
 					h.m().client_originauth_origin_username_lookup_calls_total.fail_authtok_refresh.Inc()
 				}
-			} else {
+			} else if !errors.Is(err, context.Canceled) {
 				hlog.FromRequest(r).Error().
 					Err(err).
 					Msgf("failed to get origin user info")
@@ -416,10 +420,12 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 				h.m().client_authwithserver_requests_total.fail_gameserverauth.Inc()
 				respFail(w, r, http.StatusInternalServerError, ErrorCode_BAD_GAMESERVER_RESPONSE.MessageObj())
 			default:
-				hlog.FromRequest(r).Error().
-					Err(err).
-					Msgf("failed to make gameserver auth request")
-				h.m().client_authwithserver_requests_total.fail_gameserverauth.Inc()
+				if !errors.Is(err, context.Canceled) {
+					hlog.FromRequest(r).Error().
+						Err(err).
+						Msgf("failed to make gameserver auth request")
+					h.m().client_authwithserver_requests_total.fail_gameserverauth.Inc()
+				}
 				respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 			}
 			return
