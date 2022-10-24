@@ -148,8 +148,8 @@ func insertA(n *nsacct, a *atlasdb.DB) error {
 			fmt.Fprintf(os.Stderr, "warning: uid %d (%s): failed to parse last auth ip %q (%v), ignoring\n", n.ID, n.Username, *n.LastAuthIP, err)
 		}
 	}
-	x.AuthToken = n.CurrentAuthToken
-	if v := time.Unix(n.CurrentAuthTokenExpirationTime, 0); time.Now().Before(v.Add(time.Hour * -24)) {
+	if v := time.Unix(n.CurrentAuthTokenExpirationTime/1000, 0); time.Until(v).Abs() < time.Hour*24 {
+		x.AuthToken = n.CurrentAuthToken
 		x.AuthTokenExpiry = v
 	}
 	if n.CurrentServerID != nil && *n.CurrentServerID != "" {
