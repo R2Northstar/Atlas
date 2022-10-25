@@ -58,7 +58,7 @@ func (s SID) AddTo(j http.CookieJar) {
 	}})
 }
 
-// Login gets the SID fo
+// Login gets a SID using the provided credentials.
 func Login(ctx context.Context, rt http.RoundTripper, email, password, otpsecret string) (AuthResult, error) {
 	if rt == nil {
 		rt = http.DefaultClient.Transport
