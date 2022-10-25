@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
+	"github.com/klauspost/compress/gzip"
 	"github.com/r2northstar/atlas/db/atlasdb"
 	"github.com/r2northstar/atlas/db/pdatadb"
 	"github.com/r2northstar/atlas/pkg/api/api0"
@@ -208,7 +209,6 @@ func NewServer(c *Config) (*Server, error) {
 		ServerList: api0.NewServerList(c.API0_ServerList_DeadTime, c.API0_ServerList_GhostTime, c.API0_ServerList_VerifyTime, api0.ServerListConfig{
 			ExperimentalDeterministicServerIDSecret: c.API0_ServerList_ExperimentalDeterministicServerIDSecret,
 		}),
-		OriginAuthMgr:                configureOrigin(c, s.Logger.With().Str("component", "origin").Logger()),
 		MaxServers:                   c.API0_MaxServers,
 		MaxServersPerIP:              c.API0_MaxServersPerIP,
 		InsecureDevNoCheckPlayerAuth: c.API0_InsecureDevNoCheckPlayerAuth,
@@ -222,6 +222,11 @@ func NewServer(c *Config) (*Server, error) {
 		Add(hlog.RequestIDHandler("rid", "")).
 		Then(http.HandlerFunc(s.serveRest))
 
+	if org, err := configureOrigin(c, s.Logger.With().Str("component", "origin").Logger()); err == nil {
+		s.API0.OriginAuthMgr = org
+	} else {
+		return nil, fmt.Errorf("initialize origin auth: %w", err)
+	}
 	if astore, err := configureAccountStorage(c); err == nil {
 		s.API0.AccountStorage = astore
 	} else {
@@ -385,14 +390,14 @@ func configureLogging(c *Config) (l zerolog.Logger, reopen func(), err error) {
 	return
 }
 
-func configureOrigin(c *Config, l zerolog.Logger) *origin.AuthMgr {
+func configureOrigin(c *Config, l zerolog.Logger) (*origin.AuthMgr, error) {
 	if c.OriginEmail == "" {
-		return nil
+		return nil, nil
 	}
 	var mu sync.Mutex
 	mgr := &origin.AuthMgr{
-		Credentials: func() (email string, password string, err error) {
-			return c.OriginEmail, c.OriginPassword, nil
+		Credentials: func() (email, password, otpsecret string, err error) {
+			return c.OriginEmail, c.OriginPassword, c.OriginTOTP, nil
 		},
 		Backoff: func(_ error, last time.Time, count int) bool {
 			var hmax, hmaxat, hrate float64 = 24, 8, 2.3
@@ -436,7 +441,81 @@ func configureOrigin(c *Config, l zerolog.Logger) *origin.AuthMgr {
 			mgr.SetAuth(as)
 		}
 	}
-	return mgr
+	if c.OriginHARError != "" || c.OriginHARSuccess != "" {
+		var errPath, successPath string
+		if v := c.OriginHARError; v != "" {
+			if p, err := filepath.Abs(v); err != nil {
+				return nil, fmt.Errorf("resolve error har path: %w", err)
+			} else if err := os.MkdirAll(v, 0777); err != nil {
+				return nil, fmt.Errorf("mkdir error har path: %w", err)
+			} else {
+				errPath = p
+			}
+		}
+		if v := c.OriginHARSuccess; v != "" {
+			if p, err := filepath.Abs(v); err != nil {
+				return nil, fmt.Errorf("resolve success har path: %w", err)
+			} else if err := os.MkdirAll(v, 0777); err != nil {
+				return nil, fmt.Errorf("mkdir success har path: %w", err)
+			} else {
+				successPath = p
+			}
+		}
+		var harMu sync.Mutex
+		harZ := gzip.NewWriter(io.Discard)
+		mgr.SaveHAR = func(write func(w io.Writer) error, err error) {
+			harMu.Lock()
+			defer harMu.Unlock()
+
+			var p string
+			if err != nil {
+				if errPath != "" {
+					p = filepath.Join(errPath, "origin-auth-error-")
+				}
+			} else {
+				if successPath != "" {
+					p = filepath.Join(successPath, "origin-auth-success-")
+				}
+			}
+			if p != "" {
+				p = p + strconv.FormatInt(time.Now().Unix(), 10) + ".har"
+
+				if c.OriginHARGzip {
+					p += ".gz"
+				}
+
+				f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY, 0600)
+				if err != nil {
+					l.Err(err).Msg("failed to save origin auth har")
+					return
+				}
+				defer f.Close()
+
+				if c.OriginHARGzip {
+					harZ.Reset(f)
+					if err := write(harZ); err != nil {
+						l.Err(err).Msg("failed to save origin auth har")
+						return
+					}
+					if err := harZ.Close(); err != nil {
+						l.Err(err).Msg("failed to save origin auth har")
+						return
+					}
+				} else {
+					if err := write(f); err != nil {
+						l.Err(err).Msg("failed to save origin auth har")
+						return
+					}
+				}
+
+				if err := f.Close(); err != nil {
+					l.Err(err).Msg("failed to save origin auth har")
+					return
+				}
+			}
+		}
+	}
+	return mgr, nil
 }
 
 func configureAccountStorage(c *Config) (api0.AccountStorage, error) {

@@ -2,10 +2,16 @@ package origin
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"sync"
 	"time"
+
+	"github.com/cardigann/harhar"
+	"github.com/r2northstar/atlas/pkg/juno"
 )
 
 var ErrAuthMgrBackoff = errors.New("not refreshing token due to backoff")
@@ -27,12 +33,15 @@ type AuthMgr struct {
 
 	// Credentials, if provided, is called to get credentials when updating the
 	// SID.
-	Credentials func() (email, password string, err error)
+	Credentials func() (email, password, otpsecret string, err error)
 
 	// Backoff, if provided, checks if another refresh is allowed after a
 	// failure. If it returns false, ErrAuthMgrBackoff will be returned
 	// immediately from OriginAuth.
 	Backoff func(err error, time time.Time, count int) bool
+
+	// SaveHAR, if provided, is called after every attempt to authenticate.
+	SaveHAR func(func(w io.Writer) error, error)
 
 	authInit     sync.Once
 	authPf       bool       // ensures only one update runs at a time
@@ -45,7 +54,7 @@ type AuthMgr struct {
 
 // AuthState contains the current authentication tokens.
 type AuthState struct {
-	SID                SID          `json:"sid,omitempty"`
+	SID                juno.SID     `json:"sid,omitempty"`
 	NucleusToken       NucleusToken `json:"nucleus_token,omitempty"`
 	NucleusTokenExpiry time.Time    `json:"nucleus_token_expiry,omitempty"`
 }
@@ -106,6 +115,20 @@ func (a *AuthMgr) OriginAuth(refresh bool) (NucleusToken, bool, error) {
 		}
 	}
 	a.authErr = func() (err error) {
+		t := http.DefaultClient.Transport
+		if t == nil {
+			t = http.DefaultTransport
+		}
+		if a.SaveHAR != nil {
+			rec := harhar.NewRecorder()
+			rec.RoundTripper, t = t, rec
+			defer func() {
+				go a.SaveHAR(func(w io.Writer) error {
+					return json.NewEncoder(w).Encode(rec.HAR)
+				}, err)
+			}()
+		}
+
 		defer func() {
 			if p := recover(); p != nil {
 				err = fmt.Errorf("panic: %v", p)
@@ -124,7 +147,7 @@ func (a *AuthMgr) OriginAuth(refresh bool) (NucleusToken, bool, error) {
 		defer cancel()
 
 		if a.auth.SID != "" {
-			if tok, exp, aerr := GetNucleusToken(ctx, a.auth.SID); aerr == nil {
+			if tok, exp, aerr := GetNucleusToken(ctx, t, a.auth.SID); aerr == nil {
 				a.auth.NucleusToken = tok
 				a.auth.NucleusTokenExpiry = exp
 				return
@@ -136,16 +159,16 @@ func (a *AuthMgr) OriginAuth(refresh bool) (NucleusToken, bool, error) {
 		if a.Credentials == nil {
 			err = fmt.Errorf("no origin credentials to refresh sid with")
 			return
-		} else if email, password, aerr := a.Credentials(); aerr != nil {
+		} else if email, password, otpsecret, aerr := a.Credentials(); aerr != nil {
 			err = fmt.Errorf("get origin credentials: %w", aerr)
 			return
-		} else if sid, aerr := Login(ctx, email, password); aerr != nil {
+		} else if res, aerr := juno.Login(ctx, t, email, password, otpsecret); aerr != nil {
 			err = fmt.Errorf("refresh sid: %w", aerr)
 			return
 		} else {
-			a.auth.SID = sid
+			a.auth.SID = res.SID
 		}
-		if tok, exp, aerr := GetNucleusToken(ctx, a.auth.SID); aerr != nil {
+		if tok, exp, aerr := GetNucleusToken(ctx, t, a.auth.SID); aerr != nil {
 			err = fmt.Errorf("refresh nucleus token with new sid: %w", aerr)
 		} else {
 			a.auth.NucleusToken = tok

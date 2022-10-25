@@ -138,6 +138,20 @@ type Config struct {
 	// The password for Origin login.
 	OriginPassword string `env:"ATLAS_ORIGIN_PASSWORD"`
 
+	// The base32 TOTP secret for Origin login.
+	OriginTOTP string `env:"ATLAS_ORIGIN_TOTP"`
+
+	// OriginHARGzip controls whether to compress saved HAR archives.
+	OriginHARGzip bool `env:"ATLAS_ORIGIN_HAR_GZIP"`
+
+	// OriginHARSuccess is the path to a directory to save HAR archives of
+	// successful Origin auth attempts.
+	OriginHARSuccess string `env:"ATLAS_ORIGIN_HAR_SUCCESS"`
+
+	// OriginHARError is the path to a directory to save HAR archives of
+	// successful Origin auth attempts.
+	OriginHARError string `env:"ATLAS_ORIGIN_HAR_ERROR"`
+
 	// The JSON file to save Origin login info to so tokens are preserved across
 	// restarts. Highly recommended.
 	OriginPersist string `env:"ATLAS_ORIGIN_PERSIST"`

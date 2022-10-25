@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cardigann/harhar"
+	"github.com/r2northstar/atlas/pkg/juno"
 	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/spf13/pflag"
 )
@@ -28,8 +29,8 @@ func init() {
 func main() {
 	pflag.Parse()
 
-	if pflag.NArg() != 2 || opt.Help {
-		fmt.Printf("usage: %s [options] email password\n\noptions:\n%s\nwarning: do not use this tool repeatedly, or you may trigger additional verification, which will break login\n", os.Args[0], pflag.CommandLine.FlagUsages())
+	if pflag.NArg() < 2 || pflag.NArg() > 3 || opt.Help {
+		fmt.Printf("usage: %s [options] email password [totp_secret]\n\noptions:\n%s\nwarning: do not use this tool repeatedly, or you may trigger additional verification, which will break login\n", os.Args[0], pflag.CommandLine.FlagUsages())
 		if opt.Help {
 			os.Exit(2)
 		}
@@ -68,16 +69,17 @@ func main() {
 	var fail bool
 	ctx := context.Background()
 
-	sid, err := origin.Login(ctx, pflag.Arg(0), pflag.Arg(1))
+	r, err := juno.Login(ctx, nil, pflag.Arg(0), pflag.Arg(1), pflag.Arg(2))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "origin: error: %v\n", err)
 		fail = true
 	} else {
-		fmt.Printf("SID=%s\n", sid)
+		fmt.Printf("SID=%s\n", r.SID)
+		fmt.Printf("JunoCode=%s\n", r.Code)
 	}
 
 	if !fail {
-		token, expiry, err := origin.GetNucleusToken(ctx, sid)
+		token, expiry, err := origin.GetNucleusToken(ctx, nil, r.SID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "origin: error: %v\n", err)
 			fail = true
