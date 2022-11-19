@@ -634,11 +634,13 @@ func (s *Server) Run(ctx context.Context) error {
 	}()
 
 	var hs []*http.Server
+	var as []string
 	for _, a := range s.Addr {
 		hs = append(hs, &http.Server{
 			Addr:    a,
 			Handler: s.Handler,
 		})
+		as = append(as, "http://"+a)
 	}
 	for _, a := range s.AddrTLS {
 		hs = append(hs, &http.Server{
@@ -646,10 +648,12 @@ func (s *Server) Run(ctx context.Context) error {
 			Handler:   s.Handler,
 			TLSConfig: s.TLSConfig,
 		})
+		as = append(as, "https://"+a)
 	}
 	if len(hs) == 0 {
 		return fmt.Errorf("no listen addresses provided")
 	}
+	s.Logger.Log().Msgf("starting server on %s", strings.Join(as, ", "))
 
 	errch := make(chan error, len(hs))
 	for _, h := range hs {
