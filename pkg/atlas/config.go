@@ -21,7 +21,7 @@ type UIDGID [2]int
 // ?=). All string arrays are comma-separated.
 type Config struct {
 	// The addresses to listen on (comma-separated).
-	Addr []string `env:"ATLAS_ADDR?=:8081"`
+	Addr []string `env:"ATLAS_ADDR?=:8080"`
 
 	// The addresses to listen on with TLS (comma-separated).
 	AddrTLS []string `env:"ATLAS_ADDR_HTTPS"`
