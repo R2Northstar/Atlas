@@ -21,12 +21,14 @@ import (
 
 	"github.com/VictoriaMetrics/metrics"
 	"github.com/klauspost/compress/gzip"
+	"github.com/pg9182/ip2x/ip2location"
 	"github.com/r2northstar/atlas/db/atlasdb"
 	"github.com/r2northstar/atlas/db/pdatadb"
 	"github.com/r2northstar/atlas/pkg/api/api0"
 	"github.com/r2northstar/atlas/pkg/cloudflare"
 	"github.com/r2northstar/atlas/pkg/memstore"
 	"github.com/r2northstar/atlas/pkg/origin"
+	"github.com/r2northstar/atlas/pkg/regionmap"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 	"golang.org/x/mod/semver"
@@ -253,6 +255,11 @@ func NewServer(c *Config) (*Server, error) {
 		}
 	} else {
 		return nil, fmt.Errorf("initialize ip2location: %w", err)
+	}
+	if m, err := configureRegionMap(c); err == nil {
+		s.API0.GetRegion = m
+	} else {
+		return nil, fmt.Errorf("initialize region map: %w", err)
 	}
 
 	s.MetricsSecret = c.MetricsSecret
@@ -629,6 +636,17 @@ func configureIP2Location(c *Config) (*ip2locationMgr, error) {
 	}
 	mgr := new(ip2locationMgr)
 	return mgr, mgr.Load(c.IP2Location)
+}
+
+func configureRegionMap(c *Config) (func(netip.Addr, ip2location.Record) (string, error), error) {
+	switch m := c.API0_RegionMap; m {
+	case "", "none":
+		return nil, nil
+	case "default":
+		return regionmap.GetRegion, nil
+	default:
+		return nil, fmt.Errorf("unknown region map type %q", m)
+	}
 }
 
 // Run runs the server, shutting it down gracefully when ctx is canceled, then
