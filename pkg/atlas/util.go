@@ -1,12 +1,65 @@
 package atlas
 
 import (
+	"fmt"
 	"io"
 	"net/http"
+	"net/netip"
+	"os"
 	"sync"
 
+	"github.com/pg9182/ip2x/ip2location"
 	"github.com/rs/zerolog"
 )
+
+// ip2locationMgr wraps a file-backed IP2Location database.
+type ip2locationMgr struct {
+	file *os.File
+	db   *ip2location.DB
+	mu   sync.RWMutex
+}
+
+// Load replaces the currently loaded database with the specified file. If name
+// is empty, the existing database, if any, is reopened.
+func (m *ip2locationMgr) Load(name string) error {
+	if name == "" {
+		m.mu.RLock()
+		if m.file == nil {
+			return fmt.Errorf("no ip2location database loaded")
+		}
+		name = m.file.Name()
+		m.mu.RUnlock()
+	}
+
+	f, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+
+	db, err := ip2location.New(f)
+	if err != nil {
+		f.Close()
+		return err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.file.Close()
+	m.file = f
+	m.db = db
+	return nil
+}
+
+// LookupFields calls (*ip2location.DB).LookupFields if a database is loaded.
+func (m *ip2locationMgr) LookupFields(ip netip.Addr, mask ip2location.Field) (ip2location.Record, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.db == nil {
+		return ip2location.Record{}, fmt.Errorf("no ip2location database loaded")
+	}
+	return m.db.LookupFields(ip, mask)
+}
 
 type zerologWriterLevel struct {
 	w io.Writer // or zerolog.LevelWriter

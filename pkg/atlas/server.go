@@ -242,6 +242,18 @@ func NewServer(c *Config) (*Server, error) {
 	} else {
 		return nil, fmt.Errorf("initialize main menu promos: %w", err)
 	}
+	if ip2l, err := configureIP2Location(c); err == nil {
+		if ip2l != nil {
+			s.reload = append(s.reload, func() {
+				if err := ip2l.Load(""); err != nil {
+					s.Logger.Err(err).Msg("failed to reload ip2location database")
+				}
+			})
+			s.API0.LookupIP = ip2l.LookupFields
+		}
+	} else {
+		return nil, fmt.Errorf("initialize ip2location: %w", err)
+	}
 
 	s.MetricsSecret = c.MetricsSecret
 
@@ -609,6 +621,14 @@ func configureMainMenuPromos(c *Config) (func(*http.Request) api0.MainMenuPromos
 	default:
 		return nil, fmt.Errorf("unknown source %q", typ)
 	}
+}
+
+func configureIP2Location(c *Config) (*ip2locationMgr, error) {
+	if c.IP2Location == "" {
+		return nil, nil
+	}
+	mgr := new(ip2locationMgr)
+	return mgr, mgr.Load(c.IP2Location)
 }
 
 // Run runs the server, shutting it down gracefully when ctx is canceled, then

@@ -164,6 +164,13 @@ type Config struct {
 	// of top-level names to URLs.
 	Web string `env:"ATLAS_WEB="`
 
+	// The path to the IP2Location database, which should contain at least the
+	// country and region fields. The database must not be modified while atlas
+	// is running, but it can be replaced (and a reload can be triggered with
+	// SIGHUP). If not provided, geolocation-dependent features like server
+	// regions will not be enabled.
+	IP2Location string `env:"ATLAS_IP2LOCATION"`
+
 	// For sd-notify.
 	NotifySocket string `env:"NOTIFY_SOCKET"`
 
