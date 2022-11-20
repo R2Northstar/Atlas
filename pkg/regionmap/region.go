@@ -102,6 +102,11 @@ func GetRegion(ip netip.Addr, r ip2location.Record) (string, error) {
 		return "Antartica", nil
 	}
 
+	// for Taiwan, use "Asia East" (it isn't in the UN M.49 mapping)
+	if r.CountryShort == "TW" {
+		return "Asia East", nil
+	}
+
 	// the rest are based on the M.49 mapping
 	m49region, m49subRegion, _, ok := m49(r.CountryShort)
 	if !ok {
