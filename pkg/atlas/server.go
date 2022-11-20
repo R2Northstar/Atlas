@@ -716,7 +716,9 @@ func (s *Server) HandleSIGHUP() {
 	defer s.sdnotify("READY=1")
 
 	for _, fn := range s.reload {
-		fn()
+		if fn != nil {
+			fn()
+		}
 	}
 }
 
