@@ -18,12 +18,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/klauspost/compress/gzip"
+	"github.com/pg9182/ip2x/ip2location"
 	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/rs/zerolog/hlog"
 	"golang.org/x/mod/semver"
@@ -78,6 +80,10 @@ type Handler struct {
 
 	// AllowGameServerIPv6 controls whether to allow game servers to use IPv6.
 	AllowGameServerIPv6 bool
+
+	// LookupIP looks up an IP2Location record for an IP. If not provided,
+	// server regions are disabled.
+	LookupIP func(netip.Addr, ip2location.Field) (ip2location.Record, error)
 
 	metricsInit sync.Once
 	metricsObj  apiMetrics
