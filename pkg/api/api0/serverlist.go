@@ -80,6 +80,7 @@ type Server struct {
 	LauncherVersion string // for metrics
 
 	Name        string
+	Region      string
 	Description string
 	Password    string // blank for none
 
@@ -121,6 +122,7 @@ type ServerUpdate struct {
 
 	Heartbeat   bool
 	Name        *string
+	Region      *string
 	Description *string
 	PlayerCount *int
 	MaxPlayers  *int
@@ -278,7 +280,7 @@ func csJSON(ss []*Server, est int) ([]byte, int) {
 
 	const (
 		estMin  = 256
-		estInit = 384
+		estInit = 394
 		estMax  = 512
 	)
 	switch {
@@ -309,6 +311,10 @@ func csJSON(ss []*Server, est int) ([]byte, int) {
 		b = append(b, srv.ID...)
 		b = append(b, `","name":`...)
 		b = appendJSONString(b, srv.Name)
+		if srv.Region != "" {
+			b = append(b, `,"region":`...)
+			b = appendJSONString(b, srv.Region)
+		}
 		b = append(b, `,"description":`...)
 		b = appendJSONString(b, srv.Description)
 		b = append(b, `,"playerCount":`...)
@@ -807,6 +813,9 @@ func (s *ServerList) ServerHybridUpdatePut(u *ServerUpdate, c *Server, l ServerL
 				}
 				if u.Name != nil {
 					esrv.Name, changed = *u.Name, true
+				}
+				if u.Region != nil {
+					esrv.Region, changed = *u.Region, true
 				}
 				if u.Description != nil {
 					esrv.Description, changed = *u.Description, true
