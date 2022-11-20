@@ -100,6 +100,10 @@ type Config struct {
 	// allowed.
 	API0_MinimumLauncherVersion string `env:"ATLAS_API0_MINIMUM_LAUNCHER_VERSION"`
 
+	// Region mapping to use for server list. If set to an empty string or
+	// "none", region maps are disabled. Options: none, default.
+	API0_RegionMap string `env:"ATLAS_API0_REGION_MAP?=default"`
+
 	// The time after registration for a gameserver to complete verification by.
 	API0_ServerList_VerifyTime time.Duration `env:"ATLAS_API0_SERVERLIST_VERIFY_TIME=10s"`
 
