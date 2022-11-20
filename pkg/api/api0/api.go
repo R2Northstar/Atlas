@@ -85,6 +85,17 @@ type Handler struct {
 	// server regions are disabled.
 	LookupIP func(netip.Addr, ip2location.Field) (ip2location.Record, error)
 
+	// GetRegion gets the region name from an IP2Location record. If not
+	// provided, server regions are disabled.
+	//
+	// Errors should only be returned for unexpected situations, and a
+	// best-effort region should still be returned if applicable (it will still
+	// be used on error if non-empty).
+	//
+	// Note that it is valid to return an
+	// empty region and no error if no region is to be assigned.
+	GetRegion func(netip.Addr, ip2location.Record) (string, error)
+
 	metricsInit sync.Once
 	metricsObj  apiMetrics
 }
