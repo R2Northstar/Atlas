@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pg9182/ip2x/ip2location"
 	"github.com/r2northstar/atlas/pkg/a2s"
 	"github.com/r2northstar/atlas/pkg/api/api0/api0gameserver"
 	"github.com/rs/zerolog/hlog"
@@ -155,6 +156,33 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			s.Password = v
+		}
+	}
+
+	if canCreate || canUpdate {
+		if h.LookupIP != nil && h.GetRegion != nil {
+			if rec, err := h.LookupIP(raddr.Addr(), ip2location.CountryLong|ip2location.CountryShort|ip2location.Region|ip2location.City|ip2location.Latitude|ip2location.Longitude); err == nil {
+				region, err := h.GetRegion(raddr.Addr(), rec)
+				if err == nil || region != "" { // if an error occurs, we may still have a best-effort region
+					if canCreate {
+						s.Region = region
+					}
+					if canUpdate {
+						u.Region = &region
+					}
+				}
+				if err != nil {
+					h.m().server_upsert_getregion_errors_total.Inc()
+					if region == "" {
+						hlog.FromRequest(r).Err(err).Str("ip", raddr.Addr().String()).Msg("failed to compute region, no best-effort region available")
+					} else {
+						hlog.FromRequest(r).Err(err).Str("ip", raddr.Addr().String()).Msgf("failed to compute region, using best-effort region %q", region)
+					}
+				}
+			} else {
+				h.m().server_upsert_ip2location_errors_total.Inc()
+				hlog.FromRequest(r).Err(err).Str("ip", raddr.Addr().String()).Msg("failed to lookup remote ip in ip2location database")
+			}
 		}
 	}
 
