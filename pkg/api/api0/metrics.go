@@ -134,7 +134,9 @@ type apiMetrics struct {
 		success *metrics.Histogram
 		failure *metrics.Histogram
 	}
-	server_remove_requests_total struct {
+	server_upsert_ip2location_errors_total *metrics.Counter
+	server_upsert_getregion_errors_total   *metrics.Counter
+	server_remove_requests_total           struct {
 		success                 *metrics.Counter
 		reject_unauthorized_ip  *metrics.Counter
 		reject_bad_request      *metrics.Counter
@@ -390,6 +392,8 @@ func (h *Handler) m() *apiMetrics {
 		}
 		mo.server_upsert_verify_time_seconds.success = mo.set.NewHistogram(`atlas_api0_server_upsert_verify_time_seconds{success="true"}`)
 		mo.server_upsert_verify_time_seconds.failure = mo.set.NewHistogram(`atlas_api0_server_upsert_verify_time_seconds{success="false"}`)
+		mo.server_upsert_ip2location_errors_total = mo.set.NewCounter(`atlas_api0_server_upsert_ip2location_errors_total`)
+		mo.server_upsert_getregion_errors_total = mo.set.NewCounter(`atlas_api0_server_upsert_getregion_errors_total`)
 		mo.server_remove_requests_total.success = mo.set.NewCounter(`atlas_api0_server_remove_requests_total{result="success"}`)
 		mo.server_remove_requests_total.reject_unauthorized_ip = mo.set.NewCounter(`atlas_api0_server_remove_requests_total{result="reject_unauthorized_ip"}`)
 		mo.server_remove_requests_total.reject_bad_request = mo.set.NewCounter(`atlas_api0_server_remove_requests_total{result="reject_bad_request"}`)
