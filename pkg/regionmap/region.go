@@ -37,20 +37,20 @@ func GetRegion(ip netip.Addr, r ip2location.Record) (string, error) {
 		// 3-region model: https://en.wikipedia.org/wiki/List_of_regions_of_Canada @ 2022-11-20
 		switch r.Region {
 		case "British Columbia", "Alberta", "Saskatchewan", "Manitoba":
-			return "Canada West", nil
+			return "CA West", nil
 
 		case "Ontario", "Quebec", "New Brunswick", "Prince Edward Island",
 			"Nova Scotia", "Newfoundland and Labrador":
-			return "Canada East", nil
+			return "CA East", nil
 
 		case "Yukon", "Northwest Territories", "Nunavut":
-			return "Canada North", nil
+			return "CA North", nil
 
 		case "":
-			return "Canada", nil
+			return "CA", nil
 
 		default:
-			return "Canada", fmt.Errorf("unhandled Canada province %q", r.Region)
+			return "CA", fmt.Errorf("unhandled Canada province %q", r.Region)
 		}
 	}
 
@@ -87,14 +87,14 @@ func GetRegion(ip netip.Addr, r ip2location.Record) (string, error) {
 		}
 	}
 
-	// for China, use "China"
+	// for China, use "CN"
 	if r.CountryShort == "CN" {
-		return "China", nil
+		return "CN", nil
 	}
 
-	// for Russia, use "Russia"
+	// for Russia, use "RU"
 	if r.CountryShort == "RU" {
-		return "Russia", nil
+		return "RU", nil
 	}
 
 	// for Antartica, use Antartica (this won't really get hit in practice though)
@@ -118,10 +118,10 @@ func GetRegion(ip netip.Addr, r ip2location.Record) (string, error) {
 		return "Americas", nil
 	}
 
-	// group Oceania (Australia/NZ/Polynesia/Micronesia) into "Australia" since
-	// people may not recognize "Oceania"
+	// group Oceania (Australia/NZ/Polynesia/Micronesia) into "AUS" since people
+	// may not recognize "Oceania"
 	if m49region == "Oceania" {
-		return "Australia", nil
+		return "AUS", nil
 	}
 
 	// group Africa together to keep things neat (and there aren't really
@@ -134,15 +134,15 @@ func GetRegion(ip netip.Addr, r ip2location.Record) (string, error) {
 	if m49region == "Europe" {
 		switch m49subRegion {
 		case "Eastern Europe":
-			return "Europe East", nil
+			return "EU East", nil
 		case "Northern Europe":
-			return "Europe North", nil
+			return "EU North", nil
 		case "Southern Europe":
-			return "Europe South", nil
+			return "EU South", nil
 		case "Western Europe":
-			return "Europe West", nil
+			return "EU West", nil
 		default:
-			return "Europe", fmt.Errorf("unhandled M.49 %s sub-region %q", m49region, m49subRegion)
+			return "EU", fmt.Errorf("unhandled M.49 %s sub-region %q", m49region, m49subRegion)
 		}
 	}
 
