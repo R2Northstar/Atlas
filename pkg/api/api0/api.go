@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/klauspost/compress/gzip"
-	"github.com/pg9182/ip2x/ip2location"
+	"github.com/pg9182/ip2x"
 	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/rs/zerolog/hlog"
 	"golang.org/x/mod/semver"
@@ -83,7 +83,7 @@ type Handler struct {
 
 	// LookupIP looks up an IP2Location record for an IP. If not provided,
 	// server regions are disabled.
-	LookupIP func(netip.Addr, ip2location.Field) (ip2location.Record, error)
+	LookupIP func(netip.Addr) (ip2x.Record, error)
 
 	// GetRegion gets the region name from an IP2Location record. If not
 	// provided, server regions are disabled.
@@ -94,7 +94,7 @@ type Handler struct {
 	//
 	// Note that it is valid to return an
 	// empty region and no error if no region is to be assigned.
-	GetRegion func(netip.Addr, ip2location.Record) (string, error)
+	GetRegion func(netip.Addr, ip2x.Record) (string, error)
 
 	metricsInit sync.Once
 	metricsObj  apiMetrics

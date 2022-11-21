@@ -8,20 +8,20 @@ import (
 	"os"
 	"sync"
 
-	"github.com/pg9182/ip2x/ip2location"
+	"github.com/pg9182/ip2x"
 	"github.com/rs/zerolog"
 )
 
-// ip2locationMgr wraps a file-backed IP2Location database.
-type ip2locationMgr struct {
+// ip2xMgr wraps a file-backed IP2Location database.
+type ip2xMgr struct {
 	file *os.File
-	db   *ip2location.DB
+	db   *ip2x.DB
 	mu   sync.RWMutex
 }
 
 // Load replaces the currently loaded database with the specified file. If name
 // is empty, the existing database, if any, is reopened.
-func (m *ip2locationMgr) Load(name string) error {
+func (m *ip2xMgr) Load(name string) error {
 	if name == "" {
 		m.mu.RLock()
 		if m.file == nil {
@@ -36,10 +36,15 @@ func (m *ip2locationMgr) Load(name string) error {
 		return err
 	}
 
-	db, err := ip2location.New(f)
+	db, err := ip2x.New(f)
 	if err != nil {
 		f.Close()
 		return err
+	}
+
+	if p, _ := db.Info(); p != ip2x.IP2Location {
+		f.Close()
+		return fmt.Errorf("not an ip2location database")
 	}
 
 	m.mu.Lock()
@@ -51,14 +56,14 @@ func (m *ip2locationMgr) Load(name string) error {
 	return nil
 }
 
-// LookupFields calls (*ip2location.DB).LookupFields if a database is loaded.
-func (m *ip2locationMgr) LookupFields(ip netip.Addr, mask ip2location.Field) (ip2location.Record, error) {
+// Lookup calls [ip2x.DB.Lookup] if a database is loaded.
+func (m *ip2xMgr) LookupFields(ip netip.Addr) (ip2x.Record, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if m.db == nil {
-		return ip2location.Record{}, fmt.Errorf("no ip2location database loaded")
+		return ip2x.Record{}, fmt.Errorf("no ip2location database loaded")
 	}
-	return m.db.LookupFields(ip, mask)
+	return m.db.Lookup(ip)
 }
 
 type zerologWriterLevel struct {

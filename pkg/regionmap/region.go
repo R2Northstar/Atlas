@@ -18,24 +18,34 @@ import (
 	"fmt"
 	"net/netip"
 
-	"github.com/pg9182/ip2x/ip2location"
+	"github.com/pg9182/ip2x"
 )
 
 // GetRegion gets the region name for the provided IP address and IP2Location
 // record. The IP2Location record should have at least CountryShort and Region
 // fields. If the location is unrecognized, a best-effort region and an error is
 // returned.
-func GetRegion(ip netip.Addr, r ip2location.Record) (string, error) {
+func GetRegion(ip netip.Addr, r ip2x.Record) (string, error) {
 	// RFC 1918/4193 -> "Local"
 	if ip.IsPrivate() {
 		return "Local", nil
 	}
 
+	country, ok := r.GetString(ip2x.CountryCode)
+	if !ok {
+		return "", fmt.Errorf("missing country field in ip2location data")
+	}
+
+	region, ok := r.GetString(ip2x.Region)
+	if !ok {
+		return "", fmt.Errorf("missing region field in ip2location data")
+	}
+
 	// for Canada, use the 3-region model
-	if r.CountryShort == "CA" {
+	if country == "CA" {
 		// province names: https://www.ip2location.com/free/iso3166-2 @ 2022-11-20
 		// 3-region model: https://en.wikipedia.org/wiki/List_of_regions_of_Canada @ 2022-11-20
-		switch r.Region {
+		switch region {
 		case "British Columbia", "Alberta", "Saskatchewan", "Manitoba":
 			return "CA West", nil
 
@@ -50,15 +60,15 @@ func GetRegion(ip netip.Addr, r ip2location.Record) (string, error) {
 			return "CA", nil
 
 		default:
-			return "CA", fmt.Errorf("unhandled Canada province %q", r.Region)
+			return "CA", fmt.Errorf("unhandled Canada province %q", region)
 		}
 	}
 
 	// for the United States, use the census regions
-	if r.CountryShort == "US" {
+	if country == "US" {
 		// state names: https://www.ip2location.com/free/iso3166-2 @ 2022-11-20
 		// census region: https://www2.census.gov/geo/pdfs/maps-data/maps/reference/us_regdiv.pdf @ 2022-11-20
-		switch r.Region {
+		switch region {
 		case "Connecticut", "Maine", "Massachusetts", "New Hampshire",
 			"Rhode Island", "Vermont", "New Jersey", "New York", "Pennsylvania":
 			return "US East", nil
@@ -83,34 +93,34 @@ func GetRegion(ip netip.Addr, r ip2location.Record) (string, error) {
 			return "US", nil
 
 		default:
-			return "US", fmt.Errorf("unhandled US state %q", r.Region)
+			return "US", fmt.Errorf("unhandled US state %q", region)
 		}
 	}
 
 	// for China, use "CN"
-	if r.CountryShort == "CN" {
+	if country == "CN" {
 		return "CN", nil
 	}
 
 	// for Russia, use "RU"
-	if r.CountryShort == "RU" {
+	if country == "RU" {
 		return "RU", nil
 	}
 
 	// for Antartica, use Antartica (this won't really get hit in practice though)
-	if r.CountryShort == "AQ" {
+	if country == "AQ" {
 		return "Antartica", nil
 	}
 
 	// for Taiwan, use "Asia East" (it isn't in the UN M.49 mapping)
-	if r.CountryShort == "TW" {
+	if country == "TW" {
 		return "Asia East", nil
 	}
 
 	// the rest are based on the M.49 mapping
-	m49region, m49subRegion, _, ok := m49(r.CountryShort)
+	m49region, m49subRegion, _, ok := m49(country)
 	if !ok {
-		return "", fmt.Errorf("unhandled UN M.49 mapping for ISO 3166-2 code %q", r.CountryShort)
+		return "", fmt.Errorf("unhandled UN M.49 mapping for ISO 3166-2 code %q", country)
 	}
 
 	// for other parts of America, use "Americas"
