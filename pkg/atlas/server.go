@@ -21,7 +21,7 @@ import (
 
 	"github.com/VictoriaMetrics/metrics"
 	"github.com/klauspost/compress/gzip"
-	"github.com/pg9182/ip2x/ip2location"
+	"github.com/pg9182/ip2x"
 	"github.com/r2northstar/atlas/db/atlasdb"
 	"github.com/r2northstar/atlas/db/pdatadb"
 	"github.com/r2northstar/atlas/pkg/api/api0"
@@ -630,15 +630,15 @@ func configureMainMenuPromos(c *Config) (func(*http.Request) api0.MainMenuPromos
 	}
 }
 
-func configureIP2Location(c *Config) (*ip2locationMgr, error) {
+func configureIP2Location(c *Config) (*ip2xMgr, error) {
 	if c.IP2Location == "" {
 		return nil, nil
 	}
-	mgr := new(ip2locationMgr)
+	mgr := new(ip2xMgr)
 	return mgr, mgr.Load(c.IP2Location)
 }
 
-func configureRegionMap(c *Config) (func(netip.Addr, ip2location.Record) (string, error), error) {
+func configureRegionMap(c *Config) (func(netip.Addr, ip2x.Record) (string, error), error) {
 	switch m := c.API0_RegionMap; m {
 	case "", "none":
 		return nil, nil
