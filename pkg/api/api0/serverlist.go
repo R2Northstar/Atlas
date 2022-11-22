@@ -311,7 +311,7 @@ func csJSON(ss []*Server, est int) ([]byte, int) {
 		b = append(b, srv.ID...)
 		b = append(b, `","name":`...)
 		b = appendJSONString(b, srv.Name)
-		if srv.Region != "" {
+		if srv.Region != "" && srv.Password == "" {
 			b = append(b, `,"region":`...)
 			b = appendJSONString(b, srv.Region)
 		}
