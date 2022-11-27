@@ -28,8 +28,8 @@ github.com/mattn/go-sqlite3 v1.14.16 h1:yOQRA0RpS5PFz/oikGwBEqvAWhWg5ufRz4ETLjwp
 github.com/mattn/go-sqlite3 v1.14.16/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
 github.com/mmcloughlin/geohash v0.10.0 h1:9w1HchfDfdeLc+jFEf/04D27KP7E2QmpDu52wPbJWRE=
 github.com/mmcloughlin/geohash v0.10.0/go.mod h1:oNZxQo5yWJh0eMQEP/8hwQuVx9Z9tjwFUqcTB1SmG0c=
-github.com/pg9182/ip2x v0.1.1 h1:J++3N8OV+k7zK3xAY5mSZWE73EbwgqIxpzeloL7Zqyk=
-github.com/pg9182/ip2x v0.1.1/go.mod h1:iJzts7yWZDWUaldqNGFVOZ0MW9uYrGk1hv9R/wTJdNQ=
+github.com/pg9182/ip2x v0.2.4 h1:y7i4JYvYSGxAt/1pI3MdfZoXu0NBVB9GuygFM7Xngk8=
+github.com/pg9182/ip2x v0.2.4/go.mod h1:iJzts7yWZDWUaldqNGFVOZ0MW9uYrGk1hv9R/wTJdNQ=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/rs/xid v1.4.0 h1:qd7wPTDkN6KQx2VmMBLrpHkiyQwgFXRnkOLacUiaSNY=
 github.com/rs/xid v1.4.0/go.mod h1:trrq9SKmegXys3aeAKXMUTdJsYXVwGY3RLcfgqegfbg=
