@@ -172,7 +172,8 @@ type Config struct {
 	// country and region fields. The database must not be modified while atlas
 	// is running, but it can be replaced (and a reload can be triggered with
 	// SIGHUP). If not provided, geolocation-dependent features like server
-	// regions will not be enabled.
+	// regions and geo metrics will not be enabled. If it doesn't include latlon
+	// info, geo metrics will be disabled too.
 	IP2Location string `env:"ATLAS_IP2LOCATION"`
 
 	// For sd-notify.

@@ -763,12 +763,13 @@ func (s *Server) HandleSIGHUP() {
 // serveRest handles endpoints not handled by the API.
 func (s *Server) serveRest(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/metrics" {
-		var internal bool
+		var internal, geo bool
 		if s := s.MetricsSecret; s != "" {
 			if r.URL.Query().Get("secret") == s {
 				internal = true
 			}
 		}
+		geo = r.URL.Query().Has("geo")
 
 		var ms []func(io.Writer)
 		if internal {
@@ -776,6 +777,10 @@ func (s *Server) serveRest(w http.ResponseWriter, r *http.Request) {
 			ms = append(ms, s.API0.WritePrometheus)
 		}
 		ms = append(ms, s.API0.ServerList.WritePrometheus)
+		if internal && geo {
+			ms = append(ms, s.API0.WritePrometheusGeo)
+			ms = append(ms, s.API0.ServerList.WritePrometheusGeo)
+		}
 
 		var b bytes.Buffer
 		for i, m := range ms {
