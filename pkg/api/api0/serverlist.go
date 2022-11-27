@@ -17,6 +17,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/klauspost/compress/gzip"
+	"github.com/r2northstar/atlas/pkg/metricsx"
 	"github.com/r2northstar/atlas/pkg/nstypes"
 )
 
@@ -84,6 +85,9 @@ type Server struct {
 	Description string
 	Password    string // blank for none
 
+	Latitude  float64
+	Longitude float64
+
 	VerificationDeadline time.Time // zero once verified
 	LastHeartbeat        time.Time
 
@@ -124,6 +128,8 @@ type ServerUpdate struct {
 	Name        *string
 	Region      *string
 	Description *string
+	Latitude    *float64
+	Longitude   *float64
 	PlayerCount *int
 	MaxPlayers  *int
 	Map         *string
@@ -681,6 +687,31 @@ func (s *ServerList) WritePrometheus(w io.Writer) {
 	w.Write(s.GetMetrics())
 }
 
+// WritePrometheusGeo writes location metrics for s to w.
+func (s *ServerList) WritePrometheusGeo(w io.Writer) {
+	t := s.now()
+
+	// take a read lock on the server list
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.servers1 == nil {
+		return
+	}
+
+	ctr := metricsx.NewGeoCounter2(`atlas_api0sl_map`)
+	for _, srv := range s.servers1 {
+		if s.serverState(srv, t) == serverListStateAlive {
+			if srv.Latitude != 0 && srv.Longitude != 0 {
+				ctr.Inc(srv.Latitude, srv.Longitude)
+			} else {
+				ctr.IncUnknown()
+			}
+		}
+	}
+	ctr.WritePrometheus(w)
+}
+
 // GetLiveServers loops over live (i.e., not dead/ghost) servers until fn
 // returns false. The order of the servers is non-deterministic.
 func (s *ServerList) GetLiveServers(fn func(*Server) bool) {
@@ -819,6 +850,12 @@ func (s *ServerList) ServerHybridUpdatePut(u *ServerUpdate, c *Server, l ServerL
 				}
 				if u.Description != nil {
 					esrv.Description, changed = *u.Description, true
+				}
+				if u.Latitude != nil {
+					esrv.Latitude, changed = *u.Latitude, true
+				}
+				if u.Longitude != nil {
+					esrv.Longitude, changed = *u.Longitude, true
 				}
 				if u.Map != nil {
 					esrv.Map, changed = *u.Map, true

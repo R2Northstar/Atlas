@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/VictoriaMetrics/metrics"
+	"github.com/r2northstar/atlas/pkg/metricsx"
 )
 
 // note: for results, fail_ prefix is for errors which are likely a problem with the backend, and reject_ are for client errors
@@ -55,7 +56,8 @@ type apiMetrics struct {
 		success                 func(version string) *metrics.Counter
 		http_method_not_allowed *metrics.Counter
 	}
-	client_originauth_requests_total struct {
+	client_mainmenupromos_requests_map *metricsx.GeoCounter2
+	client_originauth_requests_total   struct {
 		success                     *metrics.Counter
 		reject_bad_request          *metrics.Counter
 		reject_versiongate          *metrics.Counter
@@ -68,6 +70,7 @@ type apiMetrics struct {
 		fail_other_error            *metrics.Counter
 		http_method_not_allowed     *metrics.Counter
 	}
+	client_originauth_requests_map                            *metricsx.GeoCounter2
 	client_originauth_stryder_auth_duration_seconds           *metrics.Histogram
 	client_originauth_origin_username_lookup_duration_seconds *metrics.Histogram
 	client_originauth_origin_username_lookup_calls_total      struct {
@@ -105,6 +108,10 @@ type apiMetrics struct {
 	client_servers_requests_total struct {
 		success                 func(version string) *metrics.Counter
 		http_method_not_allowed *metrics.Counter
+	}
+	client_servers_requests_map struct {
+		northstar *metricsx.GeoCounter2
+		other     *metricsx.GeoCounter2
 	}
 	client_servers_response_size_bytes struct {
 		gzip *metrics.Histogram
@@ -163,6 +170,13 @@ func (h *Handler) WritePrometheus(w io.Writer) {
 	h.m().set.WritePrometheus(w)
 }
 
+func (h *Handler) WritePrometheusGeo(w io.Writer) {
+	h.m().client_mainmenupromos_requests_map.WritePrometheus(w)
+	h.m().client_originauth_requests_map.WritePrometheus(w)
+	h.m().client_servers_requests_map.northstar.WritePrometheus(w)
+	h.m().client_servers_requests_map.other.WritePrometheus(w)
+}
+
 // m gets metrics objects for h.
 //
 // We use it instead of using a *metrics.Set directly because:
@@ -213,6 +227,7 @@ func (h *Handler) m() *apiMetrics {
 		}
 		mo.client_mainmenupromos_requests_total.success("unknown")
 		mo.client_mainmenupromos_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_client_servers_response_size_bytes{result="http_method_not_allowed"}`)
+		mo.client_mainmenupromos_requests_map = metricsx.NewGeoCounter2(`atlas_api0_client_mainmenupromos_requests_map`)
 		mo.client_originauth_requests_total.success = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="success"}`)
 		mo.client_originauth_requests_total.reject_bad_request = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="reject_bad_request"}`)
 		mo.client_originauth_requests_total.reject_versiongate = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="reject_versiongate"}`)
@@ -224,6 +239,7 @@ func (h *Handler) m() *apiMetrics {
 		mo.client_originauth_requests_total.fail_stryder_error = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="fail_stryder_error"}`)
 		mo.client_originauth_requests_total.fail_other_error = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="fail_other_error"}`)
 		mo.client_originauth_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="http_method_not_allowed"}`)
+		mo.client_originauth_requests_map = metricsx.NewGeoCounter2(`atlas_api0_client_originauth_requests_map`)
 		mo.client_originauth_stryder_auth_duration_seconds = mo.set.NewHistogram(`atlas_api0_client_originauth_stryder_auth_duration_seconds`)
 		mo.client_originauth_origin_username_lookup_duration_seconds = mo.set.NewHistogram(`atlas_api0_client_originauth_origin_username_lookup_duration_seconds`)
 		mo.client_originauth_origin_username_lookup_calls_total.success = mo.set.NewCounter(`atlas_api0_client_originauth_origin_username_lookup_calls_total{result="success"}`)
@@ -260,6 +276,8 @@ func (h *Handler) m() *apiMetrics {
 		}
 		mo.client_servers_requests_total.success("unknown")
 		mo.client_servers_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_client_servers_requests_total{result="http_method_not_allowed"}`)
+		mo.client_servers_requests_map.northstar = metricsx.NewGeoCounter2(`atlas_api0_client_servers_requests_map{user_agent="northstar"}`)
+		mo.client_servers_requests_map.other = metricsx.NewGeoCounter2(`atlas_api0_client_servers_requests_map{user_agent="other"}`)
 		mo.client_servers_response_size_bytes.gzip = mo.set.NewHistogram(`atlas_api0_client_servers_response_size_bytes{compression="gzip"}`)
 		mo.client_servers_response_size_bytes.none = mo.set.NewHistogram(`atlas_api0_client_servers_response_size_bytes{compression="none"}`)
 		mo.server_upsert_requests_total.success_updated = func(action string) *metrics.Counter {

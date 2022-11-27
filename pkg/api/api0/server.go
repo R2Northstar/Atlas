@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pg9182/ip2x"
 	"github.com/r2northstar/atlas/pkg/a2s"
 	"github.com/r2northstar/atlas/pkg/api/api0/api0gameserver"
 	"github.com/rs/zerolog/hlog"
@@ -161,6 +162,22 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	if canCreate || canUpdate {
 		if h.LookupIP != nil && h.GetRegion != nil {
 			if rec, err := h.LookupIP(raddr.Addr()); err == nil {
+				var lat, lon float64
+				if v, _ := rec.GetFloat32(ip2x.Latitude); v != 0 {
+					lat = float64(v)
+				}
+				if v, _ := rec.GetFloat32(ip2x.Longitude); v != 0 {
+					lon = float64(v)
+				}
+				if canCreate {
+					s.Latitude = lat
+					s.Longitude = lon
+				}
+				if canUpdate {
+					u.Latitude = &lat
+					u.Longitude = &lon
+				}
+
 				region, err := h.GetRegion(raddr.Addr(), rec)
 				if err == nil || region != "" { // if an error occurs, we may still have a best-effort region
 					if canCreate {
