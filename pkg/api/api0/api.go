@@ -26,6 +26,7 @@ import (
 
 	"github.com/klauspost/compress/gzip"
 	"github.com/pg9182/ip2x"
+	"github.com/r2northstar/atlas/pkg/metricsx"
 	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/rs/zerolog/hlog"
 	"golang.org/x/mod/semver"
@@ -82,7 +83,8 @@ type Handler struct {
 	AllowGameServerIPv6 bool
 
 	// LookupIP looks up an IP2Location record for an IP. If not provided,
-	// server regions are disabled.
+	// server regions and geo metrics are disabled. If it doesn't include latlon
+	// info, geo metrics will be disabled too.
 	LookupIP func(netip.Addr) (ip2x.Record, error)
 
 	// GetRegion gets the region name from an IP2Location record. If not
@@ -210,6 +212,28 @@ func (h *Handler) extractLauncherVersion(r *http.Request) string {
 		return rver[1:]
 	}
 	return ""
+}
+
+// geoCounter2 increments a [metricsx.GeoCounter2] for the location of r.
+func (h *Handler) geoCounter2(r *http.Request, ctr *metricsx.GeoCounter2) {
+	a, err := netip.ParseAddrPort(r.RemoteAddr)
+	if err != nil {
+		return
+	}
+
+	c, err := h.LookupIP(a.Addr())
+	if err != nil {
+		return
+	}
+
+	lat, _ := c.GetFloat32(ip2x.Latitude)
+	lon, _ := c.GetFloat32(ip2x.Longitude)
+
+	if lat != 0 && lon != 0 {
+		ctr.Inc(float64(lat), float64(lon))
+	} else {
+		ctr.IncUnknown()
+	}
 }
 
 // respFail writes a {success:false,error:ErrorObj} response with the provided

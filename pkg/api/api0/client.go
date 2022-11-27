@@ -62,6 +62,7 @@ func (h *Handler) handleMainMenuPromos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.m().client_mainmenupromos_requests_total.success(h.extractLauncherVersion(r)).Inc()
+	h.geoCounter2(r, h.m().client_mainmenupromos_requests_map)
 
 	var p MainMenuPromos
 	if h.MainMenuPromos != nil {
@@ -293,6 +294,8 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 	}
 
 	h.m().client_originauth_requests_total.success.Inc()
+	h.geoCounter2(r, h.m().client_originauth_requests_map)
+
 	respJSON(w, r, http.StatusOK, map[string]any{
 		"success": true,
 		"token":   acct.AuthToken,
@@ -610,7 +613,14 @@ func (h *Handler) handleClientServers(w http.ResponseWriter, r *http.Request) {
 		h.m().client_servers_response_size_bytes.none.Update(float64(len(buf)))
 	}
 
-	h.m().client_servers_requests_total.success(h.extractLauncherVersion(r)).Inc()
+	lver := h.extractLauncherVersion(r)
+	h.m().client_servers_requests_total.success(lver).Inc()
+	if lver != "" {
+		h.geoCounter2(r, h.m().client_servers_requests_map.northstar)
+	} else {
+		h.geoCounter2(r, h.m().client_servers_requests_map.other)
+	}
+
 	w.Header().Set("Content-Length", strconv.Itoa(len(buf)))
 	w.WriteHeader(http.StatusOK)
 	if r.Method != http.MethodHead {
