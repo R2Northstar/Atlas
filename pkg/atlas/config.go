@@ -2,9 +2,13 @@
 package atlas
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"os/user"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -39,8 +43,10 @@ type Config struct {
 
 	// Comma-separated list of paths to SSL server certificates to use for SSL.
 	// The .crt and .key extensions will be appended automatically. If not
-	// provided, SSL is disabled.
-	ServerCerts []string `env:"ATLAS_SERVER_CERTS"`
+	// provided, SSL is disabled. If a path begins with @, it is treated as a
+	// systemd credential name (i.e., @mycert expands to
+	// $CREDENTIALS_DIRECTORY/mycert.{crt,key}).
+	ServerCerts []string `env:"ATLAS_SERVER_CERTS" sdcreds:"expand,list"`
 
 	// Comma-separated list of paths to SSL CA certificates to use for SSL
 	// client authentication. No effect is ServerCerts is not provided. If not
@@ -117,8 +123,9 @@ type Config struct {
 
 	// Experimental option to use deterministic server ID generation based on
 	// the provided secret and the server info. The secret is used to prevent
-	// brute-forcing server IDs from the ID and known server info.
-	API0_ServerList_ExperimentalDeterministicServerIDSecret string `env:"ATLAS_API0_SERVERLIST_EXPERIMENTAL_DETERMINISTIC_SERVER_ID_SECRET"`
+	// brute-forcing server IDs from the ID and known server info. If it begins
+	// with @, it is treated as the name of a systemd credential to load.
+	API0_ServerList_ExperimentalDeterministicServerIDSecret string `env:"ATLAS_API0_SERVERLIST_EXPERIMENTAL_DETERMINISTIC_SERVER_ID_SECRET" sdcreds:"load,trimspace"`
 
 	// The storage to use for accounts:
 	//  - memory
@@ -135,15 +142,18 @@ type Config struct {
 	//  - file:/path/to/mainmenupromos.json
 	API0_MainMenuPromos string `env:"ATLAS_API0_MAINMENUPROMOS=none"`
 
-	// The email address to use for Origin login. If not provided, usernames are not
-	// resolved during authentication.
-	OriginEmail string `env:"ATLAS_ORIGIN_EMAIL"`
+	// The email address to use for Origin login. If not provided, usernames are
+	// not resolved during authentication. If it begins with @, it is treated
+	// as the name of a systemd credential to load.
+	OriginEmail string `env:"ATLAS_ORIGIN_EMAIL" sdcreds:"load,trimspace"`
 
-	// The password for Origin login.
-	OriginPassword string `env:"ATLAS_ORIGIN_PASSWORD"`
+	// The password for Origin login. If it begins with @, it is treated as the
+	// name of a systemd credential to load.
+	OriginPassword string `env:"ATLAS_ORIGIN_PASSWORD" sdcreds:"load,trimspace"`
 
-	// The base32 TOTP secret for Origin login.
-	OriginTOTP string `env:"ATLAS_ORIGIN_TOTP"`
+	// The base32 TOTP secret for Origin login. If it begins with @, it is
+	// treated as the name of a systemd credential to load.
+	OriginTOTP string `env:"ATLAS_ORIGIN_TOTP" sdcreds:"load,trimspace"`
 
 	// OriginHARGzip controls whether to compress saved HAR archives.
 	OriginHARGzip bool `env:"ATLAS_ORIGIN_HAR_GZIP"`
@@ -160,13 +170,14 @@ type Config struct {
 	// restarts. Highly recommended.
 	OriginPersist string `env:"ATLAS_ORIGIN_PERSIST"`
 
-	// Secret token for accessing internal metrics.
-	MetricsSecret string `env:"ATLAS_METRICS_SECRET"`
+	// Secret token for accessing internal metrics. If it begins with @, it is
+	// treated as the name of a systemd credential to load.
+	MetricsSecret string `env:"ATLAS_METRICS_SECRET" sdcreds:"load,trimspace"`
 
 	// The path to use for static website files. If a file named redirects.json
 	// exists, it is read at startup, reloaded on SIGHUP, and used as a mapping
 	// of top-level names to URLs.
-	Web string `env:"ATLAS_WEB="`
+	Web string `env:"ATLAS_WEB"`
 
 	// The path to the IP2Location database, which should contain at least the
 	// country and region fields. The database must not be modified while atlas
@@ -200,6 +211,9 @@ func (c *Config) UnmarshalEnv(es []string, incremental bool) error {
 		if !ok {
 			continue
 		}
+
+		// get the default value, and check if it can be explicitly set to an
+		// empty value
 		var unsettable bool
 		key, val, _ := strings.Cut(env, "=")
 		if strings.HasSuffix(key, "?") {
@@ -207,13 +221,27 @@ func (c *Config) UnmarshalEnv(es []string, incremental bool) error {
 			unsettable = true
 		}
 		if v, exists := em[key]; exists {
+			// expand credentials before attempting to set the var or checking
+			// if it can be set to an empty value
+			v, err := sdcreds(v, ctf.Tag.Get("sdcreds"))
+			if err != nil {
+				return fmt.Errorf("env %s: expand systemd credentials: %w", key, err)
+			}
+
+			// if the value is non-empty or we are allowed to set it to an empty
+			// value, set it, otherwise simply keep the default
 			if unsettable || v != "" {
 				val = v
 			}
+
+			// we're finished processing this var
 			delete(em, key)
 		} else if incremental {
+			// if we're only doing incremental updates, don't use the default
+			// value if the current env list doesn't have the var
 			continue
 		}
+
 		switch cvf := cv.FieldByName(ctf.Name); cvf.Interface().(type) {
 		case string:
 			cvf.SetString(val)
@@ -332,4 +360,100 @@ func parseUIDGID(s string) (UIDGID, error) {
 		}
 	}
 	return u, nil
+}
+
+// sdcreds expands systemd credentials in v (prefixed by "@") according to tag,
+// which consists of a mode followed by optional flags.
+//
+// Mode:
+//   - (none): return the original value
+//   - expand: expand to the cred path
+//   - load: read the cred contents
+//
+// Args:
+//   - trimspace (load): trim leading/trailing whitespace from the cred value
+//   - list (expand, load): split v by "," and process each item individually
+func sdcreds(v string, tag string) (string, error) {
+	if tag == "" {
+		return v, nil
+	}
+
+	var mode struct {
+		expand bool
+		load   bool
+	}
+	var opts struct {
+		trimspace bool
+		list      bool
+	}
+
+	tag, args, _ := strings.Cut(tag, ",")
+	switch tag {
+	case "expand":
+		mode.expand = true
+	case "load":
+		mode.load = true
+	default:
+		return "", fmt.Errorf("invalid struct tag %q", tag)
+	}
+	for _, arg := range strings.Split(args, ",") {
+		switch {
+		case mode.load && arg == "trimspace":
+			opts.trimspace = true
+		case (mode.load || mode.expand) && arg == "list":
+			opts.list = true
+		default:
+			return "", fmt.Errorf("invalid struct tag %q arg %q", tag, arg)
+		}
+	}
+
+	var vs []string
+	if opts.list {
+		vs = strings.Split(v, ",")
+	} else {
+		vs = []string{v}
+	}
+
+	vsi := make([]int, 0, len(vs))
+	for i, x := range vs {
+		if len(x) != 0 && x[0] == '@' {
+			vsi = append(vsi, i)
+		}
+	}
+	if len(vsi) == 0 {
+		return v, nil
+	}
+	if mode.expand || mode.load {
+		crd := os.Getenv("CREDENTIALS_DIRECTORY")
+		if crd == "" {
+			return "", fmt.Errorf("expand %q: systemd CREDENTIALS_DIRECTORY env var not set", v)
+		}
+		if !filepath.IsAbs(crd) {
+			return "", fmt.Errorf("expand %q: systemd CREDENTIALS_DIRECTORY=%q env var is not an absolute path", v, crd)
+		}
+		for _, i := range vsi {
+			cred := vs[i][1:]
+			if strings.Contains(cred, "/") || strings.Contains(cred, string(filepath.Separator)) {
+				return "", fmt.Errorf("expand %q: invalid credential name %q", v, cred)
+			}
+			vs[i] = filepath.Join(crd, cred)
+		}
+	}
+	if mode.load {
+		for _, i := range vsi {
+			pt := vs[i]
+			buf, err := os.ReadFile(pt)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					return v, fmt.Errorf("expand %q: no such credential %q", v, filepath.Base(pt))
+				}
+				return v, fmt.Errorf("expand %q: read credential %q: %w", v, filepath.Base(pt), err)
+			}
+			if opts.trimspace {
+				buf = bytes.TrimSpace(buf)
+			}
+			vs[i] = string(buf)
+		}
+	}
+	return strings.Join(vs, ","), nil
 }
