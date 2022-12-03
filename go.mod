@@ -11,7 +11,7 @@ require (
 	github.com/klauspost/compress v1.15.12
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/mmcloughlin/geohash v0.10.0
-	github.com/pg9182/ip2x v0.2.4
+	github.com/pg9182/ip2x v0.3.0
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/mod v0.7.0
