@@ -257,10 +257,14 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	if acct != nil && username != "" && acct.Username != username {
+		hlog.FromRequest(r).Info().Uint64("uid", acct.UID).Str("username", username).Str("prev_username", acct.Username).Msg("got updated username from origin")
+	}
 	if acct == nil {
 		acct = &Account{
 			UID: uid,
 		}
+		hlog.FromRequest(r).Info().Uint64("uid", acct.UID).Str("username", username).Msg("created new account")
 	}
 	if username != "" {
 		acct.Username = username
