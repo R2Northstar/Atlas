@@ -50,8 +50,15 @@ This document describes the recommended setup for an non-containerized Atlas ser
 4. Set up the Atlas service user and group.
 
     ```bash
-    # create the user/group
-    sudo useradd --system --shell /usr/sbin/nologin --home-dir /var/lib/atlas atlas
+    sudo nano /etc/sysusers.d/atlas.conf
+    ```
+
+    ```
+    u atlas - "Atlas" /var/lib/atlas /usr/sbin/nologin
+    ```
+
+    ```bash
+    sudo systemd-sysusers
     ```
 
     ```bash
