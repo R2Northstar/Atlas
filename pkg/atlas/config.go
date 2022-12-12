@@ -110,6 +110,9 @@ type Config struct {
 	// "none", region maps are disabled. Options: none, default.
 	API0_RegionMap string `env:"ATLAS_API0_REGION_MAP?=default"`
 
+	// Region mapping overrides. Comma-separated list of prefix=region.
+	API0_RegionMap_Override []string `env:"ATLAS_API0_REGION_MAP_OVERRIDE"`
+
 	// The time after registration for a gameserver to complete verification by.
 	API0_ServerList_VerifyTime time.Duration `env:"ATLAS_API0_SERVERLIST_VERIFY_TIME=10s"`
 
