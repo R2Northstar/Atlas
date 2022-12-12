@@ -176,7 +176,8 @@ type Config struct {
 
 	// The path to use for static website files. If a file named redirects.json
 	// exists, it is read at startup, reloaded on SIGHUP, and used as a mapping
-	// of top-level names to URLs.
+	// of top-level names to URLs. Custom error pages can be named
+	// {status}.html.
 	Web string `env:"ATLAS_WEB"`
 
 	// The path to the IP2Location database, which should contain at least the
