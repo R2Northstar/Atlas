@@ -120,3 +120,48 @@ func (ms *middlewares) Then(h http.Handler) http.Handler {
 	}
 	return h
 }
+
+type statusInterceptor struct {
+	Handler http.Handler
+	Error   func(s int) http.Handler
+}
+
+type statusInterceptorResponse struct {
+	i    *statusInterceptor
+	w    http.ResponseWriter
+	r    *http.Request
+	hdr  bool
+	done bool
+}
+
+func (i *statusInterceptor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w = &statusInterceptorResponse{i: i, w: w, r: r}
+	i.Handler.ServeHTTP(w, r)
+}
+
+func (i *statusInterceptorResponse) Header() http.Header {
+	return i.w.Header()
+}
+
+func (i *statusInterceptorResponse) Write(b []byte) (int, error) {
+	if i.done {
+		return 0, nil
+	}
+	i.hdr = true
+	return i.w.Write(b)
+}
+
+func (i *statusInterceptorResponse) WriteHeader(statusCode int) {
+	if i.done {
+		return
+	}
+	if !i.hdr {
+		if h := i.i.Error(statusCode); h != nil {
+			i.done, i.hdr = true, true
+			h.ServeHTTP(i.w, i.r)
+			return
+		}
+	}
+	i.hdr = true
+	i.w.WriteHeader(statusCode)
+}

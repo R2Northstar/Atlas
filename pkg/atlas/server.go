@@ -71,6 +71,7 @@ func NewServer(c *Config) (*Server, error) {
 	if c.Web != "" {
 		if p, err := filepath.Abs(c.Web); err == nil {
 			var redirects sync.Map
+			var errpages sync.Map
 
 			var err1 error
 			reload := func() {
@@ -92,18 +93,72 @@ func NewServer(c *Config) (*Server, error) {
 						redirects.Store(strings.Trim(p, "/"), u)
 					}
 				}
+				if es, err := os.ReadDir(filepath.Join(p)); err != nil {
+					if !errors.Is(err, os.ErrNotExist) {
+						err1 = fmt.Errorf("read error pages: %w", err)
+						return
+					}
+				} else {
+					sc := map[int][]byte{}
+					for _, e := range es {
+						a, b, _ := strings.Cut(e.Name(), ".")
+						if b != "html" {
+							continue
+						}
+						s, err := strconv.ParseUint(a, 10, 64)
+						if err != nil || s < 400 || s >= 600 {
+							continue
+						}
+						c, err := os.ReadFile(filepath.Join(p, e.Name()))
+						if err != nil {
+							err1 = fmt.Errorf("read error page for %d: %w", s, err)
+							return
+						}
+						sc[int(s)] = c
+					}
+					errpages.Range(func(key, _ any) bool {
+						errpages.Delete(key)
+						return true
+					})
+					for s, c := range sc {
+						errpages.Store(s, c)
+					}
+				}
+
 			}
 			if reload(); err1 != nil {
 				return nil, fmt.Errorf("initialize web: %w", err)
 			}
 			s.reload = append(s.reload, reload)
 
+			fsrv := &statusInterceptor{
+				Handler: http.FileServer(http.Dir(c.Web)),
+				Error: func(s int) http.Handler {
+					switch s {
+					case http.StatusNotFound, http.StatusInternalServerError, http.StatusForbidden:
+						if c, ok := errpages.Load(s); ok {
+							b := c.([]byte)
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("Cache-Control", "private, no-cache, no-store, max-age=0, must-revalidate")
+								w.Header().Set("Expires", "0")
+								w.Header().Set("Pragma", "no-cache")
+								w.Header().Set("Content-Type", "text/html; charset=utf-8")
+								w.Header().Set("Content-Length", strconv.Itoa(len(b)))
+								w.WriteHeader(s)
+								w.Write(b)
+							})
+						}
+					}
+					return nil
+				},
+			}
+
 			s.Web = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if v, ok := redirects.Load(strings.Trim(r.URL.Path, "/")); ok {
 					http.Redirect(w, r, v.(string), http.StatusTemporaryRedirect)
 					return
 				}
-				http.FileServer(http.Dir(c.Web)).ServeHTTP(w, r)
+				fsrv.ServeHTTP(w, r)
 			})
 		} else {
 			return nil, fmt.Errorf("initialize web: resolve path: %w", err)
