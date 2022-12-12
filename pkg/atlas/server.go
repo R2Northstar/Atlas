@@ -693,15 +693,55 @@ func configureIP2Location(c *Config) (*ip2xMgr, error) {
 	return mgr, mgr.Load(c.IP2Location)
 }
 
-func configureRegionMap(c *Config) (func(netip.Addr, ip2x.Record) (string, error), error) {
+func configureRegionMap(c *Config) (fn func(netip.Addr, ip2x.Record) (string, error), err error) {
 	switch m := c.API0_RegionMap; m {
 	case "", "none":
-		return nil, nil
+		fn = nil
 	case "default":
-		return regionmap.GetRegion, nil
+		fn = regionmap.GetRegion
 	default:
 		return nil, fmt.Errorf("unknown region map type %q", m)
 	}
+	if len(c.API0_RegionMap_Override) != 0 {
+		type regionMapOverride struct {
+			Prefix netip.Prefix
+			Region string
+		}
+		var mos []regionMapOverride
+		for _, x := range c.API0_RegionMap_Override {
+			a, r, ok := strings.Cut(x, "=")
+			if !ok {
+				return nil, fmt.Errorf("parse region override %q: missing equals sign", x)
+			}
+			if strings.ContainsRune(a, '/') {
+				if pfx, err := netip.ParsePrefix(a); err == nil {
+					mos = append(mos, regionMapOverride{pfx, r})
+				} else {
+					return nil, fmt.Errorf("parse region override %q: invalid prefix: %w", x, err)
+				}
+			} else {
+				if x, err := netip.ParseAddr(a); err == nil {
+					if pfx, err := x.Prefix(x.BitLen()); err == nil {
+						mos = append(mos, regionMapOverride{pfx, r})
+					} else {
+						panic(err)
+					}
+				} else {
+					return nil, fmt.Errorf("parse region override %q: invalid prefix: %w", x, err)
+				}
+			}
+		}
+		next := fn
+		fn = func(a netip.Addr, r ip2x.Record) (string, error) {
+			for _, mo := range mos {
+				if mo.Prefix.Contains(a) {
+					return mo.Region, nil
+				}
+			}
+			return next(a, r)
+		}
+	}
+	return
 }
 
 // Run runs the server, shutting it down gracefully when ctx is canceled, then
