@@ -43,6 +43,53 @@ This document describes the recommended setup for an non-containerized Atlas ser
     sudo git -C /usr/share/northstartf pull
     ```
 
+    To automatically update the website periodically:
+
+    ```bash
+    sudo nano /etc/systemd/system/northstartf-pull.service
+    ```
+
+    ```ini
+    [Unit]
+    Description=Pull NorthstarTF website
+
+    [Service]
+    Type=oneshot
+
+    User=root
+    Group=root
+
+    WorkingDirectory=/usr/share/northstartf
+    ExecStart=git -c pull.ff=only pull
+
+    ProtectSystem=strict
+    ProtectHome=yes
+    ReadWritePaths=/usr/share/northstartf
+    PrivateTmp=yes
+    PrivateMounts=yes
+    ```
+
+    ```bash
+    sudo nano /etc/systemd/system/northstartf-pull.timer
+    ```
+
+    ```ini
+    [Unit]
+    Description=Periodically pull NorthstarTF website
+
+    [Timer]
+    OnCalendar=hourly
+    RandomizedDelaySec=5m
+
+    [Install]
+    WantedBy=timers.target
+    ```
+
+    ```bash
+    sudo systemctl enable --now northstartf-pull.timer
+    ```
+
+
 3. Download the [IP2Location](https://lite.ip2location.com) DB5 (or higher) database.
 
     If you update it later while Atlas is running, you will need to run `/usr/bin/systemctl kill --signal=SIGHUP atlas.service`. 
