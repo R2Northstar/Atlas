@@ -413,3 +413,129 @@ scrape_configs:
 Note: VictoriaMetrics generally performs better than Prometheus.
 
 <!-- TODO: sample dashboards and JSON. -->
+
+## Automatic database backups
+
+You can use [Litestream](https://litestream.io/) for real-time database backups.
+
+### Installation
+
+1. Install Litestream.
+
+    ```bash
+    wget -qO- https://github.com/benbjohnson/litestream/releases/download/v0.3.9/litestream-v0.3.9-linux-amd64-static.tar.gz | sudo tar xzvf - --no-same-owner -C /usr/local/bin litestream
+    ```
+
+2. Create a template systemd service and configuration directory.
+
+    ```bash
+    # note: we restrict the permissions since the configs usually contain credentials
+    sudo mkdir --mode=0700 /etc/litestream
+    sudo nano /etc/systemd/system/litestream@.service
+    ```
+
+    ```ini
+    [Unit]
+    Description=Litestream (%I)
+
+    [Service]
+    User=root
+    Group=root
+
+    Restart=always
+    ExecStart=/usr/local/bin/litestream replicate -config /etc/litestream/%I.yml
+
+    ProtectClock=yes
+    ProtectKernelTunables=yes
+    ProtectKernelModules=yes
+    ProtectKernelLogs=yes
+    ProtectControlGroups=yes
+    PrivateTmp=yes
+    PrivateDevices=yes
+    PrivateMounts=yes
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+
+3. Create the configuration for Atlas.
+
+    ```bash
+    sudo nano /etc/litestream/atlas.yml
+    ```
+
+    ```yml
+    dbs:
+    - path: /var/lib/atlas/accounts.db
+      replicas:
+      - url: sftp://USER:PASSWORD@SERVER:PORT/litestream/accounts
+        retention: 336h # 14d
+        snapshot-interval: 24h
+        sync-interval: 300s
+    - path: /var/lib/atlas/pdata.db
+      replicas:
+      - url: sftp://USER:PASSWORD@SERVER:PORT/litestream/pdata
+        retention: 336h # 14d
+        snapshot-interval: 24h
+        sync-interval: 300s
+    ```
+
+    Note: Update the database paths as required. You can also use other kinds of replicas or change the times as described [here](https://litestream.io/reference/config/).
+
+    Note: You will need enough free disk space to store `snapshot-interval` worth of database changes locally.
+
+4. Start litestream.
+
+    ```bash
+    sudo systemctl enable --now litestream@atlas.service
+    ```
+
+### Recovery
+
+1. Stop litestream (it will break if the database is recreated while it is running) and atlas.
+
+    ```bash
+    sudo systemctl stop litestream@atlas atlas
+    ```
+
+2. Remove the old database.
+
+    ```bash
+    sudo rm -rfv /var/lib/atlas/{,.}{accounts,pdata}.db{,-wal,-shm,-litestream}
+    ```
+
+    Note: Change the path as required.
+
+3. Restore the database.
+
+    ```bash
+    sudo litestream restore -v -config /etc/litestream/atlas.yml /var/lib/atlas/accounts.db
+    sudo litestream restore -v -config /etc/litestream/atlas.yml /var/lib/atlas/pdata.db
+    ```
+
+    Note: See [here](https://litestream.io/reference/restore/) for additional options like restoring old versions.
+
+    Note: You can also run these commands separately and use the `-o` flag to restore to a new copy of the database.
+
+4. Start litestream and atlas.
+
+    ```bash
+    sudo systemctl start litestream@atlas atlas
+    ```
+
+### Maintenance
+
+- **View backup status**
+
+  ```bash
+  sudo litestream generations -config /etc/litestream/atlas.yml /var/lib/atlas/accounts.db
+  sudo litestream generations -config /etc/litestream/atlas.yml /var/lib/atlas/pdata.db
+  sudo litestream wal -config /etc/litestream/atlas.yml /var/lib/atlas/accounts.db
+  sudo litestream wal -config /etc/litestream/atlas.yml /var/lib/atlas/pdata.db
+  ```
+
+- **Download an old version of a database**
+
+  ```bash
+  sudo litestream restore -v -config /etc/litestream/atlas.yml -timestamp 2022-12-12T06:00:00Z -o pdata-old.db /var/lib/atlas/pdata.db
+  ```
