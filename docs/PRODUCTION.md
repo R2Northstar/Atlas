@@ -7,6 +7,7 @@ This document describes the recommended setup for an non-containerized Atlas ser
 | Dependency | Version | Notes |
 | --- | --- | --- |
 | go | 1.19+ | |
+| git | | for downloading code |
 | gcc | | other C compilers will work fine |
 | systemd | 250+ | 250 is needed for credentials to work <br/> 240 is needed for data directory stuff |
 | logrotate | 3.18.0+ | older versions may also work |
@@ -209,7 +210,7 @@ This document describes the recommended setup for an non-containerized Atlas ser
     }
     ```
 
-6. Create the systemd unit:
+6. Create the systemd unit.
 
     ```bash
     sudo nano /etc/systemd/system/atlas.service
@@ -252,7 +253,7 @@ This document describes the recommended setup for an non-containerized Atlas ser
     WantedBy=multi-user.target
     ```
 
-7. Set up systemd credentials (doing it this way prevents unprivileged users from reading secrets):
+7. Set up systemd credentials (doing it this way prevents unprivileged users from reading secrets).
 
     ```bash
     sudo mkdir /etc/systemd/system/atlas.service.d
@@ -268,7 +269,7 @@ This document describes the recommended setup for an non-containerized Atlas ser
 
     Note: If you make a mistake or need to change the credentials, you'll need to remove the corresponding lines from `credentials.conf`.
 
-8. Set up logrotate (optional):
+8. Set up logrotate (optional).
 
     ```bash
     sudo nano /etc/logrotate.d/atlas
@@ -296,18 +297,14 @@ This document describes the recommended setup for an non-containerized Atlas ser
 
     Note: `delaycompress` is needed to prevent the re-open from being racy.
 
-    ```bash
-    sudo systemctl restart logrotate
-    ```
-
-9. Import data from the old [NorthstarMasterServer](https://github.com/R2Northstar/NorthstarMasterServer) database (optional):
+9. Import data from the old [NorthstarMasterServer](https://github.com/R2Northstar/NorthstarMasterServer) database (optional).
 
     ```bash
     sudo mkdir /var/lib/atlas
     sudo atlas-import --progress /path/to/old/playerdata.db /var/lib/atlas/accounts.db /var/lib/atlas/pdata.db
     ```
 
-10. Start atlas:
+10. Start atlas.
 
     ```bash
     sudo systemctl daemon-reload
