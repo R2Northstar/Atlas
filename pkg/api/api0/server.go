@@ -54,7 +54,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.checkLauncherVersion(r) {
+	if !h.CheckLauncherVersion(r) {
 		h.m().server_upsert_requests_total.reject_versiongate(action).Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return
@@ -93,7 +93,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 	var s *Server
 	if canCreate {
 		s = &Server{
-			LauncherVersion: h.extractLauncherVersion(r),
+			LauncherVersion: h.ExtractLauncherVersion(r),
 		}
 	}
 
