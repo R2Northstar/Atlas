@@ -61,7 +61,7 @@ func (h *Handler) handleMainMenuPromos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.m().client_mainmenupromos_requests_total.success(h.extractLauncherVersion(r)).Inc()
+	h.m().client_mainmenupromos_requests_total.success(h.ExtractLauncherVersion(r)).Inc()
 	h.geoCounter2(r, h.m().client_mainmenupromos_requests_map)
 
 	var p MainMenuPromos
@@ -88,7 +88,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if !h.checkLauncherVersion(r) {
+	if !h.CheckLauncherVersion(r) {
 		h.m().client_originauth_requests_total.reject_versiongate.Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return
@@ -323,7 +323,7 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if !h.checkLauncherVersion(r) {
+	if !h.CheckLauncherVersion(r) {
 		h.m().client_authwithserver_requests_total.reject_versiongate.Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return
@@ -479,7 +479,7 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if !h.checkLauncherVersion(r) {
+	if !h.CheckLauncherVersion(r) {
 		h.m().client_authwithself_requests_total.reject_versiongate.Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return
@@ -617,7 +617,7 @@ func (h *Handler) handleClientServers(w http.ResponseWriter, r *http.Request) {
 		h.m().client_servers_response_size_bytes.none.Update(float64(len(buf)))
 	}
 
-	lver := h.extractLauncherVersion(r)
+	lver := h.ExtractLauncherVersion(r)
 	h.m().client_servers_requests_total.success(lver).Inc()
 	if lver != "" {
 		h.geoCounter2(r, h.m().client_servers_requests_map.northstar)

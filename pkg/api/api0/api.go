@@ -147,9 +147,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	notPanicked = true
 }
 
-// checkLauncherVersion checks if the r was made by NorthstarLauncher and if it
+// CheckLauncherVersion checks if the r was made by NorthstarLauncher and if it
 // is at least MinimumLauncherVersion.
-func (h *Handler) checkLauncherVersion(r *http.Request) bool {
+func (h *Handler) CheckLauncherVersion(r *http.Request) bool {
 	rver, _, _ := strings.Cut(r.Header.Get("User-Agent"), " ")
 	if x := strings.TrimPrefix(rver, "R2Northstar/"); rver != x {
 		if len(x) > 0 && x[0] != 'v' {
@@ -195,9 +195,9 @@ func (h *Handler) checkLauncherVersion(r *http.Request) bool {
 	return true
 }
 
-// extractLauncherVersion extracts the launcher version from r, returning an
+// ExtractLauncherVersion extracts the launcher version from r, returning an
 // empty string if it's missing or invalid.
-func (h *Handler) extractLauncherVersion(r *http.Request) string {
+func (h *Handler) ExtractLauncherVersion(r *http.Request) string {
 	rver, _, _ := strings.Cut(r.Header.Get("User-Agent"), " ")
 	if x := strings.TrimPrefix(rver, "R2Northstar/"); rver != x {
 		if len(x) > 0 && x[0] != 'v' {
