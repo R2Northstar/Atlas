@@ -158,6 +158,7 @@ This document describes the recommended setup for an non-containerized Atlas ser
     ATLAS_API0_STORAGE_ACCOUNTS=sqlite3:/var/lib/atlas/accounts.db
     ATLAS_API0_STORAGE_PDATA=sqlite3:/var/lib/atlas/pdata.db
     ATLAS_API0_MAINMENUPROMOS=file:/etc/atlas/mainmenupromos.json
+    ATLAS_API0_MAINMENUPROMOS_UPDATENEEDED=file:/etc/atlas/mainmenupromos_updateneeded.json
 
     # origin (the account MUST have app-based two-factor authentication set up)
     ATLAS_ORIGIN_EMAIL=email@example.com
@@ -206,6 +207,21 @@ This document describes the recommended setup for an non-containerized Atlas ser
             "Title": "",
             "Url": "",
             "ImageIndex": 0
+        }
+    }
+    ```
+
+    ```bash
+    sudo nano /etc/atlas/mainmenupromos_updateneeded.json
+    ```
+
+    ```json
+    {
+        "largeButton": {
+            "Title":      "Update Northstar",
+            "Text":       "An update is required to play multiplayer.",
+            "Url":        "https://github.com/R2Northstar/Northstar/releases/latest",
+            "ImageIndex": 12
         }
     }
     ```
