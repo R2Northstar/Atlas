@@ -39,6 +39,7 @@ const (
 	OneInTheChamber Playlist = "chamber"
 	CompetitiveCTF  Playlist = "ctf_comp"
 	Fastball        Playlist = "fastball"
+	FrontierWar     Playlist = "fw"
 	GunGame         Playlist = "gg"
 	TheHidden       Playlist = "hidden"
 	HideAndSeek     Playlist = "hs"
@@ -84,6 +85,7 @@ func Playlists() []Playlist {
 		OneInTheChamber,
 		CompetitiveCTF,
 		Fastball,
+		FrontierWar,
 		GunGame,
 		TheHidden,
 		HideAndSeek,
@@ -181,6 +183,8 @@ func (p Playlist) Title() (string, bool) {
 		return "Competitive CTF", true
 	case "fastball":
 		return "Fastball", true
+	case "fw":
+		return "Frontier War", true
 	case "gg":
 		return "Gun Game", true
 	case "hidden":
