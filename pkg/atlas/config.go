@@ -148,7 +148,7 @@ type Config struct {
 	// If provided, the mainmenupromos will be merged with the provided source
 	// (same syntax as API0_MAINEMENUPROMOS) if the client is older than the
 	// API0_MinimumLauncherVersion.
-	API0_MainMenuPromos_UpdateNeeded string `env:"ATLAS_API0_MAINMENUPROMOS_UPDATENEEDED"`
+	API0_MainMenuPromos_UpdateNeeded string `env:"ATLAS_API0_MAINMENUPROMOS_UPDATENEEDED=none"`
 
 	// The email address to use for Origin login. If not provided, usernames are
 	// not resolved during authentication. If it begins with @, it is treated
