@@ -70,10 +70,10 @@ type Handler struct {
 	// @BobTheBob9 for this option even existing in the first place.
 	InsecureDevNoCheckPlayerAuth bool
 
-	// MinimumLauncherVersion restricts authentication and server registration
+	// MinimumLauncherVersion* restricts authentication and server registration
 	// to clients with at least this version, which must be valid semver. +dev
 	// versions are always allowed.
-	MinimumLauncherVersion string
+	MinimumLauncherVersionClient, MinimumLauncherVersionServer string
 
 	// TokenExpiryTime controls the expiry of player masterserver auth tokens.
 	// If zero, a reasonable a default is used.
@@ -149,7 +149,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // CheckLauncherVersion checks if the r was made by NorthstarLauncher and if it
 // is at least MinimumLauncherVersion.
-func (h *Handler) CheckLauncherVersion(r *http.Request) bool {
+func (h *Handler) CheckLauncherVersion(r *http.Request, client bool) bool {
 	rver, _, _ := strings.Cut(r.Header.Get("User-Agent"), " ")
 	if x := strings.TrimPrefix(rver, "R2Northstar/"); rver != x {
 		if len(x) > 0 && x[0] != 'v' {
@@ -162,7 +162,12 @@ func (h *Handler) CheckLauncherVersion(r *http.Request) bool {
 		return false // deny: not R2Northstar
 	}
 
-	mver := h.MinimumLauncherVersion
+	var mver string
+	if client {
+		mver = h.MinimumLauncherVersionClient
+	} else {
+		mver = h.MinimumLauncherVersionServer
+	}
 	if mver != "" {
 		if mver[0] != 'v' {
 			mver = "v" + mver
