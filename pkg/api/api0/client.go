@@ -88,7 +88,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if !h.CheckLauncherVersion(r) {
+	if !h.CheckLauncherVersion(r, true) {
 		h.m().client_originauth_requests_total.reject_versiongate.Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return
@@ -323,7 +323,7 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if !h.CheckLauncherVersion(r) {
+	if !h.CheckLauncherVersion(r, true) {
 		h.m().client_authwithserver_requests_total.reject_versiongate.Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return
@@ -479,7 +479,7 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if !h.CheckLauncherVersion(r) {
+	if !h.CheckLauncherVersion(r, true) {
 		h.m().client_authwithself_requests_total.reject_versiongate.Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return

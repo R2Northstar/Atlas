@@ -54,7 +54,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.CheckLauncherVersion(r) {
+	if !h.CheckLauncherVersion(r, false) {
 		h.m().server_upsert_requests_total.reject_versiongate(action).Inc()
 		respFail(w, r, http.StatusBadRequest, ErrorCode_UNSUPPORTED_VERSION.MessageObj())
 		return

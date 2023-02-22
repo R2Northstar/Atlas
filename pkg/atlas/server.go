@@ -59,6 +59,12 @@ func NewServer(c *Config) (*Server, error) {
 	if c.API0_MinimumLauncherVersion != "" && !semver.IsValid("v"+strings.TrimPrefix(c.API0_MinimumLauncherVersion, "v")) {
 		return nil, fmt.Errorf("invalid minimum launcher version semver %q", c.API0_MinimumLauncherVersion)
 	}
+	if c.API0_MinimumLauncherVersionClient != "" && !semver.IsValid("v"+strings.TrimPrefix(c.API0_MinimumLauncherVersionClient, "v")) {
+		return nil, fmt.Errorf("invalid minimum launcher client version semver %q", c.API0_MinimumLauncherVersionClient)
+	}
+	if c.API0_MinimumLauncherVersionServer != "" && !semver.IsValid("v"+strings.TrimPrefix(c.API0_MinimumLauncherVersionServer, "v")) {
+		return nil, fmt.Errorf("invalid minimum launcher server version semver %q", c.API0_MinimumLauncherVersionServer)
+	}
 
 	var s Server
 	var success bool
@@ -269,9 +275,18 @@ func NewServer(c *Config) (*Server, error) {
 		MaxServers:                   c.API0_MaxServers,
 		MaxServersPerIP:              c.API0_MaxServersPerIP,
 		InsecureDevNoCheckPlayerAuth: c.API0_InsecureDevNoCheckPlayerAuth,
-		MinimumLauncherVersion:       c.API0_MinimumLauncherVersion,
+		MinimumLauncherVersionClient: c.API0_MinimumLauncherVersionClient,
+		MinimumLauncherVersionServer: c.API0_MinimumLauncherVersionServer,
 		TokenExpiryTime:              c.API0_TokenExpiryTime,
 		AllowGameServerIPv6:          c.API0_AllowGameServerIPv6,
+	}
+	if v := c.API0_MinimumLauncherVersion; v != "" {
+		if s.API0.MinimumLauncherVersionClient == "" {
+			s.API0.MinimumLauncherVersionClient = v
+		}
+		if s.API0.MinimumLauncherVersionServer == "" {
+			s.API0.MinimumLauncherVersionServer = v
+		}
 	}
 
 	s.API0.NotFound = new(middlewares).
@@ -703,7 +718,7 @@ func configureMainMenuPromosUpdateNeeded(c *Config, h *api0.Handler) error {
 			if fn1 != nil {
 				mmp = fn1(r)
 			}
-			if r == nil || !h.CheckLauncherVersion(r) {
+			if r == nil || !h.CheckLauncherVersion(r, true) {
 				if buf, err1 := os.ReadFile(p); err1 != nil {
 					err = err1
 				} else if err = json.Unmarshal(buf, &mmp); err != nil {

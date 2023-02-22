@@ -106,6 +106,16 @@ type Config struct {
 	// allowed.
 	API0_MinimumLauncherVersion string `env:"ATLAS_API0_MINIMUM_LAUNCHER_VERSION"`
 
+	// Minimum launcher semver to allow for authenticated clients, replacing
+	// ATLAS_API0_MINIMUM_LAUNCHER_VERSION. Dev versions are always allowed. If
+	// not provided, API0_MinimumLauncherVersion is used.
+	API0_MinimumLauncherVersionClient string `env:"ATLAS_API0_MINIMUM_LAUNCHER_VERSION_CLIENT"`
+
+	// Minimum launcher semver to allow for servers, replacing
+	// ATLAS_API0_MINIMUM_LAUNCHER_VERSION. Dev versions are always allowed. If
+	// not provided, API0_MinimumLauncherVersion is used.
+	API0_MinimumLauncherVersionServer string `env:"ATLAS_API0_MINIMUM_LAUNCHER_VERSION_SERVER"`
+
 	// Region mapping to use for server list. If set to an empty string or
 	// "none", region maps are disabled. Options: none, default.
 	API0_RegionMap string `env:"ATLAS_API0_REGION_MAP?=default"`
