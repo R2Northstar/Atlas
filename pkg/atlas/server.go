@@ -517,7 +517,9 @@ func configureOrigin(c *Config, l zerolog.Logger) (*origin.AuthMgr, error) {
 				}
 			}
 			if err != nil {
-				l.Err(err).Msg("origin auth error")
+				l.Err(err).Msg("origin auth error; using old token")
+			} else {
+				l.Info().Msg("got new origin token")
 			}
 		},
 	}
@@ -615,7 +617,9 @@ func configureEAX(c *Config, l zerolog.Logger) (*eax.Client, error) {
 		AutoUpdateBackoff: expbackoff,
 		AutoUpdateHook: func(ver string, err error) {
 			if err != nil {
-				l.Err(err).Msg("eax update error")
+				l.Err(err).Str("eax_client_version", ver).Msg("eax update error, using old version")
+			} else {
+				l.Info().Str("eax_client_version", ver).Msg("updated eax client version")
 			}
 		},
 	}
