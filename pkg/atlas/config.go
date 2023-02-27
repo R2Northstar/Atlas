@@ -164,6 +164,10 @@ type Config struct {
 	// is used if OriginEmail is provided, otherwise, "none" is used.
 	//  - none (don't get usernames)
 	//  - origin (get the username from the Origin API)
+	//  - origin-eax (get the username from the Origin API, but fall back to EAX on failure)
+	//  - origin-eax-debug (get the username from the Origin API, but also check EAX and warn if it's different)
+	//  - eax (get the username from EAX)
+	//  - eax-origin (get the username from EAX, but fall back to the Origin API on failure)
 	UsernameSource string `env:"ATLAS_USERNAMESOURCE"`
 
 	// The email address to use for Origin login. If not provided, the Origin

@@ -649,6 +649,14 @@ func configureUsernameSource(c *Config) (api0.UsernameSource, error) {
 		return api0.UsernameSourceNone, nil
 	case "origin":
 		return api0.UsernameSourceOrigin, nil
+	case "origin-eax":
+		return api0.UsernameSourceOriginEAX, nil
+	case "origin-eax-debug":
+		return api0.UsernameSourceOriginEAXDebug, nil
+	case "eax":
+		return api0.UsernameSourceEAX, nil
+	case "eax-origin":
+		return api0.UsernameSourceEAXOrigin, nil
 	case "":
 		// backwards compat
 		if c.OriginEmail != "" {
