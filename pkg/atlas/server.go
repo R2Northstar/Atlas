@@ -26,6 +26,7 @@ import (
 	"github.com/r2northstar/atlas/db/pdatadb"
 	"github.com/r2northstar/atlas/pkg/api/api0"
 	"github.com/r2northstar/atlas/pkg/cloudflare"
+	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/memstore"
 	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/r2northstar/atlas/pkg/regionmap"
@@ -299,6 +300,11 @@ func NewServer(c *Config) (*Server, error) {
 	} else {
 		return nil, fmt.Errorf("initialize origin auth: %w", err)
 	}
+	if exc, err := configureEAX(c, s.Logger.With().Str("component", "eax").Logger()); err == nil {
+		s.API0.EAXClient = exc
+	} else {
+		return nil, fmt.Errorf("initialize eax: %w", err)
+	}
 	if x, err := configureUsernameSource(c); err == nil {
 		s.API0.UsernameSource = x
 	} else {
@@ -496,18 +502,7 @@ func configureOrigin(c *Config, l zerolog.Logger) (*origin.AuthMgr, error) {
 		Credentials: func() (email, password, otpsecret string, err error) {
 			return c.OriginEmail, c.OriginPassword, c.OriginTOTP, nil
 		},
-		Backoff: func(_ error, last time.Time, count int) bool {
-			var hmax, hmaxat, hrate float64 = 24, 8, 2.3
-			// ~5m, ~10m, ~23m, ~52m, ~2h, ~4.6h, ~10.5h, 24h
-
-			var next float64
-			if count >= int(hmaxat) {
-				next = hmax
-			} else {
-				next = math.Pow(hrate, float64(count)) * hmax / math.Pow(hrate, hmaxat)
-			}
-			return time.Since(last).Hours() >= next
-		},
+		Backoff: expbackoff,
 		Updated: func(as origin.AuthState, err error) {
 			mu.Lock()
 			defer mu.Unlock()
@@ -613,6 +608,39 @@ func configureOrigin(c *Config, l zerolog.Logger) (*origin.AuthMgr, error) {
 		}
 	}
 	return mgr, nil
+}
+
+func configureEAX(c *Config, l zerolog.Logger) (*eax.Client, error) {
+	mgr := &eax.UpdateMgr{
+		AutoUpdateBackoff: expbackoff,
+		AutoUpdateHook: func(ver string, err error) {
+			if err != nil {
+				l.Err(err).Msg("eax update error")
+			}
+		},
+	}
+	if v := c.EAXUpdateVersion; v != "" {
+		mgr.SetVersion(v)
+	} else {
+		mgr.AutoUpdateInterval = c.EAXUpdateInterval
+		mgr.AutoUpdateBucket = c.EAXUpdateBucket
+	}
+	return &eax.Client{
+		UpdateMgr: mgr,
+	}, nil
+}
+
+func expbackoff(_ error, last time.Time, count int) bool {
+	var hmax, hmaxat, hrate float64 = 24, 8, 2.3
+	// ~5m, ~10m, ~23m, ~52m, ~2h, ~4.6h, ~10.5h, 24h
+
+	var next float64
+	if count >= int(hmaxat) {
+		next = hmax
+	} else {
+		next = math.Pow(hrate, float64(count)) * hmax / math.Pow(hrate, hmaxat)
+	}
+	return time.Since(last).Hours() >= next
 }
 
 func configureUsernameSource(c *Config) (api0.UsernameSource, error) {

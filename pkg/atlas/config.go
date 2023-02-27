@@ -194,6 +194,18 @@ type Config struct {
 	// restarts. Highly recommended.
 	OriginPersist string `env:"ATLAS_ORIGIN_PERSIST"`
 
+	// Override the EAX EA App version. If specified, updates will not be
+	// checked automatically.
+	EAXUpdateVersion string `env:"EAX_UPDATE_VERSION"`
+
+	// EAXUpdateInterval is the min interval at which to check for EA App
+	// updates.
+	EAXUpdateInterval time.Duration `env:"EAX_UPDATE_INTERVAL=24h"`
+
+	// EAXUpdateBucket is the update bucket to use when checking for EA App
+	// updates.
+	EAXUpdateBucket int `env:"EAX_UPDATE_BUCKET=0"`
+
 	// Secret token for accessing internal metrics. If it begins with @, it is
 	// treated as the name of a systemd credential to load.
 	MetricsSecret string `env:"ATLAS_METRICS_SECRET" sdcreds:"load,trimspace"`
