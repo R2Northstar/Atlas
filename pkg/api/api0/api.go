@@ -26,6 +26,7 @@ import (
 
 	"github.com/klauspost/compress/gzip"
 	"github.com/pg9182/ip2x"
+	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/metricsx"
 	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/rs/zerolog/hlog"
@@ -49,6 +50,9 @@ type Handler struct {
 	// OriginAuthMgr, if provided, manages Origin nucleus tokens for checking
 	// usernames.
 	OriginAuthMgr *origin.AuthMgr
+
+	// EAXClient makes requests to the EAX API.
+	EAXClient *eax.Client
 
 	// CleanBadWords is used to filter bad words from server names and
 	// descriptions. If not provided, words will not be filtered.
