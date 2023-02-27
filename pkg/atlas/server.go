@@ -299,6 +299,11 @@ func NewServer(c *Config) (*Server, error) {
 	} else {
 		return nil, fmt.Errorf("initialize origin auth: %w", err)
 	}
+	if x, err := configureUsernameSource(c); err == nil {
+		s.API0.UsernameSource = x
+	} else {
+		return nil, fmt.Errorf("initialize username lookup: %w", err)
+	}
 	if astore, err := configureAccountStorage(c); err == nil {
 		s.API0.AccountStorage = astore
 	} else {
@@ -608,6 +613,23 @@ func configureOrigin(c *Config, l zerolog.Logger) (*origin.AuthMgr, error) {
 		}
 	}
 	return mgr, nil
+}
+
+func configureUsernameSource(c *Config) (api0.UsernameSource, error) {
+	switch typ := c.UsernameSource; typ {
+	case "none":
+		return api0.UsernameSourceNone, nil
+	case "origin":
+		return api0.UsernameSourceOrigin, nil
+	case "":
+		// backwards compat
+		if c.OriginEmail != "" {
+			return api0.UsernameSourceOrigin, nil
+		}
+		return api0.UsernameSourceNone, nil
+	default:
+		return "", fmt.Errorf("unknown source %q", typ)
+	}
 }
 
 func configureAccountStorage(c *Config) (api0.AccountStorage, error) {

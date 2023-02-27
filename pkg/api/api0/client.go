@@ -18,6 +18,17 @@ import (
 	"github.com/rs/zerolog/hlog"
 )
 
+// UsernameSource determines where to get player in-game usernames from.
+type UsernameSource string
+
+const (
+	// Don't get usernames.
+	UsernameSourceNone UsernameSource = ""
+
+	// Get the username from the Origin API.
+	UsernameSourceOrigin UsernameSource = "origin"
+)
+
 type MainMenuPromos struct {
 	NewInfo      MainMenuPromosNew         `json:"newInfo"`
 	LargeButton  MainMenuPromosButtonLarge `json:"largeButton"`
@@ -186,56 +197,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	var username string
-	if h.OriginAuthMgr != nil {
-		originStart := time.Now()
-		if tok, ours, err := h.OriginAuthMgr.OriginAuth(false); err == nil {
-			var notfound bool
-			if ui, err := origin.GetUserInfo(r.Context(), tok, uid); err == nil {
-				if len(ui) == 1 {
-					username = ui[0].EAID
-					h.m().client_originauth_origin_username_lookup_calls_total.success.Inc()
-				} else {
-					notfound = true
-					h.m().client_originauth_origin_username_lookup_calls_total.notfound.Inc()
-				}
-			} else if errors.Is(err, origin.ErrAuthRequired) {
-				if tok, ours, err := h.OriginAuthMgr.OriginAuth(true); err == nil {
-					if ui, err := origin.GetUserInfo(r.Context(), tok, uid); err == nil {
-						if len(ui) == 1 {
-							username = ui[0].EAID
-							h.m().client_originauth_origin_username_lookup_calls_total.success.Inc()
-						} else {
-							notfound = true
-							h.m().client_originauth_origin_username_lookup_calls_total.notfound.Inc()
-						}
-					}
-				} else if ours {
-					hlog.FromRequest(r).Error().
-						Err(err).
-						Msgf("origin auth token refresh failure")
-					h.m().client_originauth_origin_username_lookup_calls_total.fail_authtok_refresh.Inc()
-				}
-			} else if !errors.Is(err, context.Canceled) {
-				hlog.FromRequest(r).Error().
-					Err(err).
-					Msgf("failed to get origin user info")
-				h.m().client_originauth_origin_username_lookup_calls_total.fail_other_error.Inc()
-			}
-			if notfound {
-				hlog.FromRequest(r).Warn().
-					Err(err).
-					Uint64("uid", uid).
-					Msgf("no username found for uid")
-			}
-		} else if ours {
-			hlog.FromRequest(r).Error().
-				Err(err).
-				Msgf("origin auth token refresh failure")
-			h.m().client_originauth_origin_username_lookup_calls_total.fail_authtok_refresh.Inc()
-		}
-		h.m().client_originauth_origin_username_lookup_duration_seconds.UpdateDuration(originStart)
-	}
+	username := h.lookupUsername(r, uid)
 
 	// note: there's small chance of race conditions here if there are multiple
 	// concurrent origin_auth calls, but since we only ever support one session
@@ -258,7 +220,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 	}
 
 	if acct != nil && username != "" && acct.Username != username {
-		hlog.FromRequest(r).Info().Uint64("uid", acct.UID).Str("username", username).Str("prev_username", acct.Username).Msg("got updated username from origin")
+		hlog.FromRequest(r).Info().Uint64("uid", acct.UID).Str("username", username).Str("prev_username", acct.Username).Msg("got updated username")
 	}
 	if acct == nil {
 		acct = &Account{
@@ -304,6 +266,83 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		"success": true,
 		"token":   acct.AuthToken,
 	})
+}
+
+// lookupUsername gets the username for uid according to the configured
+// UsernameSource, returning an empty string if not found or on error.
+func (h *Handler) lookupUsername(r *http.Request, uid uint64) (username string) {
+	switch h.UsernameSource {
+	case UsernameSourceNone:
+		break
+	case UsernameSourceOrigin:
+		username, _ = h.lookupUsernameOrigin(r, uid)
+	default:
+		hlog.FromRequest(r).Error().
+			Msgf("unknown username source %q", h.UsernameSource)
+	}
+	return
+}
+
+// lookupUsernameOrigin gets the username for uid from the Origin API, returning
+// an empty string if a username does not exist for the uid, and false on error.
+func (h *Handler) lookupUsernameOrigin(r *http.Request, uid uint64) (username string, ok bool) {
+	if h.OriginAuthMgr == nil {
+		hlog.FromRequest(r).Error().
+			Str("username_source", "origin").
+			Msgf("no origin auth available for username lookup")
+		return
+	}
+	originStart := time.Now()
+	if tok, ours, err := h.OriginAuthMgr.OriginAuth(false); err == nil {
+		if ui, err := origin.GetUserInfo(r.Context(), tok, uid); err == nil {
+			if len(ui) == 1 {
+				username = ui[0].EAID
+				h.m().client_originauth_origin_username_lookup_calls_total.success.Inc()
+			} else {
+				h.m().client_originauth_origin_username_lookup_calls_total.notfound.Inc()
+			}
+			ok = true
+		} else if errors.Is(err, origin.ErrAuthRequired) {
+			if tok, ours, err := h.OriginAuthMgr.OriginAuth(true); err == nil {
+				if ui, err := origin.GetUserInfo(r.Context(), tok, uid); err == nil {
+					if len(ui) == 1 {
+						username = ui[0].EAID
+						h.m().client_originauth_origin_username_lookup_calls_total.success.Inc()
+					} else {
+						h.m().client_originauth_origin_username_lookup_calls_total.notfound.Inc()
+					}
+					ok = true
+				}
+			} else if ours {
+				hlog.FromRequest(r).Error().
+					Err(err).
+					Str("username_source", "origin").
+					Msgf("origin auth token refresh failure")
+				h.m().client_originauth_origin_username_lookup_calls_total.fail_authtok_refresh.Inc()
+			}
+		} else if !errors.Is(err, context.Canceled) {
+			hlog.FromRequest(r).Error().
+				Err(err).
+				Str("username_source", "origin").
+				Msgf("failed to get origin user info")
+			h.m().client_originauth_origin_username_lookup_calls_total.fail_other_error.Inc()
+		}
+		if username == "" && ok {
+			hlog.FromRequest(r).Warn().
+				Err(err).
+				Uint64("uid", uid).
+				Str("username_source", "origin").
+				Msgf("no origin username found for uid")
+		}
+	} else if ours {
+		hlog.FromRequest(r).Error().
+			Err(err).
+			Str("username_source", "origin").
+			Msgf("origin auth token refresh failure")
+		h.m().client_originauth_origin_username_lookup_calls_total.fail_authtok_refresh.Inc()
+	}
+	h.m().client_originauth_origin_username_lookup_duration_seconds.UpdateDuration(originStart)
+	return
 }
 
 func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Request) {
