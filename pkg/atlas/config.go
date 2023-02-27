@@ -160,9 +160,15 @@ type Config struct {
 	// API0_MinimumLauncherVersion.
 	API0_MainMenuPromos_UpdateNeeded string `env:"ATLAS_API0_MAINMENUPROMOS_UPDATENEEDED=none"`
 
-	// The email address to use for Origin login. If not provided, usernames are
-	// not resolved during authentication. If it begins with @, it is treated
-	// as the name of a systemd credential to load.
+	// Sets the source used for resolving usernames. If not specified, "origin"
+	// is used if OriginEmail is provided, otherwise, "none" is used.
+	//  - none (don't get usernames)
+	//  - origin (get the username from the Origin API)
+	UsernameSource string `env:"ATLAS_USERNAMESOURCE"`
+
+	// The email address to use for Origin login. If not provided, the Origin
+	// API will not be used. If it begins with @, it is treated as the name of a
+	// systemd credential to load.
 	OriginEmail string `env:"ATLAS_ORIGIN_EMAIL" sdcreds:"load,trimspace"`
 
 	// The password for Origin login. If it begins with @, it is treated as the

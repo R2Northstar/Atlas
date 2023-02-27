@@ -43,8 +43,11 @@ type Handler struct {
 	// PdataStorage stores player data. It must be non-nil.
 	PdataStorage PdataStorage
 
-	// OriginAuthMgr manages Origin nucleus tokens (used for checking
-	// usernames). If not provided, usernames will not be updated.
+	// UsernameSource configures the source to use for usernames.
+	UsernameSource UsernameSource
+
+	// OriginAuthMgr, if provided, manages Origin nucleus tokens for checking
+	// usernames.
 	OriginAuthMgr *origin.AuthMgr
 
 	// CleanBadWords is used to filter bad words from server names and
