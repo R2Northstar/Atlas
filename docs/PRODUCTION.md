@@ -149,7 +149,7 @@ This document describes the recommended setup for an non-containerized Atlas ser
     ATLAS_API0_MAX_SERVERS_PER_IP=25
     ATLAS_API0_TOKEN_EXPIRY_TIME=24h
     ATLAS_API0_ALLOW_GAME_SERVER_IPV6=false
-    ATLAS_API0_MINIMUM_LAUNCHER_VERSION=1.9.7
+    ATLAS_API0_MINIMUM_LAUNCHER_VERSION=1.11.3
     ATLAS_API0_REGION_MAP=default
     ATLAS_API0_SERVERLIST_EXPERIMENTAL_DETERMINISTIC_SERVER_ID_SECRET=@api0_server_id_secret
     ATLAS_API0_SERVERLIST_VERIFY_TIME=10s
@@ -160,6 +160,9 @@ This document describes the recommended setup for an non-containerized Atlas ser
     ATLAS_API0_MAINMENUPROMOS=file:/etc/atlas/mainmenupromos.json
     ATLAS_API0_MAINMENUPROMOS_UPDATENEEDED=file:/etc/atlas/mainmenupromos_updateneeded.json
 
+    # username lookup
+    ATLAS_USERNAMESOURCE=eax-origin
+
     # origin (the account MUST have app-based two-factor authentication set up)
     ATLAS_ORIGIN_EMAIL=email@example.com
     ATLAS_ORIGIN_PASSWORD=@origin_password
@@ -168,6 +171,10 @@ This document describes the recommended setup for an non-containerized Atlas ser
     ATLAS_ORIGIN_HAR_SUCCESS=/var/log/atlas/har
     ATLAS_ORIGIN_HAR_ERROR=/var/log/atlas/har
     ATLAS_ORIGIN_PERSIST=/var/lib/atlas/origin.json
+
+    # eax
+    EAX_UPDATE_INTERVAL=24h
+    EAX_UPDATE_BUCKET=60
 
     # metrics
     ATLAS_METRICS_SECRET=@metrics_secret
