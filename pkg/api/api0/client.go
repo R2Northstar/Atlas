@@ -143,6 +143,12 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	select {
+	case <-r.Context().Done(): // check if the request was canceled to avoid making unnecessary requests
+		return
+	default:
+	}
+
 	if !h.InsecureDevNoCheckPlayerAuth {
 		token := r.URL.Query().Get("token")
 		if token == "" {
@@ -211,7 +217,19 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	select {
+	case <-r.Context().Done(): // check if the request was canceled to avoid making unnecessary requests
+		return
+	default:
+	}
+
 	username := h.lookupUsername(r, uid)
+
+	select {
+	case <-r.Context().Done(): // check if the request was canceled to avoid making unnecessary requests
+		return
+	default:
+	}
 
 	// note: there's small chance of race conditions here if there are multiple
 	// concurrent origin_auth calls, but since we only ever support one session
@@ -340,6 +358,11 @@ func (h *Handler) lookupUsername(r *http.Request, uid uint64) (username string) 
 // lookupUsernameOrigin gets the username for uid from the Origin API, returning
 // an empty string if a username does not exist for the uid, and false on error.
 func (h *Handler) lookupUsernameOrigin(r *http.Request, uid uint64) (username string, ok bool) {
+	select {
+	case <-r.Context().Done(): // check if the request was canceled to avoid polluting the metrics
+		return
+	default:
+	}
 	if h.OriginAuthMgr == nil {
 		hlog.FromRequest(r).Error().
 			Str("username_source", "origin").
@@ -402,6 +425,11 @@ func (h *Handler) lookupUsernameOrigin(r *http.Request, uid uint64) (username st
 // lookupUsernameEAX gets the username for uid from the EAX API, returning an
 // empty string if a username does not exist for the uid, and false on error.
 func (h *Handler) lookupUsernameEAX(r *http.Request, uid uint64) (username string, ok bool) {
+	select {
+	case <-r.Context().Done(): // check if the request was canceled to avoid polluting the metrics
+		return
+	default:
+	}
 	if h.EAXClient == nil {
 		hlog.FromRequest(r).Error().
 			Str("username_source", "eax").
