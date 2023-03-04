@@ -180,7 +180,9 @@ func TestAccountStorage(t *testing.T, s api0.AccountStorage) {
 			users       uint64 = 16384
 		)
 		if runtime.GOOS != "linux" {
-			concurrency = 16 // doesn't perform as well for database locking, and it's not our primary target anyways
+			// doesn't perform as well for database locking (esp Windows), and it's not our primary target anyways
+			concurrency /= 4
+			users /= 4
 		}
 		var wg sync.WaitGroup
 		var fail atomic.Int32
@@ -512,7 +514,9 @@ func TestPdataStorage(t *testing.T, s api0.PdataStorage) {
 			users       uint64 = 16384
 		)
 		if runtime.GOOS != "linux" {
-			concurrency = 16 // doesn't perform as well for database locking, and it's not our primary target anyways
+			// doesn't perform as well for database locking (esp Windows), and it's not our primary target anyways
+			concurrency /= 4
+			users /= 4
 		}
 		var wg sync.WaitGroup
 		var fail atomic.Int32
