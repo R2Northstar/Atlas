@@ -16,32 +16,31 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v1
-
     - uses: actions/setup-go@v3
       with:
         go-version: ${{matrix.go}}
 
     - name: Get Go cache path
       id: go-cache
+      shell: bash
       run: |
-        echo "::set-output name=goos::$(go env GOOS)"
-        echo "::set-output name=goarch::$(go env GOARCH)"
-        echo "::set-output name=goversion::$(go env GOVERSION)"
-        echo "::set-output name=gocache::$(go env GOCACHE)"
-        echo "::set-output name=gomodcache::$(go env GOMODCACHE)"
+        echo "goos=$(go env GOOS)" >> $GITHUB_OUTPUT
+        echo "goarch=$(go env GOARCH)" >> $GITHUB_OUTPUT
+        echo "goversion=$(go env GOVERSION)" >> $GITHUB_OUTPUT
+        echo "gocache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+        echo "gomodcache=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
 
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Go build cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ${{steps.go-cache.outputs.gocache}}
         key: ${{steps.go-cache.outputs.goversion}}-${{steps.go-cache.outputs.goos}}-${{steps.go-cache.outputs.goarch}}-go-build-${{hashFiles('**/go.sum')}}
 
     - name: Go mod cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ${{steps.go-cache.outputs.gomodcache}}
         key: ${{steps.go-cache.outputs.goversion}}-${{steps.go-cache.outputs.goos}}-${{steps.go-cache.outputs.goarch}}-go-mod-${{hashFiles('**/go.sum')}}
