@@ -151,7 +151,7 @@ func (a *AuthMgr) OriginAuth(refresh bool) (NucleusToken, bool, error) {
 				a.auth.NucleusToken = tok
 				a.auth.NucleusTokenExpiry = exp
 				return
-			} else if !errors.Is(err, ErrAuthRequired) {
+			} else if !errors.Is(aerr, ErrAuthRequired) {
 				err = fmt.Errorf("refresh nucleus token: %w", aerr)
 				return
 			}

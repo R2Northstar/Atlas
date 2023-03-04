@@ -52,18 +52,19 @@ func GetNucleusToken(ctx context.Context, t http.RoundTripper, sid juno.SID) (Nu
 		return "", time.Time{}, fmt.Errorf("get nucleus token: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		var obj struct {
-			ErrorCode   string      `json:"error_code"`
-			Error       string      `json:"error"`
-			ErrorNumber json.Number `json:"error_number"`
-		}
-		if obj.ErrorCode == "login_required" {
+	var eobj struct {
+		ErrorCode   string      `json:"error_code"`
+		Error       string      `json:"error"`
+		ErrorNumber json.Number `json:"error_number"`
+	}
+	if err := json.Unmarshal(buf, &eobj); err == nil && eobj.Error != "" {
+		if eobj.ErrorCode == "login_required" {
 			return "", time.Time{}, fmt.Errorf("get nucleus token: %w: login required", ErrAuthRequired)
 		}
-		if err := json.Unmarshal(buf, &obj); err == nil && obj.Error != "" {
-			return "", time.Time{}, fmt.Errorf("get nucleus token: %w: error %s: %s (%q)", ErrOrigin, obj.ErrorNumber, obj.ErrorCode, obj.Error)
-		}
+		return "", time.Time{}, fmt.Errorf("get nucleus token: %w: error %s: %s (%q)", ErrOrigin, eobj.ErrorNumber, eobj.ErrorCode, eobj.Error)
+	}
+
+	if resp.StatusCode != http.StatusOK {
 		return "", time.Time{}, fmt.Errorf("get nucleus token: request %q: response status %d (%s)", resp.Request.URL.String(), resp.StatusCode, resp.Status)
 	}
 
