@@ -19,6 +19,22 @@ var (
 	ErrAuthFailed      = errors.New("authentication failed")
 )
 
+type ConnectionRejectedError string
+
+func (c ConnectionRejectedError) Reason() string {
+	if c == "" {
+		return "unknown"
+	}
+	return string(c)
+}
+
+func (c ConnectionRejectedError) Error() string {
+	if c == "" {
+		return "connection rejected"
+	}
+	return "connection rejected: " + string(c)
+}
+
 // VerifyText is the expected server response for /verify.
 const VerifyText = "I am a northstar server!"
 
@@ -72,10 +88,14 @@ func AuthenticateIncomingPlayer(ctx context.Context, auth netip.AddrPort, uid ui
 	defer resp.Body.Close()
 
 	var obj struct {
-		Success bool `json:"success"`
+		Success bool   `json:"success"`
+		Reject  string `json:"reject"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&obj); err != nil {
 		return ErrInvalidResponse
+	}
+	if obj.Reject != "" {
+		return ConnectionRejectedError(obj.Reject)
 	}
 	if !obj.Success {
 		return ErrAuthFailed

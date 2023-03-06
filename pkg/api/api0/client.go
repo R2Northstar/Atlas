@@ -577,7 +577,11 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 			if errors.Is(err, context.DeadlineExceeded) {
 				err = fmt.Errorf("request timed out")
 			}
+			var rej api0gameserver.ConnectionRejectedError
 			switch {
+			case errors.As(err, &rej):
+				h.m().client_authwithserver_requests_total.reject_gameserver.Inc()
+				respFail(w, r, http.StatusForbidden, ErrorCode_CONNECTION_REJECTED.MessageObjf("%s", rej.Reason()))
 			case errors.Is(err, api0gameserver.ErrAuthFailed):
 				h.m().client_authwithserver_requests_total.reject_gameserverauth.Inc()
 				respFail(w, r, http.StatusInternalServerError, ErrorCode_JSON_PARSE_ERROR.MessageObj()) // this is kind of misleading... but it's what the original master server did

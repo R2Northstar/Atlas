@@ -21,6 +21,7 @@ const (
 	ErrorCode_JSON_PARSE_ERROR           ErrorCode = "JSON_PARSE_ERROR"           // Error parsing json response
 	ErrorCode_UNSUPPORTED_VERSION        ErrorCode = "UNSUPPORTED_VERSION"        // The version you are using is no longer supported
 	ErrorCode_DUPLICATE_SERVER           ErrorCode = "DUPLICATE_SERVER"           // A server with this port already exists for your IP address
+	ErrorCode_CONNECTION_REJECTED        ErrorCode = "CONNECTION_REJECTED"        // Connection rejected
 )
 
 const (
@@ -88,6 +89,8 @@ func (n ErrorCode) Message() string {
 		return "Internal server error"
 	case ErrorCode_BAD_REQUEST:
 		return "Bad request"
+	case ErrorCode_CONNECTION_REJECTED:
+		return "Connection rejected"
 	default:
 		return string(n)
 	}
