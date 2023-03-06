@@ -94,6 +94,7 @@ type apiMetrics struct {
 		reject_masterserver_token  *metrics.Counter
 		reject_password            *metrics.Counter
 		reject_gameserverauth      *metrics.Counter
+		reject_gameserver          *metrics.Counter
 		fail_gameserverauth        *metrics.Counter
 		fail_storage_error_account *metrics.Counter
 		fail_storage_error_pdata   *metrics.Counter
@@ -265,6 +266,7 @@ func (h *Handler) m() *apiMetrics {
 		mo.client_authwithserver_requests_total.reject_masterserver_token = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_masterserver_token"}`)
 		mo.client_authwithserver_requests_total.reject_password = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_password"}`)
 		mo.client_authwithserver_requests_total.reject_gameserverauth = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_gameserverauth"}`)
+		mo.client_authwithserver_requests_total.reject_gameserver = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_gameserver"}`)
 		mo.client_authwithserver_requests_total.fail_gameserverauth = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="fail_gameserverauth"}`)
 		mo.client_authwithserver_requests_total.fail_storage_error_account = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="fail_storage_error_account"}`)
 		mo.client_authwithserver_requests_total.fail_storage_error_pdata = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="fail_storage_error_pdata"}`)
