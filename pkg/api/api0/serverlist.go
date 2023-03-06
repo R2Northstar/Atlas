@@ -79,7 +79,7 @@ type Server struct {
 	Order    uint64
 	ID       string         // unique, must not be modified after creation
 	Addr     netip.AddrPort // unique, must not be modified after creation
-	AuthPort uint16         // unique with Addr.Addr(), must not be modified after creation
+	AuthPort uint16         // if zero, reuse game Addr for UDP-based auth, otherwise unique with Addr.Addr(), must not be modified after creation
 
 	LauncherVersion string // for metrics
 
@@ -112,6 +112,9 @@ type ServerModInfo struct {
 
 // AuthAddr returns the auth address for the server.
 func (s Server) AuthAddr() netip.AddrPort {
+	if s.AuthPort == 0 {
+		return s.Addr
+	}
 	return netip.AddrPortFrom(s.Addr.Addr(), s.AuthPort)
 }
 
@@ -903,9 +906,6 @@ func (s *ServerList) ServerHybridUpdatePut(u *ServerUpdate, c *Server, l ServerL
 		// check the addresses
 		if !nsrv.Addr.IsValid() {
 			return nil, fmt.Errorf("addr is missing")
-		}
-		if nsrv.AuthPort == 0 {
-			return nil, fmt.Errorf("authport is missing")
 		}
 
 		// error if there's an existing server with a matching auth addr (note:

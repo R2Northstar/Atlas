@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/r2northstar/atlas/pkg/a2s"
 	"github.com/r2northstar/atlas/pkg/api/api0/api0gameserver"
 	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/origin"
@@ -490,6 +491,16 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	raddr, err := netip.ParseAddrPort(r.RemoteAddr)
+	if err != nil {
+		hlog.FromRequest(r).Error().
+			Err(err).
+			Msgf("failed to parse remote ip %q", r.RemoteAddr)
+		h.m().client_authwithself_requests_total.fail_other_error.Inc()
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
+		return
+	}
+
 	uidQ := r.URL.Query().Get("id")
 	if uidQ == "" {
 		h.m().client_authwithserver_requests_total.reject_bad_request.Inc()
@@ -572,38 +583,126 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 		ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
 		defer cancel()
 
-		if err := api0gameserver.AuthenticateIncomingPlayer(ctx, srv.AuthAddr(), acct.UID, acct.Username, authToken, srv.ServerAuthToken, pbuf); err != nil {
-			h.m().client_authwithserver_gameserverauth_duration_seconds.UpdateDuration(authStart)
-			if errors.Is(err, context.DeadlineExceeded) {
-				err = fmt.Errorf("request timed out")
-			}
-			var rej api0gameserver.ConnectionRejectedError
-			switch {
-			case errors.As(err, &rej):
-				h.m().client_authwithserver_requests_total.reject_gameserver.Inc()
-				respFail(w, r, http.StatusForbidden, ErrorCode_CONNECTION_REJECTED.MessageObjf("%s", rej.Reason()))
-			case errors.Is(err, api0gameserver.ErrAuthFailed):
-				h.m().client_authwithserver_requests_total.reject_gameserverauth.Inc()
-				respFail(w, r, http.StatusInternalServerError, ErrorCode_JSON_PARSE_ERROR.MessageObj()) // this is kind of misleading... but it's what the original master server did
-			case errors.Is(err, api0gameserver.ErrInvalidResponse):
-				hlog.FromRequest(r).Error().
-					Err(err).
-					Msgf("failed to make gameserver auth request")
-				h.m().client_authwithserver_requests_total.fail_gameserverauth.Inc()
-				respFail(w, r, http.StatusInternalServerError, ErrorCode_BAD_GAMESERVER_RESPONSE.MessageObj())
-			default:
-				if !errors.Is(err, context.Canceled) {
+		if srv.AuthPort != 0 {
+			if err := api0gameserver.AuthenticateIncomingPlayer(ctx, srv.AuthAddr(), acct.UID, acct.Username, authToken, srv.ServerAuthToken, pbuf); err != nil {
+				h.m().client_authwithserver_gameserverauth_duration_seconds.UpdateDuration(authStart)
+				if errors.Is(err, context.DeadlineExceeded) {
+					err = fmt.Errorf("request timed out")
+				}
+				var rej api0gameserver.ConnectionRejectedError
+				switch {
+				case errors.As(err, &rej):
+					h.m().client_authwithserver_requests_total.reject_gameserver.Inc()
+					respFail(w, r, http.StatusForbidden, ErrorCode_CONNECTION_REJECTED.MessageObjf("%s", rej.Reason()))
+				case errors.Is(err, api0gameserver.ErrAuthFailed):
+					h.m().client_authwithserver_requests_total.reject_gameserverauth.Inc()
+					respFail(w, r, http.StatusInternalServerError, ErrorCode_JSON_PARSE_ERROR.MessageObj()) // this is kind of misleading... but it's what the original master server did
+				case errors.Is(err, api0gameserver.ErrInvalidResponse):
 					hlog.FromRequest(r).Error().
 						Err(err).
 						Msgf("failed to make gameserver auth request")
 					h.m().client_authwithserver_requests_total.fail_gameserverauth.Inc()
+					respFail(w, r, http.StatusInternalServerError, ErrorCode_BAD_GAMESERVER_RESPONSE.MessageObj())
+				default:
+					if !errors.Is(err, context.Canceled) {
+						hlog.FromRequest(r).Error().
+							Err(err).
+							Msgf("failed to make gameserver auth request")
+						h.m().client_authwithserver_requests_total.fail_gameserverauth.Inc()
+					}
+					respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
 				}
-				respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
+				return
 			}
-			return
-		}
 
-		h.m().client_authwithserver_gameserverauth_duration_seconds.UpdateDuration(authStart)
+			h.m().client_authwithserver_gameserverauth_duration_seconds.UpdateDuration(authStart)
+		} else {
+			obj := map[string]any{
+				"type":     "connect",
+				"token":    authToken,
+				"uid":      acct.UID,
+				"username": acct.Username,
+				"ip":       raddr.Addr().String(),
+				"time":     time.Now().Unix(),
+			}
+
+			key := connectStateKey{
+				ServerID: srv.ID,
+				Token:    authToken,
+			}
+
+			ch := make(chan string, 1)
+			h.connect.Store(key, &connectState{
+				res:   ch,
+				pdata: pbuf,
+			})
+			defer h.connect.Delete(key)
+
+			var attempts int
+			if rej, err := func() (string, error) {
+				t := time.NewTicker(time.Millisecond * 250)
+				defer t.Stop()
+
+				x := make(chan error, 1)
+
+				for {
+					attempts++
+					go func() {
+						if err := a2s.AtlasSigreq1(srv.AuthAddr(), time.Second, srv.ServerAuthToken, obj); err != nil {
+							if !errors.Is(err, a2s.ErrTimeout) {
+								select {
+								case x <- err:
+								default:
+								}
+							}
+						}
+					}()
+					select {
+					case <-ctx.Done():
+						err := ctx.Err()
+						if errors.Is(err, context.DeadlineExceeded) {
+							// if we timed out, it might be because of an error while sending the packet
+							select {
+							case err = <-x:
+							default:
+							}
+						}
+						return "", err
+					case x := <-ch:
+						return x, nil
+					case <-t.C:
+					}
+				}
+			}(); err != nil {
+				h.m().client_authwithserver_gameserverauthudp_duration_seconds.UpdateDuration(authStart)
+				switch {
+				case errors.Is(err, context.DeadlineExceeded):
+					hlog.FromRequest(r).Error().
+						Err(err).
+						Msgf("failed to make gameserver udp auth request")
+					h.m().client_authwithserver_requests_total.fail_gameserverauthudp.Inc()
+					respFail(w, r, http.StatusGatewayTimeout, ErrorCode_NO_GAMESERVER_RESPONSE.MessageObj())
+				default:
+					if !errors.Is(err, context.Canceled) {
+						hlog.FromRequest(r).Error().
+							Err(err).
+							Msgf("failed to make gameserver udp auth request")
+						h.m().client_authwithserver_requests_total.fail_gameserverauthudp.Inc()
+						respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
+					}
+				}
+				return
+			} else if rej != "" {
+				h.m().client_authwithserver_gameserverauthudp_duration_seconds.UpdateDuration(authStart)
+				h.m().client_authwithserver_gameserverauthudp_attempts.Update(float64(attempts))
+				h.m().client_authwithserver_requests_total.reject_gameserver.Inc()
+				respFail(w, r, http.StatusForbidden, ErrorCode_CONNECTION_REJECTED.MessageObjf("%s", rej))
+				return
+			}
+
+			h.m().client_authwithserver_gameserverauthudp_duration_seconds.UpdateDuration(authStart)
+			h.m().client_authwithserver_gameserverauthudp_attempts.Update(float64(attempts))
+		}
 	}
 
 	acct.LastServerID = srv.ID

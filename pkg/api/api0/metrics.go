@@ -96,13 +96,16 @@ type apiMetrics struct {
 		reject_gameserverauth      *metrics.Counter
 		reject_gameserver          *metrics.Counter
 		fail_gameserverauth        *metrics.Counter
+		fail_gameserverauthudp     *metrics.Counter
 		fail_storage_error_account *metrics.Counter
 		fail_storage_error_pdata   *metrics.Counter
 		fail_other_error           *metrics.Counter
 		http_method_not_allowed    *metrics.Counter
 	}
-	client_authwithserver_gameserverauth_duration_seconds *metrics.Histogram
-	client_authwithself_requests_total                    struct {
+	client_authwithserver_gameserverauth_duration_seconds    *metrics.Histogram
+	client_authwithserver_gameserverauthudp_duration_seconds *metrics.Histogram
+	client_authwithserver_gameserverauthudp_attempts         *metrics.Histogram
+	client_authwithself_requests_total                       struct {
 		success                    *metrics.Counter
 		reject_bad_request         *metrics.Counter
 		reject_versiongate         *metrics.Counter
@@ -158,6 +161,18 @@ type apiMetrics struct {
 		reject_server_not_found *metrics.Counter
 		fail_other_error        *metrics.Counter
 		http_method_not_allowed *metrics.Counter
+	}
+	server_connect_requests_total struct {
+		success                         *metrics.Counter
+		success_reject                  *metrics.Counter
+		success_pdata                   *metrics.Counter
+		reject_unauthorized_ip          *metrics.Counter
+		reject_server_not_found         *metrics.Counter
+		reject_invalid_connection_token *metrics.Counter
+		reject_must_get_pdata           *metrics.Counter
+		reject_bad_request              *metrics.Counter
+		fail_other_error                *metrics.Counter
+		http_method_not_allowed         *metrics.Counter
 	}
 	player_pdata_requests_total struct {
 		success                  func(filter string) *metrics.Counter
@@ -268,11 +283,14 @@ func (h *Handler) m() *apiMetrics {
 		mo.client_authwithserver_requests_total.reject_gameserverauth = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_gameserverauth"}`)
 		mo.client_authwithserver_requests_total.reject_gameserver = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_gameserver"}`)
 		mo.client_authwithserver_requests_total.fail_gameserverauth = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="fail_gameserverauth"}`)
+		mo.client_authwithserver_requests_total.fail_gameserverauthudp = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="fail_gameserverauthudp"}`)
 		mo.client_authwithserver_requests_total.fail_storage_error_account = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="fail_storage_error_account"}`)
 		mo.client_authwithserver_requests_total.fail_storage_error_pdata = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="fail_storage_error_pdata"}`)
 		mo.client_authwithserver_requests_total.fail_other_error = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="fail_other_error"}`)
 		mo.client_authwithserver_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="http_method_not_allowed"}`)
 		mo.client_authwithserver_gameserverauth_duration_seconds = mo.set.NewHistogram(`atlas_api0_client_authwithserver_gameserverauth_duration_seconds`)
+		mo.client_authwithserver_gameserverauthudp_duration_seconds = mo.set.NewHistogram(`atlas_api0_client_authwithserver_gameserverauthudp_duration_seconds`)
+		mo.client_authwithserver_gameserverauthudp_attempts = mo.set.NewHistogram(`atlas_api0_client_authwithserver_gameserverauthudp_attempts`)
 		mo.client_authwithself_requests_total.success = mo.set.NewCounter(`atlas_api0_client_authwithself_requests_total{result="success"}`)
 		mo.client_authwithself_requests_total.reject_bad_request = mo.set.NewCounter(`atlas_api0_client_authwithself_requests_total{result="reject_bad_request"}`)
 		mo.client_authwithself_requests_total.reject_versiongate = mo.set.NewCounter(`atlas_api0_client_authwithself_requests_total{result="reject_versiongate"}`)
@@ -432,6 +450,16 @@ func (h *Handler) m() *apiMetrics {
 		mo.server_remove_requests_total.reject_server_not_found = mo.set.NewCounter(`atlas_api0_server_remove_requests_total{result="reject_server_not_found"}`)
 		mo.server_remove_requests_total.fail_other_error = mo.set.NewCounter(`atlas_api0_server_remove_requests_total{result="fail_other_error"}`)
 		mo.server_remove_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_server_remove_requests_total{result="http_method_not_allowed"}`)
+		mo.server_connect_requests_total.success = mo.set.NewCounter(`atlas_api0_server_connect_requests_total{result="success"}`)
+		mo.server_connect_requests_total.success_reject = mo.set.NewCounter(`atlas_api0_server_connect_requests_total{result="success_reject"}`)
+		mo.server_connect_requests_total.success_pdata = mo.set.NewCounter(`atlas_api0_server_connect_requests_total{result="success_pdata"}`)
+		mo.server_connect_requests_total.reject_unauthorized_ip = mo.set.NewCounter(`atlas_api0_server_connect_requests_total{result="reject_unauthorized_ip"}`)
+		mo.server_connect_requests_total.reject_server_not_found = mo.set.NewCounter(`atlas_api0_server_connect_requests_total{result="reject_server_not_found"}`)
+		mo.server_connect_requests_total.reject_invalid_connection_token = mo.set.NewCounter(`atlas_api0_server_connect_requests_total{result="reject_invalid_connection_token"}`)
+		mo.server_connect_requests_total.reject_must_get_pdata = mo.set.NewCounter(`atlas_api0_server_connect_requests_total{result="reject_must_get_pdata"}`)
+		mo.server_connect_requests_total.reject_bad_request = mo.set.NewCounter(`atlas_api0_server_connect_requests_total{result="reject_bad_request"}`)
+		mo.server_connect_requests_total.fail_other_error = mo.set.NewCounter(`atlas_api0_server_connect_requests_total{result="fail_other_error"}`)
+		mo.server_connect_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_server_connect_requests_total{result="http_method_not_allowed"}`)
 		mo.player_pdata_requests_total.success = func(filter string) *metrics.Counter {
 			if filter == "" {
 				panic("invalid filter")
