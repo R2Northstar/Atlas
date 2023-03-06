@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/klauspost/compress/gzip"
@@ -107,6 +108,19 @@ type Handler struct {
 
 	metricsInit sync.Once
 	metricsObj  apiMetrics
+
+	connect sync.Map // [connectStateKey]*connectState
+}
+
+type connectStateKey struct {
+	ServerID string
+	Token    string
+}
+
+type connectState struct {
+	res      chan<- string // buffer 1
+	pdata    []byte
+	gotPdata atomic.Bool
 }
 
 // ServeHTTP routes requests to Handler.
@@ -135,6 +149,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleServerUpsert(w, r)
 	case "/server/remove_server":
 		h.handleServerRemove(w, r)
+	case "/server/connect":
+		h.handleServerConnect(w, r)
 	case "/accounts/write_persistence":
 		h.handleAccountsWritePersistence(w, r)
 	case "/accounts/get_username":

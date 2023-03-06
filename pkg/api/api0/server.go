@@ -140,6 +140,8 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 				respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("authPort param is required"))
 				return
 			}
+		} else if v == "udp" {
+			s.AuthPort = 0
 		} else if n, err := strconv.ParseUint(v, 10, 16); err != nil {
 			h.m().server_upsert_requests_total.reject_bad_request(action).Inc()
 			respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("authPort param is invalid: %v", err))
@@ -368,23 +370,25 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithDeadline(r.Context(), nsrv.VerificationDeadline)
 		defer cancel()
 
-		if err := api0gameserver.Verify(ctx, s.AuthAddr()); err != nil {
-			var code ErrorCode
-			switch {
-			case errors.Is(err, context.DeadlineExceeded):
-				err = fmt.Errorf("request timed out")
-				code = ErrorCode_NO_GAMESERVER_RESPONSE
-				h.m().server_upsert_requests_total.reject_verify_authtimeout(action).Inc()
-			case errors.Is(err, api0gameserver.ErrInvalidResponse):
-				code = ErrorCode_BAD_GAMESERVER_RESPONSE
-				h.m().server_upsert_requests_total.reject_verify_authresp(action).Inc()
-			default:
-				code = ErrorCode_NO_GAMESERVER_RESPONSE
-				h.m().server_upsert_requests_total.reject_verify_autherr(action).Inc()
+		if nsrv.AuthPort != 0 {
+			if err := api0gameserver.Verify(ctx, s.AuthAddr()); err != nil {
+				var code ErrorCode
+				switch {
+				case errors.Is(err, context.DeadlineExceeded):
+					err = fmt.Errorf("request timed out")
+					code = ErrorCode_NO_GAMESERVER_RESPONSE
+					h.m().server_upsert_requests_total.reject_verify_authtimeout(action).Inc()
+				case errors.Is(err, api0gameserver.ErrInvalidResponse):
+					code = ErrorCode_BAD_GAMESERVER_RESPONSE
+					h.m().server_upsert_requests_total.reject_verify_authresp(action).Inc()
+				default:
+					code = ErrorCode_NO_GAMESERVER_RESPONSE
+					h.m().server_upsert_requests_total.reject_verify_autherr(action).Inc()
+				}
+				h.m().server_upsert_verify_time_seconds.failure.UpdateDuration(verifyStart)
+				respFail(w, r, http.StatusBadGateway, code.MessageObjf("failed to connect to auth port: %v", err))
+				return
 			}
-			h.m().server_upsert_verify_time_seconds.failure.UpdateDuration(verifyStart)
-			respFail(w, r, http.StatusBadGateway, code.MessageObjf("failed to connect to auth port: %v", err))
-			return
 		}
 
 		if err := a2s.Probe(s.Addr, time.Until(nsrv.VerificationDeadline)); err != nil {
@@ -401,6 +405,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			respFail(w, r, http.StatusBadGateway, code.MessageObjf("failed to connect to game port: %v", err))
 			return
 		}
+
 		h.m().server_upsert_verify_time_seconds.success.UpdateDuration(verifyStart)
 
 		if !h.ServerList.VerifyServer(nsrv.ID) {
@@ -470,6 +475,110 @@ func (h *Handler) handleServerRemove(w http.ResponseWriter, r *http.Request) {
 	h.ServerList.DeleteServerByID(id)
 
 	h.m().server_remove_requests_total.success.Inc()
+	respJSON(w, r, http.StatusOK, map[string]any{
+		"success": true,
+	})
+}
+
+func (h *Handler) handleServerConnect(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodOptions && r.Method != http.MethodGet && r.Method != http.MethodPost {
+		h.m().server_connect_requests_total.http_method_not_allowed.Inc()
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Cache-Control", "private, no-cache, no-store")
+	w.Header().Set("Expires", "0")
+	w.Header().Set("Pragma", "no-cache")
+
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Allow", "OPTIONS, GET, POST")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	raddr, err := netip.ParseAddrPort(r.RemoteAddr)
+	if err != nil {
+		hlog.FromRequest(r).Error().
+			Err(err).
+			Msgf("failed to parse remote ip %q", r.RemoteAddr)
+		h.m().server_connect_requests_total.fail_other_error.Inc()
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
+		return
+	}
+
+	var serverId string
+	if v := r.URL.Query().Get("serverId"); v == "" {
+		h.m().server_connect_requests_total.reject_bad_request.Inc()
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("serverId param is required"))
+		return
+	} else {
+		serverId = v
+	}
+
+	srv := h.ServerList.GetServerByID(serverId)
+	if srv == nil {
+		h.m().server_connect_requests_total.reject_server_not_found.Inc()
+		respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObjf("no such game server"))
+		return
+	}
+	if srv.Addr.Addr() != raddr.Addr() {
+		h.m().server_connect_requests_total.reject_unauthorized_ip.Inc()
+		respFail(w, r, http.StatusForbidden, ErrorCode_UNAUTHORIZED_GAMESERVER.MessageObj())
+		return
+	}
+
+	var state *connectState
+	if v := r.URL.Query().Get("token"); v == "" {
+		h.m().server_connect_requests_total.reject_invalid_connection_token.Inc()
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("connection token is required"))
+		return
+	} else if v, ok := h.connect.Load(connectStateKey{
+		ServerID: srv.ID,
+		Token:    v,
+	}); !ok {
+		h.m().server_connect_requests_total.reject_invalid_connection_token.Inc()
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("no such connection token (has it already been used?)"))
+		return
+	} else {
+		state = v.(*connectState)
+	}
+
+	if r.Method == http.MethodGet {
+		state.gotPdata.Store(true)
+		h.m().server_connect_requests_total.success_pdata.Inc()
+		respMaybeCompress(w, r, http.StatusOK, state.pdata)
+		return
+	}
+
+	var reject string
+	if v := r.URL.Query()["reject"]; len(v) != 1 {
+		h.m().server_connect_requests_total.reject_invalid_connection_token.Inc()
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("reject is required (if no rejection reason, set to an empty string)"))
+		return
+	} else {
+		reject = v[0]
+	}
+	if n := 256; len(reject) > n {
+		reject = reject[:n]
+	}
+
+	if reject == "" && !state.gotPdata.Load() {
+		h.m().server_connect_requests_total.reject_must_get_pdata.Inc()
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("must get pdata before accepting connection"))
+		return
+	}
+
+	select {
+	case state.res <- reject:
+	default:
+	}
+
+	if reject == "" {
+		h.m().server_connect_requests_total.success.Inc()
+	} else {
+		h.m().server_connect_requests_total.success_reject.Inc()
+	}
 	respJSON(w, r, http.StatusOK, map[string]any{
 		"success": true,
 	})
