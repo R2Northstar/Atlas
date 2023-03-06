@@ -228,6 +228,10 @@ func (h *Handler) ExtractLauncherVersion(r *http.Request) string {
 
 // geoCounter2 increments a [metricsx.GeoCounter2] for the location of r.
 func (h *Handler) geoCounter2(r *http.Request, ctr *metricsx.GeoCounter2) {
+	if h.LookupIP == nil {
+		return
+	}
+
 	a, err := netip.ParseAddrPort(r.RemoteAddr)
 	if err != nil {
 		return
