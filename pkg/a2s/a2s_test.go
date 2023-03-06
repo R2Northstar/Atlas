@@ -51,6 +51,15 @@ func TestDecodeChallenge(t *testing.T) {
 		t.Errorf("incorrect challenge")
 	}
 }
+
+func TestAtlasSigreq1(t *testing.T) {
+	b := mustDecodeHex("ffffffff547369677265713100803dab964c7c71851c05de40f5bf4cf72743951c96f2f0b81139ca780203260674657374")
+	a := r2encodeAtlasSigreq1([]byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), []byte("test"))
+	if !bytes.Equal(a, b) {
+		t.Errorf("incorrect encoding: expected %x, got %x", b, a)
+	}
+}
+
 func FuzzGetChallenge(f *testing.F) {
 	f.Add(uint64(0))
 	f.Add(uint64(1000000001337))

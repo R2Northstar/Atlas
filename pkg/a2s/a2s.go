@@ -6,8 +6,11 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -63,6 +66,37 @@ func Probe(addr netip.AddrPort, timeout time.Duration) error {
 	}
 	if uid != ProbeUID {
 		return fmt.Errorf("invalid challenge")
+	}
+	return nil
+}
+
+func AtlasSigreq1(addr netip.AddrPort, timeout time.Duration, key string, obj any) error {
+	// TODO: unconnected udp for performance
+
+	a := net.UDPAddrFromAddrPort(addr)
+	conn, err := net.DialUDP("udp", nil, a)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	t := time.Now().Add(timeout)
+	conn.SetWriteDeadline(t)
+
+	j, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	}
+
+	pkt, err := r2cryptoEncrypt(r2encodeAtlasSigreq1([]byte(key), j))
+	if err != nil {
+		return fmt.Errorf("encrypt packet: %w", err)
+	}
+	if _, err := conn.Write(pkt); err != nil {
+		if errors.Is(err, os.ErrDeadlineExceeded) {
+			err = fmt.Errorf("%w: %v", ErrTimeout, err)
+		}
+		return fmt.Errorf("send packet: %w", err)
 	}
 	return nil
 }
@@ -132,6 +166,19 @@ func r2encodeGetChallenge(uid uint64) []byte {
 	binary.Write(&b, binary.LittleEndian, uint64(uid))
 	binary.Write(&b, binary.LittleEndian, uint8(2))
 	return b.Bytes()
+}
+
+func r2encodeAtlasSigreq1(key, data []byte) []byte {
+	sig := hmac.New(sha256.New, key)
+	sig.Write(data)
+
+	var b []byte
+	b = append(b, '\xFF', '\xFF', '\xFF', '\xFF') // connectionless: int32(-1)
+	b = append(b, 'T')                            // packet kind
+	b = append(b, "sigreq1\x00"...)               // packet type
+	b = sig.Sum(b)                                // sigreq1 - signature
+	b = append(b, data...)                        // sigreq1 - data
+	return b
 }
 
 func r2decodeChallenge(b []byte) (uint64, int32, error) {
