@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Packet Monitor</title>
+    <style>
+        html, body {
+            padding: 0;
+            margin: 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        #status,
+        table > tbody > tr > td {
+            padding: 8px;
+            font-size: 12px;
+            font-family: monospace;
+            white-space: pre;
+            line-height: 1;
+        }
+        table > tbody > tr > td {
+            width: 1%;
+            vertical-align: top;
+        }
+        table > tbody > tr > td:first-child {
+            border-right: 1px solid currentColor;
+        }
+        table > tbody > tr > td:last-child {
+            width: auto;
+        }
+        table, #status {
+            color: #000;
+            border-bottom: 1px solid currentColor;
+        }
+        table > tbody > tr:nth-child(odd) {
+            background: #fafafa;
+        }
+        table > tbody > tr:nth-child(even) {
+            background: #ececec;
+        }
+        #status {
+            background: #dedede;
+        }
+    </style>
+</head>
+<body>
+    <table><tbody id="log"></tbody></table>
+    <div id="status">error</div>
+    <script>
+        (async () => {
+            let ready = false
+            let attempts = 0
+            while (1) {
+                await new Promise(retry => {
+                    status(`connecting (attempt ${attempts})`)
+                    const sse = new EventSource("?sse")
+                    sse.addEventListener("open", e => {
+                        attempts = 0
+                        status(`connected`)
+                    })
+                    sse.addEventListener("error", e => {
+                        if (ready) write("disconnected", "", "")
+                        sse.close()
+                        ready = false
+                        status(`connection failed (attempt ${++attempts})`)
+                        window.setTimeout(retry,
+                            attempts < 30 ?   500 :
+                            attempts < 60 ?  1000 :
+                            attempts < 78 ? 15000 : 30000)
+                    })
+                    sse.addEventListener("init", e => {
+                        ready = true
+                        write("connected", "", e.data)
+                    })
+                    sse.addEventListener("packet", e => {
+                        const obj = JSON.parse(e.data)
+                        write(obj.remote, (obj.in ? "<--" : "-->"), obj.desc + "\n\n" + obj.data)
+                    })
+                })
+            }
+            function status(x) {
+                document.getElementById("status").textContent = x
+            }
+            function write(...a) {
+                const d = new Date()
+                const t = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")}`
+                const s = (document.body.offsetHeight - 10) < (window.innerHeight + window.pageYOffset)
+                const e = document.getElementById("log").appendChild(document.createElement("tr"))
+                for (const x of [t, ...a]) e.appendChild(document.createElement("td")).textContent = x
+                if (s) window.scrollTo(0, document.body.scrollHeight)
+            }
+        })()
+    </script>
+</body>
+</html>
