@@ -31,6 +31,10 @@ type Config struct {
 	// The addresses to listen on with TLS (comma-separated).
 	AddrTLS []string `env:"ATLAS_ADDR_HTTPS"`
 
+	// The address to listen on and use to send connectionless packets. If the
+	// port is 0, a random one is chosen.
+	AddrUDP netip.AddrPort `env:"ATLAS_ADDR_UDP=:0"`
+
 	// Whether to trust Cloudflare headers like CF-Connecting-IP.
 	//
 	// This is not safe to use unless you:

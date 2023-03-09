@@ -41,6 +41,7 @@ type Server struct {
 
 	Addr          []string
 	AddrTLS       []string
+	AddrUDP       netip.AddrPort
 	Handler       http.Handler
 	Web           http.Handler
 	Redirects     map[string]string
@@ -73,6 +74,7 @@ func NewServer(c *Config) (*Server, error) {
 
 	s.Addr = c.Addr
 	s.AddrTLS = c.AddrTLS
+	s.AddrUDP = c.AddrUDP
 
 	s.NotifySocket = c.NotifySocket
 
@@ -916,7 +918,7 @@ func (s *Server) Run(ctx context.Context) error {
 		}()
 	}
 	go func() {
-		errch <- s.API0.NSPkt.ListenAndServe(netip.AddrPort{})
+		errch <- s.API0.NSPkt.ListenAndServe(s.AddrUDP)
 	}()
 
 	select {
