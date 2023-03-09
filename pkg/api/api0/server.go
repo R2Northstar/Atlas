@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/netip"
 	"strconv"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	"github.com/pg9182/ip2x"
-	"github.com/r2northstar/atlas/pkg/a2s"
 	"github.com/r2northstar/atlas/pkg/api/api0/api0gameserver"
 	"github.com/rs/zerolog/hlog"
 )
@@ -391,18 +391,18 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if err := a2s.Probe(s.Addr, time.Until(nsrv.VerificationDeadline)); err != nil {
-			var code ErrorCode
+		if err := h.probeUDP(ctx, s.Addr); err != nil {
+			var obj ErrorObj
 			switch {
-			case errors.Is(err, a2s.ErrTimeout):
+			case errors.Is(err, context.DeadlineExceeded):
 				h.m().server_upsert_requests_total.reject_verify_udptimeout(action).Inc()
-				code = ErrorCode_NO_GAMESERVER_RESPONSE
+				obj = ErrorCode_NO_GAMESERVER_RESPONSE.MessageObjf("failed to connect to game port")
 			default:
 				h.m().server_upsert_requests_total.reject_verify_udperr(action).Inc()
-				code = ErrorCode_BAD_GAMESERVER_RESPONSE
+				obj = ErrorCode_INTERNAL_SERVER_ERROR.MessageObjf("failed to connect to game port: %v", err)
 			}
 			h.m().server_upsert_verify_time_seconds.failure.UpdateDuration(verifyStart)
-			respFail(w, r, http.StatusBadGateway, code.MessageObjf("failed to connect to game port: %v", err))
+			respFail(w, r, http.StatusBadGateway, obj)
 			return
 		}
 
@@ -423,6 +423,43 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 		"id":              nsrv.ID,
 		"serverAuthToken": nsrv.ServerAuthToken,
 	})
+}
+
+func (h *Handler) probeUDP(ctx context.Context, addr netip.AddrPort) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	uid := rand.Uint64()
+
+	x := make(chan error, 1)
+	go func() {
+		t := time.NewTicker(time.Second * 3) // note: we don't want to exceed the connectionless rate limit
+		defer t.Stop()
+
+		for {
+			if err := h.NSPkt.SendConnect(addr, uid); err != nil {
+				select {
+				case x <- err:
+				default:
+				}
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+			}
+		}
+	}()
+
+	err := h.NSPkt.WaitConnectReply(ctx, addr, uid)
+	if err != nil {
+		select {
+		case err = <-x:
+			// error could be due to an issue sending the packet
+		default:
+		}
+	}
+	return err
 }
 
 func (h *Handler) handleServerRemove(w http.ResponseWriter, r *http.Request) {
