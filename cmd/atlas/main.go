@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-envparse"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/r2northstar/atlas/pkg/atlas"
+	"github.com/r2northstar/atlas/pkg/nspkt"
 	"github.com/spf13/pflag"
 )
 
@@ -53,14 +54,21 @@ func main() {
 		}
 	}
 
+	dbg := http.NewServeMux()
 	if dbgAddr, _ := getEnvList("INSECURE_DEBUG_SERVER_ADDR", e, os.Environ()); dbgAddr != "" {
 		go func() {
 			fmt.Fprintf(os.Stderr, "warning: running insecure debug server on %q\n", dbgAddr)
-			if err := runDebugServer(dbgAddr); err != nil {
+			if err := http.ListenAndServe(dbgAddr, dbg); err != nil {
 				fmt.Fprintf(os.Stderr, "warning: failed to start debug server: %v\n", err)
 			}
 		}()
 	}
+
+	dbg.HandleFunc("/debug/pprof/", pprof.Index)
+	dbg.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	dbg.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	dbg.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	dbg.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	var c atlas.Config
 	if err := c.UnmarshalEnv(e, false); err != nil {
@@ -73,6 +81,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error: initialize server: %v\n", err)
 		os.Exit(1)
 	}
+
+	dbg.Handle("/nspkt", nspkt.DebugMonitorHandler(s.API0.NSPkt))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -91,16 +101,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error: run server: %v\n", err)
 		os.Exit(1)
 	}
-}
-
-func runDebugServer(addr string) error {
-	m := http.NewServeMux()
-	m.HandleFunc("/debug/pprof/", pprof.Index)
-	m.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	m.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	m.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	m.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	return http.ListenAndServe(addr, m)
 }
 
 func getEnvList(k string, e ...[]string) (string, bool) {
