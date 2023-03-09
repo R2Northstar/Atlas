@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net/netip"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -336,6 +337,16 @@ func (c *Config) UnmarshalEnv(es []string, incremental bool) error {
 				cvf.Set(reflect.ValueOf((*UIDGID)(nil)))
 			} else if v, err := parseUIDGID(val); err == nil {
 				cvf.Set(reflect.ValueOf(&v))
+			} else {
+				return fmt.Errorf("env %s (%T): parse %q: %w", key, cvf.Interface(), val, err)
+			}
+		case netip.AddrPort:
+			if val == "" {
+				cvf.Set(reflect.ValueOf(netip.AddrPort{}))
+			} else if v, err := netip.ParseAddrPort(val); err == nil {
+				cvf.Set(reflect.ValueOf(v))
+			} else if v, err1 := netip.ParseAddrPort("[::]" + val); val[0] == ':' && err1 == nil {
+				cvf.Set(reflect.ValueOf(v))
 			} else {
 				return fmt.Errorf("env %s (%T): parse %q: %w", key, cvf.Interface(), val, err)
 			}
