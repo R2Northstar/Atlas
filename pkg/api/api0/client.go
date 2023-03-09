@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/r2northstar/atlas/pkg/a2s"
 	"github.com/r2northstar/atlas/pkg/api/api0/api0gameserver"
 	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/origin"
@@ -617,61 +616,65 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 
 			h.m().client_authwithserver_gameserverauth_duration_seconds.UpdateDuration(authStart)
 		} else {
-			obj := map[string]any{
-				"type":     "connect",
-				"token":    authToken,
-				"uid":      acct.UID,
-				"username": acct.Username,
-				"ip":       raddr.Addr().String(),
-				"time":     time.Now().Unix(),
-			}
-
-			key := connectStateKey{
-				ServerID: srv.ID,
-				Token:    authToken,
-			}
-
-			ch := make(chan string, 1)
-			h.connect.Store(key, &connectState{
-				res:   ch,
-				pdata: pbuf,
-			})
-			defer h.connect.Delete(key)
-
 			var attempts int
 			if rej, err := func() (string, error) {
-				t := time.NewTicker(time.Millisecond * 250)
-				defer t.Stop()
+				obj := map[string]any{
+					"type":     "connect",
+					"token":    authToken,
+					"uid":      acct.UID,
+					"username": acct.Username,
+					"ip":       raddr.Addr().String(),
+					"time":     time.Now().Unix(),
+				}
+
+				key := connectStateKey{
+					ServerID: srv.ID,
+					Token:    authToken,
+				}
+
+				ch := make(chan string, 1)
+				h.connect.Store(key, &connectState{
+					res:   ch,
+					pdata: pbuf,
+				})
+				defer h.connect.Delete(key)
+
+				ctx, cancel := context.WithCancel(ctx)
+				defer cancel()
 
 				x := make(chan error, 1)
 
-				for {
-					attempts++
-					go func() {
-						if err := a2s.AtlasSigreq1(srv.AuthAddr(), time.Second, srv.ServerAuthToken, obj); err != nil {
-							if !errors.Is(err, a2s.ErrTimeout) {
-								select {
-								case x <- err:
-								default:
-								}
-							}
-						}
-					}()
-					select {
-					case <-ctx.Done():
-						err := ctx.Err()
-						if errors.Is(err, context.DeadlineExceeded) {
-							// if we timed out, it might be because of an error while sending the packet
+				go func() {
+					t := time.NewTicker(time.Millisecond * 250)
+					defer t.Stop()
+
+					for {
+						attempts++
+						if err := h.NSPkt.SendAtlasSigreq1(srv.AuthAddr(), srv.ServerAuthToken, obj); err != nil {
 							select {
-							case err = <-x:
+							case x <- err:
 							default:
 							}
 						}
-						return "", err
-					case x := <-ch:
-						return x, nil
-					case <-t.C:
+						select {
+						case <-ctx.Done():
+							return
+						case <-t.C:
+						}
 					}
+				}()
+
+				select {
+				case <-ctx.Done():
+					err := ctx.Err()
+					select {
+					case err = <-x:
+						// error could be due to an issue sending the packet
+					default:
+					}
+					return "", err
+				case x := <-ch:
+					return x, nil
 				}
 			}(); err != nil {
 				h.m().client_authwithserver_gameserverauthudp_duration_seconds.UpdateDuration(authStart)

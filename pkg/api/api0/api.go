@@ -29,6 +29,7 @@ import (
 	"github.com/pg9182/ip2x"
 	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/metricsx"
+	"github.com/r2northstar/atlas/pkg/nspkt"
 	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/rs/zerolog/hlog"
 	"golang.org/x/mod/semver"
@@ -44,6 +45,9 @@ type Handler struct {
 
 	// PdataStorage stores player data. It must be non-nil.
 	PdataStorage PdataStorage
+
+	// NSPkt handles connectionless packets. It must be non-nil.
+	NSPkt *nspkt.Listener
 
 	// UsernameSource configures the source to use for usernames.
 	UsernameSource UsernameSource

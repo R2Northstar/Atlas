@@ -28,6 +28,7 @@ import (
 	"github.com/r2northstar/atlas/pkg/cloudflare"
 	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/memstore"
+	"github.com/r2northstar/atlas/pkg/nspkt"
 	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/r2northstar/atlas/pkg/regionmap"
 	"github.com/rs/zerolog"
@@ -270,6 +271,7 @@ func NewServer(c *Config) (*Server, error) {
 	m.Add(hlog.RequestIDHandler("rid", ""))
 
 	s.API0 = &api0.Handler{
+		NSPkt: nspkt.NewListener(),
 		ServerList: api0.NewServerList(c.API0_ServerList_DeadTime, c.API0_ServerList_GhostTime, c.API0_ServerList_VerifyTime, api0.ServerListConfig{
 			ExperimentalDeterministicServerIDSecret: c.API0_ServerList_ExperimentalDeterministicServerIDSecret,
 			AllowUwuify:                             c.AllowJokes,
@@ -913,6 +915,9 @@ func (s *Server) Run(ctx context.Context) error {
 			}
 		}()
 	}
+	go func() {
+		errch <- s.API0.NSPkt.ListenAndServe(netip.AddrPort{})
+	}()
 
 	select {
 	case <-ctx.Done():
@@ -984,6 +989,7 @@ func (s *Server) serveRest(w http.ResponseWriter, r *http.Request) {
 		if internal {
 			ms = append(ms, metrics.WriteProcessMetrics)
 			ms = append(ms, s.API0.WritePrometheus)
+			ms = append(ms, s.API0.NSPkt.WritePrometheus)
 		}
 		ms = append(ms, s.API0.ServerList.WritePrometheus)
 		if internal && geo {
