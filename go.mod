@@ -14,12 +14,14 @@ require (
 	github.com/pg9182/ip2x v1.0.0
 	github.com/rs/zerolog v1.29.0
 	github.com/spf13/pflag v1.0.5
+	gitlab.com/lamados/uwuify v1.0.3
 	golang.org/x/mod v0.8.0
 	golang.org/x/net v0.7.0
 	golang.org/x/sys v0.5.0
 )
 
 require (
+	github.com/OneOfOne/xxhash v1.2.8 // indirect
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
