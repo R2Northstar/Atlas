@@ -217,7 +217,9 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			if n := 256; len(v) > n { // NorthstarLauncher@v1.9.7 limits it to 63
 				v = v[:n]
 			}
-			v = uwuify.TranslateNoKaomoji(v)
+			if t := time.Now(); t.Day() == 1 && t.Month() == 4 {
+				v = uwuify.TranslateNoKaomoji(v)
+			}
 			if canCreate {
 				s.Name = v
 			}
