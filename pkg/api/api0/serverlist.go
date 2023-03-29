@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -70,6 +71,8 @@ type ServerListConfig struct {
 	// restarting the masterserver) or server restart. Notable, if a server
 	// changes their name or description, the ID will not be the same anymore.
 	ExperimentalDeterministicServerIDSecret string
+
+	AllowUwuify bool
 }
 
 type Server struct {
@@ -272,14 +275,14 @@ func (s *ServerList) csGetJSON() []byte {
 	// generate the json and cache it
 	//
 	// note: we write it manually to avoid copying the entire list and to avoid the perf overhead of reflection
-	buf, est := csJSON(ss, int(s.csEst.Load()))
+	buf, est := csJSON(ss, int(s.csEst.Load()), s.cfg)
 	s.csBytes.Store(&buf)
 	s.csEst.Store(uint64(est))
 
 	return buf
 }
 
-func csJSON(ss []*Server, est int) ([]byte, int) {
+func csJSON(ss []*Server, est int, cfg ServerListConfig) ([]byte, int) {
 	if len(ss) == 0 {
 		return []byte(`[]`), est
 	}
@@ -316,7 +319,13 @@ func csJSON(ss []*Server, est int) ([]byte, int) {
 		b = append(b, `,"id":"`...)
 		b = append(b, srv.ID...)
 		b = append(b, `","name":`...)
-		b = appendJSONString(b, srv.Name)
+		name := srv.Name
+		if cfg.AllowUwuify {
+			if _, m, d := time.Now().UTC().Date(); m == time.April && d == 1 {
+				name = uwuify(name)
+			}
+		}
+		b = appendJSONString(b, name)
 		if srv.Region != "" && srv.Password == "" {
 			b = append(b, `,"region":`...)
 			b = appendJSONString(b, srv.Region)
@@ -1294,4 +1303,28 @@ func appendJSONString(e []byte, s string) []byte {
 	}
 	e = append(e, '"')
 	return e
+}
+
+// uwuifier contains replacements to convert a string to uwu.
+//
+// Source: gitlab.com/lamados/uwuify, MIT license, Copyright (c) 2020 lamados.
+// P.S. since repo is now gone see rehosted at https://github.com/1lann/uwuify
+var replacer = strings.NewReplacer(
+	"r", "w", "R", "W",
+	"l", "w", "L", "W",
+	"f", "fw", "F", "FW",
+	"ck", "cc", "cK", "cC", "Ck", "Cc", "CC", "CC",
+	"ff", "ffw", "fF", "fFW", "Ff", "Ffw", "FF", "FFW",
+	// "ing", "in", "inG", "iN", "iNg", "iN", "iNG", "iN", "Ing", "In", "InG", "IN", "INg", "IN", "ING", "IN",
+	"tha", "da", "thA", "dA", "tHa", "Da", "tHA", "DA", "Tha", "Da", "ThA", "DA", "THa", "Da", "THA", "DA",
+	"the", "de", "thE", "dE", "tHe", "De", "tHE", "DE", "The", "De", "ThE", "DE", "THe", "De", "THE", "DE",
+	"...", ",,,", "..", ",,", "…", ",,,",
+	".", "!!!", "?", "?!!!", "!", "!!!",
+	"Northstar", "SouwthSuwn",
+	"northstar", "souwthsuwn",
+)
+
+// converts s to UwU.
+func uwuify(s string) string {
+	return replacer.Replace(s)
 }
