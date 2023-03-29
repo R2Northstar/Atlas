@@ -15,7 +15,6 @@ import (
 	"github.com/r2northstar/atlas/pkg/a2s"
 	"github.com/r2northstar/atlas/pkg/api/api0/api0gameserver"
 	"github.com/rs/zerolog/hlog"
-	"gitlab.com/lamados/uwuify"
 )
 
 func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
@@ -216,9 +215,6 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			}
 			if n := 256; len(v) > n { // NorthstarLauncher@v1.9.7 limits it to 63
 				v = v[:n]
-			}
-			if t := time.Now(); t.Day() == 1 && t.Month() == 4 {
-				v = uwuify.TranslateNoKaomoji(v)
 			}
 			if canCreate {
 				s.Name = v

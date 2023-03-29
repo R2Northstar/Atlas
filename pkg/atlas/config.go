@@ -24,6 +24,9 @@ type UIDGID [2]int
 // environment variable name and the default value if missing, or empty (if not
 // ?=). All string arrays are comma-separated.
 type Config struct {
+	// For the Funny:tm:
+	AllowJokes bool `env:"ATLAS_JOKES"`
+
 	// The addresses to listen on (comma-separated).
 	Addr []string `env:"ATLAS_ADDR?=:8080"`
 
