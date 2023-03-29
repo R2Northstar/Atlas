@@ -220,6 +220,9 @@ type Config struct {
 	// {status}.html.
 	Web string `env:"ATLAS_WEB"`
 
+	// For the Funny:tm:
+	AllowJokes bool `env:"ATLAS_JOKES"`
+
 	// The path to the IP2Location database, which should contain at least the
 	// country and region fields. The database must not be modified while atlas
 	// is running, but it can be replaced (and a reload can be triggered with
@@ -230,9 +233,6 @@ type Config struct {
 
 	// For sd-notify.
 	NotifySocket string `env:"NOTIFY_SOCKET"`
-
-	// For the Funny:tm:
-	AllowJokes bool `env:"ATLAS_JOKES"`
 
 	// TODO: BadWords
 }
