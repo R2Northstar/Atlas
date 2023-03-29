@@ -1320,6 +1320,8 @@ var replacer = strings.NewReplacer(
 	"the", "de", "thE", "dE", "tHe", "De", "tHE", "DE", "The", "De", "ThE", "DE", "THe", "De", "THE", "DE",
 	"...", ",,,", "..", ",,", "…", ",,,",
 	".", "!!!", "?", "?!!!", "!", "!!!",
+	"Northstar", "SouwthSuwn",
+	"northstar", "souwthsuwn",
 )
 
 // converts s to UwU.
