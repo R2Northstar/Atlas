@@ -184,6 +184,9 @@ This document describes the recommended setup for an non-containerized Atlas ser
 
     # ip2location
     ATLAS_IP2LOCATION=/usr/share/ip2location-lite/IP2LOCATION-LITE-DB11.IPV6.BIN
+
+    # misc
+    ATLAS_JOKES=true
     ```
 
     Note: The `@` values in the config are references to systemd credentials, which will be described later.
