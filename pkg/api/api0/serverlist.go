@@ -319,11 +319,13 @@ func csJSON(ss []*Server, est int, cfg ServerListConfig) ([]byte, int) {
 		b = append(b, `,"id":"`...)
 		b = append(b, srv.ID...)
 		b = append(b, `","name":`...)
-		if t := time.Now().UTC(); cfg.AllowUwuify && t.Month() == time.April && t.Day() == 1 {
-			b = appendJSONString(b, uwuify(srv.Name))
-		} else {
-			b = appendJSONString(b, srv.Name)
+		name := srv.Name
+		if cfg.AllowUwuify {
+			if _, m, d := time.Now().UTC().Date(); m == time.April && d == 1 {
+				name = uwuify(name)
+			}
 		}
+		b = appendJSONString(b, name)
 		if srv.Region != "" && srv.Password == "" {
 			b = append(b, `,"region":`...)
 			b = appendJSONString(b, srv.Region)
