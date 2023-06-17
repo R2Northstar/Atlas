@@ -519,7 +519,12 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 	password := r.URL.Query().Get("password")
 
 	srv := h.ServerList.GetServerByID(server)
-	if srv == nil || srv.Password != password {
+	if srv == nil {
+		h.m().client_authwithserver_requests_total.reject_gameserver_not_found.Inc()
+		respFail(w, r, http.StatusUnauthorized, ErrorCode_GAMESERVER_NOT_FOUND.MessageObj())
+		return
+	}
+	if srv.Password != password {
 		h.m().client_authwithserver_requests_total.reject_password.Inc()
 		respFail(w, r, http.StatusUnauthorized, ErrorCode_UNAUTHORIZED_PWD.MessageObj())
 		return

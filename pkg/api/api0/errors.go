@@ -17,6 +17,7 @@ const (
 	ErrorCode_STRYDER_RESPONSE           ErrorCode = "STRYDER_RESPONSE"           // Got bad response from stryder
 	ErrorCode_STRYDER_PARSE              ErrorCode = "STRYDER_PARSE"              // Couldn't parse stryder response
 	ErrorCode_PLAYER_NOT_FOUND           ErrorCode = "PLAYER_NOT_FOUND"           // Couldn't find player account
+	ErrorCode_GAMESERVER_NOT_FOUND       ErrorCode = "GAMESERVER_NOT_FOUND"       // Couldn't find game server
 	ErrorCode_INVALID_MASTERSERVER_TOKEN ErrorCode = "INVALID_MASTERSERVER_TOKEN" // Invalid or expired masterserver token
 	ErrorCode_JSON_PARSE_ERROR           ErrorCode = "JSON_PARSE_ERROR"           // Error parsing json response
 	ErrorCode_UNSUPPORTED_VERSION        ErrorCode = "UNSUPPORTED_VERSION"        // The version you are using is no longer supported
@@ -77,6 +78,8 @@ func (n ErrorCode) Message() string {
 		return "Couldn't parse stryder response"
 	case ErrorCode_PLAYER_NOT_FOUND:
 		return "Couldn't find player account"
+	case ErrorCode_GAMESERVER_NOT_FOUND:
+		return "Couldn't find game server"
 	case ErrorCode_INVALID_MASTERSERVER_TOKEN:
 		return "Invalid or expired masterserver token"
 	case ErrorCode_JSON_PARSE_ERROR:

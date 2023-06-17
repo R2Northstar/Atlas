@@ -87,20 +87,21 @@ type apiMetrics struct {
 		fail_other_error  *metrics.Counter
 	}
 	client_authwithserver_requests_total struct {
-		success                    *metrics.Counter
-		reject_bad_request         *metrics.Counter
-		reject_versiongate         *metrics.Counter
-		reject_player_not_found    *metrics.Counter
-		reject_masterserver_token  *metrics.Counter
-		reject_password            *metrics.Counter
-		reject_gameserverauth      *metrics.Counter
-		reject_gameserver          *metrics.Counter
-		fail_gameserverauth        *metrics.Counter
-		fail_gameserverauthudp     *metrics.Counter
-		fail_storage_error_account *metrics.Counter
-		fail_storage_error_pdata   *metrics.Counter
-		fail_other_error           *metrics.Counter
-		http_method_not_allowed    *metrics.Counter
+		success                     *metrics.Counter
+		reject_bad_request          *metrics.Counter
+		reject_versiongate          *metrics.Counter
+		reject_gameserver_not_found *metrics.Counter
+		reject_player_not_found     *metrics.Counter
+		reject_masterserver_token   *metrics.Counter
+		reject_password             *metrics.Counter
+		reject_gameserverauth       *metrics.Counter
+		reject_gameserver           *metrics.Counter
+		fail_gameserverauth         *metrics.Counter
+		fail_gameserverauthudp      *metrics.Counter
+		fail_storage_error_account  *metrics.Counter
+		fail_storage_error_pdata    *metrics.Counter
+		fail_other_error            *metrics.Counter
+		http_method_not_allowed     *metrics.Counter
 	}
 	client_authwithserver_gameserverauth_duration_seconds    *metrics.Histogram
 	client_authwithserver_gameserverauthudp_duration_seconds *metrics.Histogram
@@ -277,6 +278,7 @@ func (h *Handler) m() *apiMetrics {
 		mo.client_authwithserver_requests_total.success = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="success"}`)
 		mo.client_authwithserver_requests_total.reject_bad_request = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_bad_request"}`)
 		mo.client_authwithserver_requests_total.reject_versiongate = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_versiongate"}`)
+		mo.client_authwithserver_requests_total.reject_gameserver_not_found = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_gameserver_not_found"}`)
 		mo.client_authwithserver_requests_total.reject_player_not_found = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_player_not_found"}`)
 		mo.client_authwithserver_requests_total.reject_masterserver_token = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_masterserver_token"}`)
 		mo.client_authwithserver_requests_total.reject_password = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_password"}`)
