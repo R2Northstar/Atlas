@@ -386,7 +386,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 					h.m().server_upsert_requests_total.reject_verify_autherr(action).Inc()
 				}
 				h.m().server_upsert_verify_time_seconds.failure.UpdateDuration(verifyStart)
-				respFail(w, r, http.StatusBadGateway, code.MessageObjf("failed to connect to auth port: %v", err))
+				respFail(w, r, http.StatusBadGateway, code.MessageObjf("failed to connect to auth port (addr %s): %v", nsrv.AuthAddr(), err))
 				return
 			}
 		}
@@ -396,10 +396,10 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 			switch {
 			case errors.Is(err, context.DeadlineExceeded):
 				h.m().server_upsert_requests_total.reject_verify_udptimeout(action).Inc()
-				obj = ErrorCode_NO_GAMESERVER_RESPONSE.MessageObjf("failed to connect to game port")
+				obj = ErrorCode_NO_GAMESERVER_RESPONSE.MessageObjf("failed to connect to game port (addr %s)", nsrv.Addr)
 			default:
 				h.m().server_upsert_requests_total.reject_verify_udperr(action).Inc()
-				obj = ErrorCode_INTERNAL_SERVER_ERROR.MessageObjf("failed to connect to game port: %v", err)
+				obj = ErrorCode_INTERNAL_SERVER_ERROR.MessageObjf("failed to connect to game port (addr %s): %v", nsrv.Addr, err)
 			}
 			h.m().server_upsert_verify_time_seconds.failure.UpdateDuration(verifyStart)
 			respFail(w, r, http.StatusBadGateway, obj)
@@ -410,7 +410,7 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 
 		if !h.ServerList.VerifyServer(nsrv.ID) {
 			h.m().server_upsert_requests_total.reject_verify_udptimeout(action).Inc()
-			respFail(w, r, http.StatusBadGateway, ErrorCode_NO_GAMESERVER_RESPONSE.MessageObjf("verification timed out"))
+			respFail(w, r, http.StatusBadGateway, ErrorCode_NO_GAMESERVER_RESPONSE.MessageObjf("verification timed out (addr %s)", nsrv.Addr))
 			return
 		}
 
