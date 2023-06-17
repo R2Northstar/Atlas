@@ -275,6 +275,11 @@ This document describes the recommended setup for an non-containerized Atlas ser
     LimitNOFILE=32000
     LimitNPROC=32000
 
+    Restart=on-failure
+    RestartSec=15s
+    StartLimitIntervalSec=60
+    StartLimitBurst=4
+
     [Install]
     WantedBy=multi-user.target
     ```
