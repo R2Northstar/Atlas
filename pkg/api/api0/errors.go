@@ -85,7 +85,7 @@ func (n ErrorCode) Message() string {
 	case ErrorCode_JSON_PARSE_ERROR:
 		return "Error parsing json response"
 	case ErrorCode_UNSUPPORTED_VERSION:
-		return "The version you are using is no longer supported"
+		return "The version you are using is no longer supported. Update Northstar to continue."
 	case ErrorCode_DUPLICATE_SERVER:
 		return "A server with this port already exists for your IP address"
 	case ErrorCode_INTERNAL_SERVER_ERROR:
