@@ -90,6 +90,9 @@ type Config struct {
 	// 192.168.0.0/24=1.2.3.4).
 	DevMapIP []string `env:"ATLAS_DEV_MAP_IP"`
 
+	// The path to a directory containing lexically-sorted rulesets.
+	Rules string `env:"ATLAS_RULES"`
+
 	// The maximum number of gameservers to allow. If -1, no limit is applied.
 	API0_MaxServers int `env:"ATLAS_API0_MAX_SERVERS=1000"`
 
