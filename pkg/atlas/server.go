@@ -29,6 +29,7 @@ import (
 	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/memstore"
 	"github.com/r2northstar/atlas/pkg/nspkt"
+	"github.com/r2northstar/atlas/pkg/nsrule"
 	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/r2northstar/atlas/pkg/regionmap"
 	"github.com/rs/zerolog"
@@ -50,6 +51,7 @@ type Server struct {
 	API0          *api0.Handler
 	Middleware    []func(http.Handler) http.Handler
 	TLSConfig     *tls.Config
+	Rules         *nsrule.RuleSet
 
 	reload []func()
 	closed bool
@@ -77,6 +79,26 @@ func NewServer(c *Config) (*Server, error) {
 	s.AddrUDP = c.AddrUDP
 
 	s.NotifySocket = c.NotifySocket
+
+	if c.Rules != "" {
+		s.Rules = new(nsrule.RuleSet)
+		if p, err := filepath.Abs(c.Rules); err == nil {
+			var err1 error
+			reload := func() {
+				if err := s.Rules.LoadFS(os.DirFS(p)); err != nil {
+					s.Logger.Err(err).Msgf("failed to load rules from %q", p)
+					err1 = fmt.Errorf("parse rulesets from %q: %w", p, err)
+					return
+				}
+			}
+			if reload(); err1 != nil {
+				return nil, fmt.Errorf("initialize rules: %w", err1)
+			}
+			s.reload = append(s.reload, reload)
+		} else {
+			return nil, fmt.Errorf("initialize rules: resolve path: %w", err)
+		}
+	}
 
 	if c.Web != "" {
 		if p, err := filepath.Abs(c.Web); err == nil {
@@ -285,6 +307,7 @@ func NewServer(c *Config) (*Server, error) {
 		MinimumLauncherVersionServer: c.API0_MinimumLauncherVersionServer,
 		TokenExpiryTime:              c.API0_TokenExpiryTime,
 		AllowGameServerIPv6:          c.API0_AllowGameServerIPv6,
+		Rules:                        s.Rules,
 	}
 	if v := c.API0_MinimumLauncherVersion; v != "" {
 		if s.API0.MinimumLauncherVersionClient == "" {

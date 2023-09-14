@@ -184,6 +184,7 @@ type apiMetrics struct {
 		fail_other_error         *metrics.Counter
 		http_method_not_allowed  *metrics.Counter
 	}
+	rule_evaluation_time_seconds *metrics.Histogram
 }
 
 func (h *Handler) Metrics() *metrics.Set {
@@ -474,6 +475,7 @@ func (h *Handler) m() *apiMetrics {
 		mo.player_pdata_requests_total.fail_pdata_invalid = mo.set.NewCounter(`atlas_api0_player_pdata_requests_total{result="fail_pdata_invalid"}`)
 		mo.player_pdata_requests_total.fail_other_error = mo.set.NewCounter(`atlas_api0_player_pdata_requests_total{result="fail_other_error"}`)
 		mo.player_pdata_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_player_pdata_requests_total{result="http_method_not_allowed"}`)
+		mo.rule_evaluation_time_seconds = mo.set.NewHistogram(`atlas_api0_rule_evaluation_time_seconds`)
 	})
 
 	// ensure we initialized everything
