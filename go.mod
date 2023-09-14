@@ -1,6 +1,6 @@
 module github.com/r2northstar/atlas
 
-go 1.19
+go 1.21.0
 
 require (
 	github.com/VictoriaMetrics/metrics v1.23.1

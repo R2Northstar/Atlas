@@ -6,7 +6,7 @@ This document describes the recommended setup for an non-containerized Atlas ser
 
 | Dependency | Version | Notes |
 | --- | --- | --- |
-| go | 1.19+ | |
+| go | 1.21.0+ | |
 | git | | for downloading code |
 | gcc | | other C compilers will work fine |
 | systemd | 250+ | 250 is needed for credentials to work <br/> 240 is needed for data directory stuff |
