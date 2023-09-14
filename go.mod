@@ -5,6 +5,7 @@ go 1.21.0
 require (
 	github.com/VictoriaMetrics/metrics v1.23.1
 	github.com/andybalholm/cascadia v1.3.1
+	github.com/antonmedv/expr v1.15.2
 	github.com/cardigann/harhar v0.0.0-20161005032312-acb91b7a8682
 	github.com/hashicorp/go-envparse v0.1.0
 	github.com/jmoiron/sqlx v1.3.5
