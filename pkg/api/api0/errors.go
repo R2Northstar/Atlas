@@ -20,7 +20,7 @@ const (
 	ErrorCode_GAMESERVER_NOT_FOUND       ErrorCode = "GAMESERVER_NOT_FOUND"       // Couldn't find game server
 	ErrorCode_INVALID_MASTERSERVER_TOKEN ErrorCode = "INVALID_MASTERSERVER_TOKEN" // Invalid or expired masterserver token
 	ErrorCode_JSON_PARSE_ERROR           ErrorCode = "JSON_PARSE_ERROR"           // Error parsing json response
-	ErrorCode_UNSUPPORTED_VERSION        ErrorCode = "UNSUPPORTED_VERSION"        // The version you are using is no longer supported
+	ErrorCode_UNSUPPORTED_VERSION        ErrorCode = "UNSUPPORTED_VERSION"        // The version you are using is no longer supported; update Northstar to continue
 	ErrorCode_DUPLICATE_SERVER           ErrorCode = "DUPLICATE_SERVER"           // A server with this port already exists for your IP address
 	ErrorCode_CONNECTION_REJECTED        ErrorCode = "CONNECTION_REJECTED"        // Connection rejected
 )
@@ -85,7 +85,7 @@ func (n ErrorCode) Message() string {
 	case ErrorCode_JSON_PARSE_ERROR:
 		return "Error parsing json response"
 	case ErrorCode_UNSUPPORTED_VERSION:
-		return "The version you are using is no longer supported"
+		return "The version you are using is no longer supported; update Northstar to continue"
 	case ErrorCode_DUPLICATE_SERVER:
 		return "A server with this port already exists for your IP address"
 	case ErrorCode_INTERNAL_SERVER_ERROR:
