@@ -14,6 +14,7 @@ package api0
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -30,6 +31,7 @@ import (
 	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/metricsx"
 	"github.com/r2northstar/atlas/pkg/nspkt"
+	"github.com/r2northstar/atlas/pkg/nsrule"
 	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/rs/zerolog/hlog"
 	"golang.org/x/mod/semver"
@@ -110,6 +112,9 @@ type Handler struct {
 	// empty region and no error if no region is to be assigned.
 	GetRegion func(netip.Addr, ip2x.Record) (string, error)
 
+	// Rules provides a ruleset to apply.
+	Rules *nsrule.RuleSet
+
 	metricsInit sync.Once
 	metricsObj  apiMetrics
 
@@ -127,6 +132,14 @@ type connectState struct {
 	gotPdata atomic.Bool
 }
 
+type rulesContextKey struct{}
+
+type rulesContextValue struct {
+	e nsrule.Env
+	s *nsrule.RuleSet
+	t nsrule.Tags
+}
+
 // ServeHTTP routes requests to Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var notPanicked bool // this lets us catch panics without swallowing them
@@ -135,6 +148,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.m().request_panics_total.Inc()
 		}
 	}()
+
+	if h.Rules != nil {
+		r = r.WithContext(context.WithValue(r.Context(), rulesContextKey{}, &rulesContextValue{
+			e: nsrule.NewEnv(),
+			s: h.Rules,
+			t: make(nsrule.Tags),
+		}))
+		h.EvalRules(r, nil)
+	}
 
 	w.Header().Set("Server", "Atlas")
 
@@ -172,6 +194,27 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	notPanicked = true
+}
+
+func (h *Handler) EvalRules(r *http.Request, update func(e nsrule.Env)) {
+	if v := r.Context().Value(rulesContextKey{}); v != nil {
+		t := time.Now()
+		v := v.(*rulesContextValue)
+		if update != nil {
+			update(v.e)
+		}
+		for _, err := range v.s.Evaluate(v.e, v.t) {
+			hlog.FromRequest(r).Warn().Err(err).Msg("failed to evaluate rule")
+		}
+		h.m().rule_evaluation_time_seconds.UpdateDuration(t)
+	}
+}
+
+func (h *Handler) Tags(r *http.Request) nsrule.Tags {
+	if v := r.Context().Value(rulesContextKey{}); v != nil {
+		return v.(*rulesContextValue).t
+	}
+	return nsrule.Tags{}
 }
 
 // CheckLauncherVersion checks if the r was made by NorthstarLauncher and if it
