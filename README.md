@@ -22,7 +22,7 @@ go build ./cmd/atlas
 
 ## Usage
 
-Run the `main.exe` or directly with `go run ./cmd/atlas` and update your northstar config to point to the new masterserver.
+Run the `atlas.exe` or directly with `go run ./cmd/atlas` and update your northstar config to point to the new masterserver.
 
 ```
 ns_masterserver_hostname "localhost:8080"
