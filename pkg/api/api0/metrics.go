@@ -86,6 +86,11 @@ type apiMetrics struct {
 		fail_update_check *metrics.Counter
 		fail_other_error  *metrics.Counter
 	}
+	client_originauth_stryder_username_lookup_calls_total struct {
+		success          *metrics.Counter
+		notfound         *metrics.Counter
+		fail_other_error *metrics.Counter
+	}
 	client_authwithserver_requests_total struct {
 		success                     *metrics.Counter
 		reject_bad_request          *metrics.Counter
@@ -275,6 +280,9 @@ func (h *Handler) m() *apiMetrics {
 		mo.client_originauth_eax_username_lookup_calls_total.notfound = mo.set.NewCounter(`atlas_api0_client_originauth_eax_username_lookup_calls_total{result="notfound"}`)
 		mo.client_originauth_eax_username_lookup_calls_total.fail_update_check = mo.set.NewCounter(`atlas_api0_client_originauth_eax_username_lookup_calls_total{result="fail_update_check"}`)
 		mo.client_originauth_eax_username_lookup_calls_total.fail_other_error = mo.set.NewCounter(`atlas_api0_client_originauth_eax_username_lookup_calls_total{result="fail_other_error"}`)
+		mo.client_originauth_stryder_username_lookup_calls_total.success = mo.set.NewCounter(`atlas_api0_client_originauth_stryder_username_lookup_calls_total{result="success"}`)
+		mo.client_originauth_stryder_username_lookup_calls_total.notfound = mo.set.NewCounter(`atlas_api0_client_originauth_stryder_username_lookup_calls_total{result="notfound"}`)
+		mo.client_originauth_stryder_username_lookup_calls_total.fail_other_error = mo.set.NewCounter(`atlas_api0_client_originauth_stryder_username_lookup_calls_total{result="fail_other_error"}`)
 		mo.client_authwithserver_requests_total.success = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="success"}`)
 		mo.client_authwithserver_requests_total.reject_bad_request = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_bad_request"}`)
 		mo.client_authwithserver_requests_total.reject_versiongate = mo.set.NewCounter(`atlas_api0_client_authwithserver_requests_total{result="reject_versiongate"}`)

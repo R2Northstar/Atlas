@@ -41,6 +41,17 @@ const (
 
 	// Get the username from EAX, but fall back to the Origin API on failure.
 	UsernameSourceEAXOrigin UsernameSource = "eax-origin"
+
+	// Get the username from Stryder (available since October 2, 2023). Note
+	// that this source only returns usernames for valid tokens.
+	UsernameSourceStryder UsernameSource = "stryder"
+
+	// Get the username from Stryder, but fall back to EAX on missing/failure.
+	UsernameSourceStryderEAX UsernameSource = "stryder-eax"
+
+	// Get the username from Stryder, but also check EAX and warn if it's
+	// different.
+	UsernameSourceStryderEAXDebug UsernameSource = "stryder-eax-debug"
 )
 
 type MainMenuPromos struct {
@@ -149,6 +160,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 	default:
 	}
 
+	var stryderRes []byte
 	if !h.InsecureDevNoCheckPlayerAuth {
 		token := r.URL.Query().Get("token")
 		if token == "" {
@@ -162,7 +174,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		stryderCtx, cancel := context.WithTimeout(r.Context(), time.Second*5)
 		defer cancel()
 
-		stryderRes, err := stryder.NucleusAuth(stryderCtx, token, uid)
+		stryderRes, err = stryder.NucleusAuth(stryderCtx, token, uid)
 		h.m().client_originauth_stryder_auth_duration_seconds.UpdateDuration(stryderStart)
 		if err != nil {
 			switch {
@@ -223,7 +235,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 	default:
 	}
 
-	username := h.lookupUsername(r, uid)
+	username := h.lookupUsername(r, uid, stryderRes)
 
 	select {
 	case <-r.Context().Done(): // check if the request was canceled to avoid making unnecessary requests
@@ -302,7 +314,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 
 // lookupUsername gets the username for uid according to the configured
 // UsernameSource, returning an empty string if not found or on error.
-func (h *Handler) lookupUsername(r *http.Request, uid uint64) (username string) {
+func (h *Handler) lookupUsername(r *http.Request, uid uint64, stryderRes []byte) (username string) {
 	switch h.UsernameSource {
 	case UsernameSourceNone:
 		break
@@ -347,6 +359,35 @@ func (h *Handler) lookupUsername(r *http.Request, uid uint64) (username string) 
 					Str("origin_username", originUsername).
 					Msgf("failed to get username from eax, but got it from origin")
 			}
+		}
+	case UsernameSourceStryder:
+		username, _ = h.lookupUsernameStryder(r, uid, stryderRes)
+	case UsernameSourceStryderEAX:
+		username, _ = h.lookupUsernameStryder(r, uid, stryderRes)
+		if username == "" {
+			if eaxUsername, ok := h.lookupUsernameEAX(r, uid); ok {
+				username = eaxUsername
+				hlog.FromRequest(r).Warn().
+					Uint64("uid", uid).
+					Str("eax_username", eaxUsername).
+					Msgf("failed to get username from stryder, but got it from eax")
+			}
+		}
+	case UsernameSourceStryderEAXDebug:
+		username, _ = h.lookupUsernameStryder(r, uid, stryderRes)
+		if eaxUsername, ok := h.lookupUsernameEAX(r, uid); ok {
+			if eaxUsername != username {
+				hlog.FromRequest(r).Warn().
+					Uint64("uid", uid).
+					Str("stryder_username", username).
+					Str("eax_username", eaxUsername).
+					Msgf("got username from stryder and eax, but they don't match; using the stryder one")
+			}
+		} else {
+			hlog.FromRequest(r).Warn().
+				Uint64("uid", uid).
+				Str("stryder_username", username).
+				Msgf("got username from stryder, but failed to get username from eax")
 		}
 	default:
 		hlog.FromRequest(r).Error().
@@ -465,6 +506,31 @@ func (h *Handler) lookupUsernameEAX(r *http.Request, uid uint64) (username strin
 	}
 	h.m().client_originauth_eax_username_lookup_duration_seconds.UpdateDuration(eaxStart)
 	return
+}
+
+// lookupUsernameStryder gets the username for uid from the Stryder response,
+// returning an empty string if the username is empty, or false if the
+// username is not present in the response or the response is invalid.
+func (h *Handler) lookupUsernameStryder(r *http.Request, uid uint64, res []byte) (username string, ok bool) {
+	select {
+	case <-r.Context().Done(): // check if the request was canceled to avoid polluting the metrics
+		return
+	default:
+	}
+	u, err := stryder.NucleusAuthUsername(res)
+	if err != nil {
+		hlog.FromRequest(r).Warn().
+			Err(err).
+			Uint64("uid", uid).
+			Str("username_source", "stryder").
+			Msgf("failed to get username from stryder nucleus auth response")
+		h.m().client_originauth_stryder_username_lookup_calls_total.fail_other_error.Inc()
+	} else if u == "" {
+		h.m().client_originauth_stryder_username_lookup_calls_total.notfound.Inc()
+	} else {
+		h.m().client_originauth_stryder_username_lookup_calls_total.success.Inc()
+	}
+	return u, err == nil
 }
 
 func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Request) {
