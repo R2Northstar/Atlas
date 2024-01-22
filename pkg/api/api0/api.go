@@ -30,7 +30,6 @@ import (
 	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/metricsx"
 	"github.com/r2northstar/atlas/pkg/nspkt"
-	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/rs/zerolog/hlog"
 	"golang.org/x/mod/semver"
 )
@@ -51,10 +50,6 @@ type Handler struct {
 
 	// UsernameSource configures the source to use for usernames.
 	UsernameSource UsernameSource
-
-	// OriginAuthMgr, if provided, manages Origin nucleus tokens for checking
-	// usernames.
-	OriginAuthMgr *origin.AuthMgr
 
 	// EAXClient makes requests to the EAX API.
 	EAXClient *eax.Client

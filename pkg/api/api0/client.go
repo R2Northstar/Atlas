@@ -13,7 +13,6 @@ import (
 
 	"github.com/r2northstar/atlas/pkg/api/api0/api0gameserver"
 	"github.com/r2northstar/atlas/pkg/eax"
-	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/r2northstar/atlas/pkg/pdata"
 	"github.com/r2northstar/atlas/pkg/stryder"
 	"github.com/rs/zerolog/hlog"
@@ -26,21 +25,8 @@ const (
 	// Don't get usernames.
 	UsernameSourceNone UsernameSource = ""
 
-	// Get the username from the Origin API.
-	UsernameSourceOrigin UsernameSource = "origin"
-
-	// Get the username from the Origin API, but fall back to EAX on failure.
-	UsernameSourceOriginEAX UsernameSource = "origin-eax"
-
 	// Get the username from EAX.
 	UsernameSourceEAX UsernameSource = "eax"
-
-	// Get the username from the Origin API, but also check EAX and warn if it's
-	// different.
-	UsernameSourceOriginEAXDebug UsernameSource = "origin-eax-debug"
-
-	// Get the username from EAX, but fall back to the Origin API on failure.
-	UsernameSourceEAXOrigin UsernameSource = "eax-origin"
 
 	// Get the username from Stryder (available since October 2, 2023). Note
 	// that this source only returns usernames for valid tokens.
@@ -318,48 +304,8 @@ func (h *Handler) lookupUsername(r *http.Request, uid uint64, stryderRes []byte)
 	switch h.UsernameSource {
 	case UsernameSourceNone:
 		break
-	case UsernameSourceOrigin:
-		username, _ = h.lookupUsernameOrigin(r, uid)
-	case UsernameSourceOriginEAX:
-		username, _ = h.lookupUsernameOrigin(r, uid)
-		if username == "" {
-			if eaxUsername, ok := h.lookupUsernameEAX(r, uid); ok {
-				username = eaxUsername
-				hlog.FromRequest(r).Warn().
-					Uint64("uid", uid).
-					Str("origin_username", eaxUsername).
-					Msgf("failed to get username from origin, but got it from eax")
-			}
-		}
-	case UsernameSourceOriginEAXDebug:
-		username, _ = h.lookupUsernameOrigin(r, uid)
-		if eaxUsername, ok := h.lookupUsernameEAX(r, uid); ok {
-			if eaxUsername != username {
-				hlog.FromRequest(r).Warn().
-					Uint64("uid", uid).
-					Str("origin_username", username).
-					Str("eax_username", eaxUsername).
-					Msgf("got username from origin and eax, but they don't match; using the origin one")
-			}
-		} else {
-			hlog.FromRequest(r).Warn().
-				Uint64("uid", uid).
-				Str("origin_username", username).
-				Msgf("got username from origin, but failed to get username from eax")
-		}
 	case UsernameSourceEAX:
 		username, _ = h.lookupUsernameEAX(r, uid)
-	case UsernameSourceEAXOrigin:
-		username, _ = h.lookupUsernameEAX(r, uid)
-		if username == "" {
-			if originUsername, ok := h.lookupUsernameOrigin(r, uid); ok {
-				username = originUsername
-				hlog.FromRequest(r).Warn().
-					Uint64("uid", uid).
-					Str("origin_username", originUsername).
-					Msgf("failed to get username from eax, but got it from origin")
-			}
-		}
 	case UsernameSourceStryder:
 		username, _ = h.lookupUsernameStryder(r, uid, stryderRes)
 	case UsernameSourceStryderEAX:
@@ -393,73 +339,6 @@ func (h *Handler) lookupUsername(r *http.Request, uid uint64, stryderRes []byte)
 		hlog.FromRequest(r).Error().
 			Msgf("unknown username source %q", h.UsernameSource)
 	}
-	return
-}
-
-// lookupUsernameOrigin gets the username for uid from the Origin API, returning
-// an empty string if a username does not exist for the uid, and false on error.
-func (h *Handler) lookupUsernameOrigin(r *http.Request, uid uint64) (username string, ok bool) {
-	select {
-	case <-r.Context().Done(): // check if the request was canceled to avoid polluting the metrics
-		return
-	default:
-	}
-	if h.OriginAuthMgr == nil {
-		hlog.FromRequest(r).Error().
-			Str("username_source", "origin").
-			Msgf("no origin auth available for username lookup")
-		return
-	}
-	originStart := time.Now()
-	if tok, ours, err := h.OriginAuthMgr.OriginAuth(false); err == nil {
-		if ui, err := origin.GetUserInfo(r.Context(), tok, uid); err == nil {
-			if len(ui) == 1 {
-				username = ui[0].EAID
-				h.m().client_originauth_origin_username_lookup_calls_total.success.Inc()
-			} else {
-				h.m().client_originauth_origin_username_lookup_calls_total.notfound.Inc()
-			}
-			ok = true
-		} else if errors.Is(err, origin.ErrAuthRequired) {
-			if tok, ours, err := h.OriginAuthMgr.OriginAuth(true); err == nil {
-				if ui, err := origin.GetUserInfo(r.Context(), tok, uid); err == nil {
-					if len(ui) == 1 {
-						username = ui[0].EAID
-						h.m().client_originauth_origin_username_lookup_calls_total.success.Inc()
-					} else {
-						h.m().client_originauth_origin_username_lookup_calls_total.notfound.Inc()
-					}
-					ok = true
-				}
-			} else if ours {
-				hlog.FromRequest(r).Error().
-					Err(err).
-					Str("username_source", "origin").
-					Msgf("origin auth token refresh failure")
-				h.m().client_originauth_origin_username_lookup_calls_total.fail_authtok_refresh.Inc()
-			}
-		} else if !errors.Is(err, context.Canceled) {
-			hlog.FromRequest(r).Error().
-				Err(err).
-				Str("username_source", "origin").
-				Msgf("failed to get origin user info")
-			h.m().client_originauth_origin_username_lookup_calls_total.fail_other_error.Inc()
-		}
-		if username == "" && ok {
-			hlog.FromRequest(r).Warn().
-				Err(err).
-				Uint64("uid", uid).
-				Str("username_source", "origin").
-				Msgf("no origin username found for uid")
-		}
-	} else if ours {
-		hlog.FromRequest(r).Error().
-			Err(err).
-			Str("username_source", "origin").
-			Msgf("origin auth token refresh failure")
-		h.m().client_originauth_origin_username_lookup_calls_total.fail_authtok_refresh.Inc()
-	}
-	h.m().client_originauth_origin_username_lookup_duration_seconds.UpdateDuration(originStart)
 	return
 }
 

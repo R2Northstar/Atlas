@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
-	"github.com/klauspost/compress/gzip"
 	"github.com/pg9182/ip2x"
 	"github.com/r2northstar/atlas/db/atlasdb"
 	"github.com/r2northstar/atlas/db/pdatadb"
@@ -29,7 +28,6 @@ import (
 	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/memstore"
 	"github.com/r2northstar/atlas/pkg/nspkt"
-	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/r2northstar/atlas/pkg/regionmap"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
@@ -300,11 +298,6 @@ func NewServer(c *Config) (*Server, error) {
 		Add(hlog.RequestIDHandler("rid", "")).
 		Then(http.HandlerFunc(s.serveRest))
 
-	if org, err := configureOrigin(c, s.Logger.With().Str("component", "origin").Logger()); err == nil {
-		s.API0.OriginAuthMgr = org
-	} else {
-		return nil, fmt.Errorf("initialize origin auth: %w", err)
-	}
 	if exc, err := configureEAX(c, s.Logger.With().Str("component", "eax").Logger()); err == nil {
 		s.API0.EAXClient = exc
 	} else {
@@ -498,125 +491,6 @@ func configureLogging(c *Config) (l zerolog.Logger, reopen func(), err error) {
 	return
 }
 
-func configureOrigin(c *Config, l zerolog.Logger) (*origin.AuthMgr, error) {
-	if c.OriginEmail == "" {
-		return nil, nil
-	}
-	var mu sync.Mutex
-	mgr := &origin.AuthMgr{
-		Credentials: func() (email, password, otpsecret string, err error) {
-			return c.OriginEmail, c.OriginPassword, c.OriginTOTP, nil
-		},
-		Backoff: expbackoff,
-		Updated: func(as origin.AuthState, err error) {
-			mu.Lock()
-			defer mu.Unlock()
-
-			if fn := c.OriginPersist; fn != "" {
-				if buf, err := json.Marshal(as); err != nil {
-					l.Err(err).Msg("failed to save origin auth json")
-					return
-				} else if err = os.WriteFile(fn, buf, 0666); err != nil {
-					l.Err(err).Msg("failed to save origin auth json")
-					return
-				}
-			}
-			if err != nil {
-				l.Err(err).Msg("origin auth error; using old token")
-			} else {
-				l.Info().Msg("got new origin token")
-			}
-		},
-	}
-	if fn := c.OriginPersist; fn != "" {
-		var as origin.AuthState
-		if buf, err := os.ReadFile(fn); err != nil {
-			if !os.IsNotExist(err) {
-				l.Err(err).Msg("failed to load origin auth json")
-			}
-		} else if err := json.Unmarshal(buf, &as); err != nil {
-			l.Err(err).Msg("failed to load origin auth json")
-		} else {
-			mgr.SetAuth(as)
-		}
-	}
-	if c.OriginHARError != "" || c.OriginHARSuccess != "" {
-		var errPath, successPath string
-		if v := c.OriginHARError; v != "" {
-			if p, err := filepath.Abs(v); err != nil {
-				return nil, fmt.Errorf("resolve error har path: %w", err)
-			} else if err := os.MkdirAll(v, 0777); err != nil {
-				return nil, fmt.Errorf("mkdir error har path: %w", err)
-			} else {
-				errPath = p
-			}
-		}
-		if v := c.OriginHARSuccess; v != "" {
-			if p, err := filepath.Abs(v); err != nil {
-				return nil, fmt.Errorf("resolve success har path: %w", err)
-			} else if err := os.MkdirAll(v, 0777); err != nil {
-				return nil, fmt.Errorf("mkdir success har path: %w", err)
-			} else {
-				successPath = p
-			}
-		}
-		var harMu sync.Mutex
-		harZ := gzip.NewWriter(io.Discard)
-		mgr.SaveHAR = func(write func(w io.Writer) error, err error) {
-			harMu.Lock()
-			defer harMu.Unlock()
-
-			var p string
-			if err != nil {
-				if errPath != "" {
-					p = filepath.Join(errPath, "origin-auth-error-")
-				}
-			} else {
-				if successPath != "" {
-					p = filepath.Join(successPath, "origin-auth-success-")
-				}
-			}
-			if p != "" {
-				p = p + strconv.FormatInt(time.Now().Unix(), 10) + ".har"
-
-				if c.OriginHARGzip {
-					p += ".gz"
-				}
-
-				f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY, 0600)
-				if err != nil {
-					l.Err(err).Msg("failed to save origin auth har")
-					return
-				}
-				defer f.Close()
-
-				if c.OriginHARGzip {
-					harZ.Reset(f)
-					if err := write(harZ); err != nil {
-						l.Err(err).Msg("failed to save origin auth har")
-						return
-					}
-					if err := harZ.Close(); err != nil {
-						l.Err(err).Msg("failed to save origin auth har")
-						return
-					}
-				} else {
-					if err := write(f); err != nil {
-						l.Err(err).Msg("failed to save origin auth har")
-						return
-					}
-				}
-
-				if err := f.Close(); err != nil {
-					l.Err(err).Msg("failed to save origin auth har")
-					return
-				}
-			}
-		}
-	}
-	return mgr, nil
-}
-
 func configureEAX(c *Config, l zerolog.Logger) (*eax.Client, error) {
 	mgr := &eax.UpdateMgr{
 		AutoUpdateBackoff: expbackoff,
@@ -656,16 +530,8 @@ func configureUsernameSource(c *Config) (api0.UsernameSource, error) {
 	switch typ := c.UsernameSource; typ {
 	case "none":
 		return api0.UsernameSourceNone, nil
-	case "origin":
-		return api0.UsernameSourceOrigin, nil
-	case "origin-eax":
-		return api0.UsernameSourceOriginEAX, nil
-	case "origin-eax-debug":
-		return api0.UsernameSourceOriginEAXDebug, nil
 	case "eax":
 		return api0.UsernameSourceEAX, nil
-	case "eax-origin":
-		return api0.UsernameSourceEAXOrigin, nil
 	case "stryder":
 		return api0.UsernameSourceStryder, nil
 	case "stryder-eax":
@@ -673,10 +539,6 @@ func configureUsernameSource(c *Config) (api0.UsernameSource, error) {
 	case "stryder-eax-debug":
 		return api0.UsernameSourceStryderEAXDebug, nil
 	case "":
-		// backwards compat
-		if c.OriginEmail != "" {
-			return api0.UsernameSourceOrigin, nil
-		}
 		return api0.UsernameSourceNone, nil
 	default:
 		return "", fmt.Errorf("unknown source %q", typ)

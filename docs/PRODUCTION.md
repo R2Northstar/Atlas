@@ -161,16 +161,7 @@ This document describes the recommended setup for an non-containerized Atlas ser
     ATLAS_API0_MAINMENUPROMOS_UPDATENEEDED=file:/etc/atlas/mainmenupromos_updateneeded.json
 
     # username lookup
-    ATLAS_USERNAMESOURCE=eax-origin
-
-    # origin (the account MUST have app-based two-factor authentication set up)
-    ATLAS_ORIGIN_EMAIL=email@example.com
-    ATLAS_ORIGIN_PASSWORD=@origin_password
-    ATLAS_ORIGIN_TOTP=@origin_totp
-    ATLAS_ORIGIN_HAR_GZIP=true
-    ATLAS_ORIGIN_HAR_SUCCESS=/var/log/atlas/har
-    ATLAS_ORIGIN_HAR_ERROR=/var/log/atlas/har
-    ATLAS_ORIGIN_PERSIST=/var/lib/atlas/origin.json
+    ATLAS_USERNAMESOURCE=stryder
 
     # eax
     EAX_UPDATE_INTERVAL=24h
@@ -291,7 +282,7 @@ This document describes the recommended setup for an non-containerized Atlas ser
     echo "[Service]" | tee /etc/systemd/system/atlas.service.d/credentials.conf
     ```
 
-    For each credential (in the example config: `northstartf.key`, `northstartf.crt`, `api0_server_id_secret`, `metrics_secret`, `origin_password`, `origin_totp`),
+    For each credential (in the example config: `northstartf.key`, `northstartf.crt`, `api0_server_id_secret`, `metrics_secret`),
 
     ```bash
     sudo systemd-creds --pretty encrypt --name credential_name - - | tee -a /etc/systemd/system/atlas.service.d/credentials.conf
