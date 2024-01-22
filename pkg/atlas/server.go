@@ -666,6 +666,12 @@ func configureUsernameSource(c *Config) (api0.UsernameSource, error) {
 		return api0.UsernameSourceEAX, nil
 	case "eax-origin":
 		return api0.UsernameSourceEAXOrigin, nil
+	case "stryder":
+		return api0.UsernameSourceStryder, nil
+	case "stryder-eax":
+		return api0.UsernameSourceStryderEAX, nil
+	case "stryder-eax-debug":
+		return api0.UsernameSourceStryderEAXDebug, nil
 	case "":
 		// backwards compat
 		if c.OriginEmail != "" {
