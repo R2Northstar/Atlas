@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net"
 	"net/http"
 	"net/netip"
@@ -478,19 +477,6 @@ func configureLogging(c *Config) (l zerolog.Logger, reopen func(), err error) {
 		Timestamp().
 		Logger()
 	return
-}
-
-func expbackoff(_ error, last time.Time, count int) bool {
-	var hmax, hmaxat, hrate float64 = 24, 8, 2.3
-	// ~5m, ~10m, ~23m, ~52m, ~2h, ~4.6h, ~10.5h, 24h
-
-	var next float64
-	if count >= int(hmaxat) {
-		next = hmax
-	} else {
-		next = math.Pow(hrate, float64(count)) * hmax / math.Pow(hrate, hmaxat)
-	}
-	return time.Since(last).Hours() >= next
 }
 
 func configureAccountStorage(c *Config) (api0.AccountStorage, error) {
