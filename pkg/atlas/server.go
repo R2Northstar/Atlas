@@ -25,7 +25,6 @@ import (
 	"github.com/r2northstar/atlas/db/pdatadb"
 	"github.com/r2northstar/atlas/pkg/api/api0"
 	"github.com/r2northstar/atlas/pkg/cloudflare"
-	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/memstore"
 	"github.com/r2northstar/atlas/pkg/nspkt"
 	"github.com/r2northstar/atlas/pkg/regionmap"
@@ -298,16 +297,6 @@ func NewServer(c *Config) (*Server, error) {
 		Add(hlog.RequestIDHandler("rid", "")).
 		Then(http.HandlerFunc(s.serveRest))
 
-	if exc, err := configureEAX(c, s.Logger.With().Str("component", "eax").Logger()); err == nil {
-		s.API0.EAXClient = exc
-	} else {
-		return nil, fmt.Errorf("initialize eax: %w", err)
-	}
-	if x, err := configureUsernameSource(c); err == nil {
-		s.API0.UsernameSource = x
-	} else {
-		return nil, fmt.Errorf("initialize username lookup: %w", err)
-	}
 	if astore, err := configureAccountStorage(c); err == nil {
 		s.API0.AccountStorage = astore
 	} else {
@@ -491,28 +480,6 @@ func configureLogging(c *Config) (l zerolog.Logger, reopen func(), err error) {
 	return
 }
 
-func configureEAX(c *Config, l zerolog.Logger) (*eax.Client, error) {
-	mgr := &eax.UpdateMgr{
-		AutoUpdateBackoff: expbackoff,
-		AutoUpdateHook: func(ver string, err error) {
-			if err != nil {
-				l.Err(err).Str("eax_client_version", ver).Msg("eax update error, using old version")
-			} else {
-				l.Info().Str("eax_client_version", ver).Msg("updated eax client version")
-			}
-		},
-	}
-	if v := c.EAXUpdateVersion; v != "" {
-		mgr.SetVersion(v)
-	} else {
-		mgr.AutoUpdateInterval = c.EAXUpdateInterval
-		mgr.AutoUpdateBucket = c.EAXUpdateBucket
-	}
-	return &eax.Client{
-		UpdateMgr: mgr,
-	}, nil
-}
-
 func expbackoff(_ error, last time.Time, count int) bool {
 	var hmax, hmaxat, hrate float64 = 24, 8, 2.3
 	// ~5m, ~10m, ~23m, ~52m, ~2h, ~4.6h, ~10.5h, 24h
@@ -524,25 +491,6 @@ func expbackoff(_ error, last time.Time, count int) bool {
 		next = math.Pow(hrate, float64(count)) * hmax / math.Pow(hrate, hmaxat)
 	}
 	return time.Since(last).Hours() >= next
-}
-
-func configureUsernameSource(c *Config) (api0.UsernameSource, error) {
-	switch typ := c.UsernameSource; typ {
-	case "none":
-		return api0.UsernameSourceNone, nil
-	case "eax":
-		return api0.UsernameSourceEAX, nil
-	case "stryder":
-		return api0.UsernameSourceStryder, nil
-	case "stryder-eax":
-		return api0.UsernameSourceStryderEAX, nil
-	case "stryder-eax-debug":
-		return api0.UsernameSourceStryderEAXDebug, nil
-	case "":
-		return api0.UsernameSourceNone, nil
-	default:
-		return "", fmt.Errorf("unknown source %q", typ)
-	}
 }
 
 func configureAccountStorage(c *Config) (api0.AccountStorage, error) {

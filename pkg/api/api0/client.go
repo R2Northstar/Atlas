@@ -12,32 +12,9 @@ import (
 	"time"
 
 	"github.com/r2northstar/atlas/pkg/api/api0/api0gameserver"
-	"github.com/r2northstar/atlas/pkg/eax"
 	"github.com/r2northstar/atlas/pkg/pdata"
 	"github.com/r2northstar/atlas/pkg/stryder"
 	"github.com/rs/zerolog/hlog"
-)
-
-// UsernameSource determines where to get player in-game usernames from.
-type UsernameSource string
-
-const (
-	// Don't get usernames.
-	UsernameSourceNone UsernameSource = ""
-
-	// Get the username from EAX.
-	UsernameSourceEAX UsernameSource = "eax"
-
-	// Get the username from Stryder (available since October 2, 2023). Note
-	// that this source only returns usernames for valid tokens.
-	UsernameSourceStryder UsernameSource = "stryder"
-
-	// Get the username from Stryder, but fall back to EAX on missing/failure.
-	UsernameSourceStryderEAX UsernameSource = "stryder-eax"
-
-	// Get the username from Stryder, but also check EAX and warn if it's
-	// different.
-	UsernameSourceStryderEAXDebug UsernameSource = "stryder-eax-debug"
 )
 
 type MainMenuPromos struct {
@@ -214,14 +191,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 			}
 		}
 	}
-
-	select {
-	case <-r.Context().Done(): // check if the request was canceled to avoid making unnecessary requests
-		return
-	default:
-	}
-
-	username := h.lookupUsername(r, uid, stryderRes)
+	username, _ := h.lookupUsername(r, uid, stryderRes)
 
 	select {
 	case <-r.Context().Done(): // check if the request was canceled to avoid making unnecessary requests
@@ -298,99 +268,10 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-// lookupUsername gets the username for uid according to the configured
-// UsernameSource, returning an empty string if not found or on error.
-func (h *Handler) lookupUsername(r *http.Request, uid uint64, stryderRes []byte) (username string) {
-	switch h.UsernameSource {
-	case UsernameSourceNone:
-		break
-	case UsernameSourceEAX:
-		username, _ = h.lookupUsernameEAX(r, uid)
-	case UsernameSourceStryder:
-		username, _ = h.lookupUsernameStryder(r, uid, stryderRes)
-	case UsernameSourceStryderEAX:
-		username, _ = h.lookupUsernameStryder(r, uid, stryderRes)
-		if username == "" {
-			if eaxUsername, ok := h.lookupUsernameEAX(r, uid); ok {
-				username = eaxUsername
-				hlog.FromRequest(r).Warn().
-					Uint64("uid", uid).
-					Str("eax_username", eaxUsername).
-					Msgf("failed to get username from stryder, but got it from eax")
-			}
-		}
-	case UsernameSourceStryderEAXDebug:
-		username, _ = h.lookupUsernameStryder(r, uid, stryderRes)
-		if eaxUsername, ok := h.lookupUsernameEAX(r, uid); ok {
-			if eaxUsername != username {
-				hlog.FromRequest(r).Warn().
-					Uint64("uid", uid).
-					Str("stryder_username", username).
-					Str("eax_username", eaxUsername).
-					Msgf("got username from stryder and eax, but they don't match; using the stryder one")
-			}
-		} else {
-			hlog.FromRequest(r).Warn().
-				Uint64("uid", uid).
-				Str("stryder_username", username).
-				Msgf("got username from stryder, but failed to get username from eax")
-		}
-	default:
-		hlog.FromRequest(r).Error().
-			Msgf("unknown username source %q", h.UsernameSource)
-	}
-	return
-}
-
-// lookupUsernameEAX gets the username for uid from the EAX API, returning an
-// empty string if a username does not exist for the uid, and false on error.
-func (h *Handler) lookupUsernameEAX(r *http.Request, uid uint64) (username string, ok bool) {
-	select {
-	case <-r.Context().Done(): // check if the request was canceled to avoid polluting the metrics
-		return
-	default:
-	}
-	if h.EAXClient == nil {
-		hlog.FromRequest(r).Error().
-			Str("username_source", "eax").
-			Msgf("no eax client available for username lookup")
-		return
-	}
-	eaxStart := time.Now()
-	if p, err := h.EAXClient.PlayerIDByPD(r.Context(), uid); err == nil {
-		if p != nil {
-			username = p.DisplayName
-			h.m().client_originauth_eax_username_lookup_calls_total.success.Inc()
-		} else {
-			hlog.FromRequest(r).Warn().
-				Err(err).
-				Uint64("uid", uid).
-				Str("username_source", "eax").
-				Msgf("no eax username found for uid")
-			h.m().client_originauth_eax_username_lookup_calls_total.notfound.Inc()
-		}
-		ok = true
-	} else if errors.Is(err, eax.ErrVersionRequired) || errors.Is(err, eax.ErrAutoUpdateBackoff) {
-		hlog.FromRequest(r).Error().
-			Err(err).
-			Str("username_source", "eax").
-			Msgf("eax update check failure")
-		h.m().client_originauth_eax_username_lookup_calls_total.fail_update_check.Inc()
-	} else if !errors.Is(err, context.Canceled) {
-		hlog.FromRequest(r).Error().
-			Err(err).
-			Str("username_source", "eax").
-			Msgf("failed to get eax player info")
-		h.m().client_originauth_eax_username_lookup_calls_total.fail_other_error.Inc()
-	}
-	h.m().client_originauth_eax_username_lookup_duration_seconds.UpdateDuration(eaxStart)
-	return
-}
-
-// lookupUsernameStryder gets the username for uid from the Stryder response,
-// returning an empty string if the username is empty, or false if the
-// username is not present in the response or the response is invalid.
-func (h *Handler) lookupUsernameStryder(r *http.Request, uid uint64, res []byte) (username string, ok bool) {
+// lookupUsername gets the username for uid from the Stryder response, returning
+// an empty string if the username is empty, or false if the username is not
+// present in the response or the response is invalid.
+func (h *Handler) lookupUsername(r *http.Request, uid uint64, res []byte) (username string, ok bool) {
 	select {
 	case <-r.Context().Done(): // check if the request was canceled to avoid polluting the metrics
 		return

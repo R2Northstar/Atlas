@@ -70,15 +70,8 @@ type apiMetrics struct {
 		fail_other_error            *metrics.Counter
 		http_method_not_allowed     *metrics.Counter
 	}
-	client_originauth_requests_map                         *metricsx.GeoCounter2
-	client_originauth_stryder_auth_duration_seconds        *metrics.Histogram
-	client_originauth_eax_username_lookup_duration_seconds *metrics.Histogram
-	client_originauth_eax_username_lookup_calls_total      struct {
-		success           *metrics.Counter
-		notfound          *metrics.Counter
-		fail_update_check *metrics.Counter
-		fail_other_error  *metrics.Counter
-	}
+	client_originauth_requests_map                        *metricsx.GeoCounter2
+	client_originauth_stryder_auth_duration_seconds       *metrics.Histogram
 	client_originauth_stryder_username_lookup_calls_total struct {
 		success          *metrics.Counter
 		notfound         *metrics.Counter
@@ -263,11 +256,6 @@ func (h *Handler) m() *apiMetrics {
 		mo.client_originauth_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="http_method_not_allowed"}`)
 		mo.client_originauth_requests_map = metricsx.NewGeoCounter2(`atlas_api0_client_originauth_requests_map`)
 		mo.client_originauth_stryder_auth_duration_seconds = mo.set.NewHistogram(`atlas_api0_client_originauth_stryder_auth_duration_seconds`)
-		mo.client_originauth_eax_username_lookup_duration_seconds = mo.set.NewHistogram(`atlas_api0_client_originauth_eax_username_lookup_duration_seconds`)
-		mo.client_originauth_eax_username_lookup_calls_total.success = mo.set.NewCounter(`atlas_api0_client_originauth_eax_username_lookup_calls_total{result="success"}`)
-		mo.client_originauth_eax_username_lookup_calls_total.notfound = mo.set.NewCounter(`atlas_api0_client_originauth_eax_username_lookup_calls_total{result="notfound"}`)
-		mo.client_originauth_eax_username_lookup_calls_total.fail_update_check = mo.set.NewCounter(`atlas_api0_client_originauth_eax_username_lookup_calls_total{result="fail_update_check"}`)
-		mo.client_originauth_eax_username_lookup_calls_total.fail_other_error = mo.set.NewCounter(`atlas_api0_client_originauth_eax_username_lookup_calls_total{result="fail_other_error"}`)
 		mo.client_originauth_stryder_username_lookup_calls_total.success = mo.set.NewCounter(`atlas_api0_client_originauth_stryder_username_lookup_calls_total{result="success"}`)
 		mo.client_originauth_stryder_username_lookup_calls_total.notfound = mo.set.NewCounter(`atlas_api0_client_originauth_stryder_username_lookup_calls_total{result="notfound"}`)
 		mo.client_originauth_stryder_username_lookup_calls_total.fail_other_error = mo.set.NewCounter(`atlas_api0_client_originauth_stryder_username_lookup_calls_total{result="fail_other_error"}`)
