@@ -4,8 +4,6 @@ go 1.21.0
 
 require (
 	github.com/VictoriaMetrics/metrics v1.23.1
-	github.com/andybalholm/cascadia v1.3.1
-	github.com/cardigann/harhar v0.0.0-20161005032312-acb91b7a8682
 	github.com/hashicorp/go-envparse v0.1.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/klauspost/compress v1.16.0
@@ -15,7 +13,6 @@ require (
 	github.com/rs/zerolog v1.29.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/mod v0.8.0
-	golang.org/x/net v0.7.0
 	golang.org/x/sys v0.5.0
 )
 
