@@ -284,6 +284,15 @@ func (h *Handler) handleServerUpsert(w http.ResponseWriter, r *http.Request) {
 				u.MaxPlayers = &x
 			}
 		}
+
+		if v, err := strconv.ParseBool(q.Get("isDraining")); err == nil {
+			if canCreate {
+				s.IsDraining = v
+			}
+			if canUpdate {
+				u.IsDraining = &v
+			}
+		}
 	}
 
 	if canCreate {
