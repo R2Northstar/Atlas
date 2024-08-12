@@ -165,56 +165,6 @@ type Config struct {
 	// API0_MinimumLauncherVersion.
 	API0_MainMenuPromos_UpdateNeeded string `env:"ATLAS_API0_MAINMENUPROMOS_UPDATENEEDED=none"`
 
-	// Sets the source used for resolving usernames. If not specified, "origin"
-	// is used if OriginEmail is provided, otherwise, "none" is used.
-	//  - none (don't get usernames)
-	//  - origin (get the username from the Origin API)
-	//  - origin-eax (get the username from the Origin API, but fall back to EAX on failure)
-	//  - origin-eax-debug (get the username from the Origin API, but also check EAX and warn if it's different)
-	//  - eax (get the username from EAX)
-	//  - eax-origin (get the username from EAX, but fall back to the Origin API on failure)
-	UsernameSource string `env:"ATLAS_USERNAMESOURCE"`
-
-	// The email address to use for Origin login. If not provided, the Origin
-	// API will not be used. If it begins with @, it is treated as the name of a
-	// systemd credential to load.
-	OriginEmail string `env:"ATLAS_ORIGIN_EMAIL" sdcreds:"load,trimspace"`
-
-	// The password for Origin login. If it begins with @, it is treated as the
-	// name of a systemd credential to load.
-	OriginPassword string `env:"ATLAS_ORIGIN_PASSWORD" sdcreds:"load,trimspace"`
-
-	// The base32 TOTP secret for Origin login. If it begins with @, it is
-	// treated as the name of a systemd credential to load.
-	OriginTOTP string `env:"ATLAS_ORIGIN_TOTP" sdcreds:"load,trimspace"`
-
-	// OriginHARGzip controls whether to compress saved HAR archives.
-	OriginHARGzip bool `env:"ATLAS_ORIGIN_HAR_GZIP"`
-
-	// OriginHARSuccess is the path to a directory to save HAR archives of
-	// successful Origin auth attempts.
-	OriginHARSuccess string `env:"ATLAS_ORIGIN_HAR_SUCCESS"`
-
-	// OriginHARError is the path to a directory to save HAR archives of
-	// successful Origin auth attempts.
-	OriginHARError string `env:"ATLAS_ORIGIN_HAR_ERROR"`
-
-	// The JSON file to save Origin login info to so tokens are preserved across
-	// restarts. Highly recommended.
-	OriginPersist string `env:"ATLAS_ORIGIN_PERSIST"`
-
-	// Override the EAX EA App version. If specified, updates will not be
-	// checked automatically.
-	EAXUpdateVersion string `env:"EAX_UPDATE_VERSION"`
-
-	// EAXUpdateInterval is the min interval at which to check for EA App
-	// updates.
-	EAXUpdateInterval time.Duration `env:"EAX_UPDATE_INTERVAL=24h"`
-
-	// EAXUpdateBucket is the update bucket to use when checking for EA App
-	// updates.
-	EAXUpdateBucket int `env:"EAX_UPDATE_BUCKET=0"`
-
 	// Secret token for accessing internal metrics. If it begins with @, it is
 	// treated as the name of a systemd credential to load.
 	MetricsSecret string `env:"ATLAS_METRICS_SECRET" sdcreds:"load,trimspace"`

@@ -12,35 +12,9 @@ import (
 	"time"
 
 	"github.com/r2northstar/atlas/pkg/api/api0/api0gameserver"
-	"github.com/r2northstar/atlas/pkg/eax"
-	"github.com/r2northstar/atlas/pkg/origin"
 	"github.com/r2northstar/atlas/pkg/pdata"
 	"github.com/r2northstar/atlas/pkg/stryder"
 	"github.com/rs/zerolog/hlog"
-)
-
-// UsernameSource determines where to get player in-game usernames from.
-type UsernameSource string
-
-const (
-	// Don't get usernames.
-	UsernameSourceNone UsernameSource = ""
-
-	// Get the username from the Origin API.
-	UsernameSourceOrigin UsernameSource = "origin"
-
-	// Get the username from the Origin API, but fall back to EAX on failure.
-	UsernameSourceOriginEAX UsernameSource = "origin-eax"
-
-	// Get the username from EAX.
-	UsernameSourceEAX UsernameSource = "eax"
-
-	// Get the username from the Origin API, but also check EAX and warn if it's
-	// different.
-	UsernameSourceOriginEAXDebug UsernameSource = "origin-eax-debug"
-
-	// Get the username from EAX, but fall back to the Origin API on failure.
-	UsernameSourceEAXOrigin UsernameSource = "eax-origin"
 )
 
 type MainMenuPromos struct {
@@ -149,6 +123,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 	default:
 	}
 
+	var stryderRes []byte
 	if !h.InsecureDevNoCheckPlayerAuth {
 		token := r.URL.Query().Get("token")
 		if token == "" {
@@ -162,7 +137,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 		stryderCtx, cancel := context.WithTimeout(r.Context(), time.Second*5)
 		defer cancel()
 
-		stryderRes, err := stryder.NucleusAuth(stryderCtx, token, uid)
+		stryderRes, err = stryder.NucleusAuth(stryderCtx, token, uid)
 		h.m().client_originauth_stryder_auth_duration_seconds.UpdateDuration(stryderStart)
 		if err != nil {
 			switch {
@@ -216,14 +191,7 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 			}
 		}
 	}
-
-	select {
-	case <-r.Context().Done(): // check if the request was canceled to avoid making unnecessary requests
-		return
-	default:
-	}
-
-	username := h.lookupUsername(r, uid)
+	username, _ := h.lookupUsername(r, uid, stryderRes)
 
 	select {
 	case <-r.Context().Done(): // check if the request was canceled to avoid making unnecessary requests
@@ -300,171 +268,29 @@ func (h *Handler) handleClientOriginAuth(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-// lookupUsername gets the username for uid according to the configured
-// UsernameSource, returning an empty string if not found or on error.
-func (h *Handler) lookupUsername(r *http.Request, uid uint64) (username string) {
-	switch h.UsernameSource {
-	case UsernameSourceNone:
-		break
-	case UsernameSourceOrigin:
-		username, _ = h.lookupUsernameOrigin(r, uid)
-	case UsernameSourceOriginEAX:
-		username, _ = h.lookupUsernameOrigin(r, uid)
-		if username == "" {
-			if eaxUsername, ok := h.lookupUsernameEAX(r, uid); ok {
-				username = eaxUsername
-				hlog.FromRequest(r).Warn().
-					Uint64("uid", uid).
-					Str("origin_username", eaxUsername).
-					Msgf("failed to get username from origin, but got it from eax")
-			}
-		}
-	case UsernameSourceOriginEAXDebug:
-		username, _ = h.lookupUsernameOrigin(r, uid)
-		if eaxUsername, ok := h.lookupUsernameEAX(r, uid); ok {
-			if eaxUsername != username {
-				hlog.FromRequest(r).Warn().
-					Uint64("uid", uid).
-					Str("origin_username", username).
-					Str("eax_username", eaxUsername).
-					Msgf("got username from origin and eax, but they don't match; using the origin one")
-			}
-		} else {
-			hlog.FromRequest(r).Warn().
-				Uint64("uid", uid).
-				Str("origin_username", username).
-				Msgf("got username from origin, but failed to get username from eax")
-		}
-	case UsernameSourceEAX:
-		username, _ = h.lookupUsernameEAX(r, uid)
-	case UsernameSourceEAXOrigin:
-		username, _ = h.lookupUsernameEAX(r, uid)
-		if username == "" {
-			if originUsername, ok := h.lookupUsernameOrigin(r, uid); ok {
-				username = originUsername
-				hlog.FromRequest(r).Warn().
-					Uint64("uid", uid).
-					Str("origin_username", originUsername).
-					Msgf("failed to get username from eax, but got it from origin")
-			}
-		}
-	default:
-		hlog.FromRequest(r).Error().
-			Msgf("unknown username source %q", h.UsernameSource)
-	}
-	return
-}
-
-// lookupUsernameOrigin gets the username for uid from the Origin API, returning
-// an empty string if a username does not exist for the uid, and false on error.
-func (h *Handler) lookupUsernameOrigin(r *http.Request, uid uint64) (username string, ok bool) {
+// lookupUsername gets the username for uid from the Stryder response, returning
+// an empty string if the username is empty, or false if the username is not
+// present in the response or the response is invalid.
+func (h *Handler) lookupUsername(r *http.Request, uid uint64, res []byte) (username string, ok bool) {
 	select {
 	case <-r.Context().Done(): // check if the request was canceled to avoid polluting the metrics
 		return
 	default:
 	}
-	if h.OriginAuthMgr == nil {
-		hlog.FromRequest(r).Error().
-			Str("username_source", "origin").
-			Msgf("no origin auth available for username lookup")
-		return
-	}
-	originStart := time.Now()
-	if tok, ours, err := h.OriginAuthMgr.OriginAuth(false); err == nil {
-		if ui, err := origin.GetUserInfo(r.Context(), tok, uid); err == nil {
-			if len(ui) == 1 {
-				username = ui[0].EAID
-				h.m().client_originauth_origin_username_lookup_calls_total.success.Inc()
-			} else {
-				h.m().client_originauth_origin_username_lookup_calls_total.notfound.Inc()
-			}
-			ok = true
-		} else if errors.Is(err, origin.ErrAuthRequired) {
-			if tok, ours, err := h.OriginAuthMgr.OriginAuth(true); err == nil {
-				if ui, err := origin.GetUserInfo(r.Context(), tok, uid); err == nil {
-					if len(ui) == 1 {
-						username = ui[0].EAID
-						h.m().client_originauth_origin_username_lookup_calls_total.success.Inc()
-					} else {
-						h.m().client_originauth_origin_username_lookup_calls_total.notfound.Inc()
-					}
-					ok = true
-				}
-			} else if ours {
-				hlog.FromRequest(r).Error().
-					Err(err).
-					Str("username_source", "origin").
-					Msgf("origin auth token refresh failure")
-				h.m().client_originauth_origin_username_lookup_calls_total.fail_authtok_refresh.Inc()
-			}
-		} else if !errors.Is(err, context.Canceled) {
-			hlog.FromRequest(r).Error().
-				Err(err).
-				Str("username_source", "origin").
-				Msgf("failed to get origin user info")
-			h.m().client_originauth_origin_username_lookup_calls_total.fail_other_error.Inc()
-		}
-		if username == "" && ok {
-			hlog.FromRequest(r).Warn().
-				Err(err).
-				Uint64("uid", uid).
-				Str("username_source", "origin").
-				Msgf("no origin username found for uid")
-		}
-	} else if ours {
-		hlog.FromRequest(r).Error().
+	u, err := stryder.NucleusAuthUsername(res)
+	if err != nil {
+		hlog.FromRequest(r).Warn().
 			Err(err).
-			Str("username_source", "origin").
-			Msgf("origin auth token refresh failure")
-		h.m().client_originauth_origin_username_lookup_calls_total.fail_authtok_refresh.Inc()
+			Uint64("uid", uid).
+			Str("username_source", "stryder").
+			Msgf("failed to get username from stryder nucleus auth response")
+		h.m().client_originauth_stryder_username_lookup_calls_total.fail_other_error.Inc()
+	} else if u == "" {
+		h.m().client_originauth_stryder_username_lookup_calls_total.notfound.Inc()
+	} else {
+		h.m().client_originauth_stryder_username_lookup_calls_total.success.Inc()
 	}
-	h.m().client_originauth_origin_username_lookup_duration_seconds.UpdateDuration(originStart)
-	return
-}
-
-// lookupUsernameEAX gets the username for uid from the EAX API, returning an
-// empty string if a username does not exist for the uid, and false on error.
-func (h *Handler) lookupUsernameEAX(r *http.Request, uid uint64) (username string, ok bool) {
-	select {
-	case <-r.Context().Done(): // check if the request was canceled to avoid polluting the metrics
-		return
-	default:
-	}
-	if h.EAXClient == nil {
-		hlog.FromRequest(r).Error().
-			Str("username_source", "eax").
-			Msgf("no eax client available for username lookup")
-		return
-	}
-	eaxStart := time.Now()
-	if p, err := h.EAXClient.PlayerIDByPD(r.Context(), uid); err == nil {
-		if p != nil {
-			username = p.DisplayName
-			h.m().client_originauth_eax_username_lookup_calls_total.success.Inc()
-		} else {
-			hlog.FromRequest(r).Warn().
-				Err(err).
-				Uint64("uid", uid).
-				Str("username_source", "eax").
-				Msgf("no eax username found for uid")
-			h.m().client_originauth_eax_username_lookup_calls_total.notfound.Inc()
-		}
-		ok = true
-	} else if errors.Is(err, eax.ErrVersionRequired) || errors.Is(err, eax.ErrAutoUpdateBackoff) {
-		hlog.FromRequest(r).Error().
-			Err(err).
-			Str("username_source", "eax").
-			Msgf("eax update check failure")
-		h.m().client_originauth_eax_username_lookup_calls_total.fail_update_check.Inc()
-	} else if !errors.Is(err, context.Canceled) {
-		hlog.FromRequest(r).Error().
-			Err(err).
-			Str("username_source", "eax").
-			Msgf("failed to get eax player info")
-		h.m().client_originauth_eax_username_lookup_calls_total.fail_other_error.Inc()
-	}
-	h.m().client_originauth_eax_username_lookup_duration_seconds.UpdateDuration(eaxStart)
-	return
+	return u, err == nil
 }
 
 func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Request) {

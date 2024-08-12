@@ -103,6 +103,26 @@ func nucleusAuth(r *http.Response) ([]byte, error) {
 	return buf, nil
 }
 
+// NucleusAuthUsername extracts the username field from the nucleus auth
+// response (since October 2, 2023). This field is usually empty for
+// unsuccessful responses, but is always present (if not, an error will be
+// returned). If resp is empty or invalid, an error will be returned.
+func NucleusAuthUsername(resp []byte) (string, error) {
+	var obj struct {
+		Username *string `json:"userName,omitempty"`
+	}
+	if len(resp) == 0 {
+		return "", fmt.Errorf("empty or missing nucleus auth response")
+	}
+	if err := json.Unmarshal(resp, &obj); err != nil {
+		return "", fmt.Errorf("%w: invalid nucleus auth response json: %v", ErrStryder, err)
+	}
+	if obj.Username == nil {
+		return "", fmt.Errorf("missing userName field in nucleus auth response %q", string(resp))
+	}
+	return *obj.Username, nil
+}
+
 func castOr[T any](v any, d T) T {
 	if x, ok := v.(T); ok {
 		return x
