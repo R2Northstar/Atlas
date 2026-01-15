@@ -165,6 +165,11 @@ type Config struct {
 	// API0_MinimumLauncherVersion.
 	API0_MainMenuPromos_UpdateNeeded string `env:"ATLAS_API0_MAINMENUPROMOS_UPDATENEEDED=none"`
 
+	// The source to use for announcements:
+	//  - none
+	//  - file:/path/to/announcements.json
+	API0_Announcements string `env:"ATLAS_API0_ANNOUNCEMENTS=none"`
+
 	// Secret token for accessing internal metrics. If it begins with @, it is
 	// treated as the name of a systemd credential to load.
 	MetricsSecret string `env:"ATLAS_METRICS_SECRET" sdcreds:"load,trimspace"`

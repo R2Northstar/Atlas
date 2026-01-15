@@ -311,6 +311,11 @@ func NewServer(c *Config) (*Server, error) {
 	} else {
 		return nil, fmt.Errorf("initialize main menu promos: %w", err)
 	}
+	if mmp, err := configureAnnouncements(c); err == nil {
+		s.API0.Announcements = mmp
+	} else {
+		return nil, fmt.Errorf("initialize announcements: %w", err)
+	}
 	if err := configureMainMenuPromosUpdateNeeded(c, s.API0); err != nil {
 		return nil, fmt.Errorf("configure main menu promos when update needed: %w", err)
 	}
@@ -556,6 +561,33 @@ func configureMainMenuPromos(c *Config) (func(*http.Request) api0.MainMenuPromos
 		}
 		fn := func(*http.Request) api0.MainMenuPromos {
 			var mmp api0.MainMenuPromos
+			if buf, err1 := os.ReadFile(p); err1 != nil {
+				err = err1
+			} else if err = json.Unmarshal(buf, &mmp); err != nil {
+				err = err1
+			}
+			return mmp
+		}
+		if fn(nil); err != nil {
+			return nil, fmt.Errorf("file: %w", err)
+		}
+		return fn, nil
+	default:
+		return nil, fmt.Errorf("unknown source %q", typ)
+	}
+}
+
+func configureAnnouncements(c *Config) (func(*http.Request) api0.Announcements, error) {
+	switch typ, arg, _ := strings.Cut(c.API0_Announcements, ":"); typ {
+	case "none":
+		return nil, nil
+	case "file":
+		p, err := filepath.Abs(arg)
+		if err != nil {
+			return nil, fmt.Errorf("file: resolve %q: %w", arg, err)
+		}
+		fn := func(*http.Request) api0.Announcements {
+			var mmp api0.Announcements
 			if buf, err1 := os.ReadFile(p); err1 != nil {
 				err = err1
 			} else if err = json.Unmarshal(buf, &mmp); err != nil {
