@@ -56,8 +56,12 @@ type apiMetrics struct {
 		success                 func(version string) *metrics.Counter
 		http_method_not_allowed *metrics.Counter
 	}
-	client_mainmenupromos_requests_map *metricsx.GeoCounter2
-	client_originauth_requests_total   struct {
+	client_mainmenupromos_requests_map  *metricsx.GeoCounter2
+	client_announcements_requests_total struct {
+		success                 func(version string) *metrics.Counter
+		http_method_not_allowed *metrics.Counter
+	}
+	client_originauth_requests_total struct {
 		success                     *metrics.Counter
 		reject_bad_request          *metrics.Counter
 		reject_versiongate          *metrics.Counter
@@ -243,6 +247,14 @@ func (h *Handler) m() *apiMetrics {
 		mo.client_mainmenupromos_requests_total.success("unknown")
 		mo.client_mainmenupromos_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_client_mainmenupromos_requests_total{result="http_method_not_allowed"}`)
 		mo.client_mainmenupromos_requests_map = metricsx.NewGeoCounter2(`atlas_api0_client_mainmenupromos_requests_map`)
+		mo.client_announcements_requests_total.success = func(launcher_version string) *metrics.Counter {
+			if launcher_version == "" {
+				launcher_version = "unknown"
+			}
+			return mo.set.GetOrCreateCounter(`atlas_api0_client_announcements_requests_total{result="success",launcher_version="` + launcher_version + `"}`)
+		}
+		mo.client_announcements_requests_total.success("unknown")
+		mo.client_announcements_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_client_announcements_requests_total{result="http_method_not_allowed"}`)
 		mo.client_originauth_requests_total.success = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="success"}`)
 		mo.client_originauth_requests_total.reject_bad_request = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="reject_bad_request"}`)
 		mo.client_originauth_requests_total.reject_versiongate = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="reject_versiongate"}`)

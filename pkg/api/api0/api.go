@@ -54,6 +54,9 @@ type Handler struct {
 	// MainMenuPromos gets the main menu promos to return for a request.
 	MainMenuPromos func(*http.Request) MainMenuPromos
 
+	// Announcements gets the announcements to return for a request.
+	Announcements func(*http.Request) Announcements
+
 	// NotFound handles requests not handled by this Handler.
 	NotFound http.Handler
 
@@ -129,6 +132,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/client/mainmenupromos":
 		h.handleMainMenuPromos(w, r)
+	case "/client/announcements":
+		h.handleAnnouncements(w, r)
 	case "/client/origin_auth":
 		h.handleClientOriginAuth(w, r)
 	case "/client/auth_with_server":

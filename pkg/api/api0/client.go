@@ -43,6 +43,11 @@ type MainMenuPromosButtonSmall struct {
 	ImageIndex int    `json:"ImageIndex"`
 }
 
+type Announcements struct {
+	Annoucement         string `json:"announcement"`
+	AnnouncementVersion string `json:"announcementVersion"`
+}
+
 func (h *Handler) handleMainMenuPromos(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodOptions && r.Method != http.MethodHead && r.Method != http.MethodGet {
 		h.m().client_mainmenupromos_requests_total.http_method_not_allowed.Inc()
@@ -66,6 +71,32 @@ func (h *Handler) handleMainMenuPromos(w http.ResponseWriter, r *http.Request) {
 	var p MainMenuPromos
 	if h.MainMenuPromos != nil {
 		p = h.MainMenuPromos(r)
+	}
+	respJSON(w, r, http.StatusOK, p)
+}
+
+func (h *Handler) handleAnnouncements(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodOptions && r.Method != http.MethodHead && r.Method != http.MethodGet {
+		h.m().client_announcements_requests_total.http_method_not_allowed.Inc()
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Cache-Control", "private, no-cache, no-store")
+	w.Header().Set("Expires", "0")
+	w.Header().Set("Pragma", "no-cache")
+
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Allow", "OPTIONS, HEAD, GET")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	h.m().client_announcements_requests_total.success(h.ExtractLauncherVersion(r)).Inc()
+
+	var p Announcements
+	if h.Announcements != nil {
+		p = h.Announcements(r)
 	}
 	respJSON(w, r, http.StatusOK, p)
 }
