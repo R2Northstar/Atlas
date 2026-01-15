@@ -241,7 +241,7 @@ func (h *Handler) m() *apiMetrics {
 			return mo.set.GetOrCreateCounter(`atlas_api0_client_mainmenupromos_requests_total{result="success",launcher_version="` + launcher_version + `"}`)
 		}
 		mo.client_mainmenupromos_requests_total.success("unknown")
-		mo.client_mainmenupromos_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_client_servers_response_size_bytes{result="http_method_not_allowed"}`)
+		mo.client_mainmenupromos_requests_total.http_method_not_allowed = mo.set.NewCounter(`atlas_api0_client_mainmenupromos_requests_total{result="http_method_not_allowed"}`)
 		mo.client_mainmenupromos_requests_map = metricsx.NewGeoCounter2(`atlas_api0_client_mainmenupromos_requests_map`)
 		mo.client_originauth_requests_total.success = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="success"}`)
 		mo.client_originauth_requests_total.reject_bad_request = mo.set.NewCounter(`atlas_api0_client_originauth_requests_total{result="reject_bad_request"}`)
