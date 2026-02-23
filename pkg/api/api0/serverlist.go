@@ -99,6 +99,8 @@ type Server struct {
 	Map         string
 	Playlist    string
 
+	IsDraining bool
+
 	ServerAuthToken string // used for authenticating the masterserver to the gameserver authserver
 
 	ModInfo []ServerModInfo
@@ -116,6 +118,15 @@ func (s Server) AuthAddr() netip.AddrPort {
 		return s.Addr
 	}
 	return netip.AddrPortFrom(s.Addr.Addr(), s.AuthPort)
+}
+
+// EffectiveMaxPlayers returns the max players which can actually join, taking
+// IsDraining into account.
+func (s Server) EffectiveMaxPlayers() int {
+	if s.IsDraining {
+		return s.PlayerCount
+	}
+	return s.MaxPlayers
 }
 
 // clone returns a deep copy of s.
@@ -140,6 +151,7 @@ type ServerUpdate struct {
 	MaxPlayers  *int
 	Map         *string
 	Playlist    *string
+	IsDraining  *bool
 }
 
 type ServerListLimit struct {
@@ -338,7 +350,7 @@ func csJSON(ss []*Server, est int, cfg ServerListConfig) ([]byte, int) {
 		b = append(b, `,"playerCount":`...)
 		b = strconv.AppendInt(b, int64(srv.PlayerCount), 10)
 		b = append(b, `,"maxPlayers":`...)
-		b = strconv.AppendInt(b, int64(srv.MaxPlayers), 10)
+		b = strconv.AppendInt(b, int64(srv.EffectiveMaxPlayers()), 10)
 		b = append(b, `,"map":`...)
 		b = appendJSONString(b, srv.Map)
 		b = append(b, `,"playlist":`...)
@@ -347,6 +359,11 @@ func csJSON(ss []*Server, est int, cfg ServerListConfig) ([]byte, int) {
 			b = append(b, `,"hasPassword":true`...)
 		} else {
 			b = append(b, `,"hasPassword":false`...)
+		}
+		if srv.IsDraining {
+			b = append(b, `,"isDraining":true`...)
+		} else {
+			b = append(b, `,"isDraining":false`...)
 		}
 		b = append(b, `,"modInfo":{"Mods":[`...)
 		for j, mi := range srv.ModInfo {
@@ -504,7 +521,7 @@ func (s *ServerList) GetMetrics() []byte {
 		mpls = append(mpls, mpl{m, nstypes.Playlist("")})
 	}
 
-	var players, maxPlayers, servers, serversWithPlayers, fullServers int
+	var players, maxPlayers, servers, serversWithPlayers, fullServers, drainingServers int
 	mplPlayers := make(map[mpl]int, len(mpls))
 	mplMaxPlayers := make(map[mpl]int, len(mpls))
 	mplServers := make(map[mpl]int, len(mpls))
@@ -523,16 +540,19 @@ func (s *ServerList) GetMetrics() []byte {
 					mplv.Playlist = pl
 				}
 				players += srv.PlayerCount
-				maxPlayers += srv.MaxPlayers
+				maxPlayers += srv.EffectiveMaxPlayers()
 				servers++
 				if srv.PlayerCount > 0 {
 					serversWithPlayers++
 				}
-				if srv.PlayerCount == srv.MaxPlayers {
+				if srv.PlayerCount == srv.MaxPlayers { // not EffectiveMaxPlayers
 					fullServers++
 				}
+				if srv.IsDraining {
+					drainingServers++
+				}
 				mplPlayers[mplv] += srv.PlayerCount
-				mplMaxPlayers[mplv] += srv.MaxPlayers
+				mplMaxPlayers[mplv] += srv.EffectiveMaxPlayers()
 				mplServers[mplv]++
 				verServers[srv.LauncherVersion]++
 				for _, mi := range srv.ModInfo {
@@ -689,6 +709,9 @@ func (s *ServerList) GetMetrics() []byte {
 	b.WriteByte('\n')
 	b.WriteString(`atlas_api0sl_fullservers `)
 	b.WriteString(strconv.Itoa(fullServers))
+	b.WriteByte('\n')
+	b.WriteString(`atlas_api0sl_drainingservers `)
+	b.WriteString(strconv.Itoa(drainingServers))
 	b.WriteByte('\n')
 
 	return b.Bytes()
@@ -880,6 +903,9 @@ func (s *ServerList) ServerHybridUpdatePut(u *ServerUpdate, c *Server, l ServerL
 				}
 				if u.MaxPlayers != nil {
 					esrv.MaxPlayers, changed = *u.MaxPlayers, true
+				}
+				if u.IsDraining != nil {
+					esrv.IsDraining, changed = *u.IsDraining, true
 				}
 				if changed {
 					s.csForceUpdate()
