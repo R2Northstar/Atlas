@@ -17,13 +17,14 @@ func up001(ctx context.Context, tx *sqlx.Tx) error {
 		CREATE TABLE accounts (
 			uid         TEXT PRIMARY KEY NOT NULL,
 			username    TEXT NOT NULL DEFAULT '' COLLATE NOCASE,
+			clan_tag    TEXT NOT NULL DEFAULT '' COLLATE NOCASE,
 			auth_ip     TEXT,
 			auth_token  TEXT,
 			auth_expiry INTEGER,
 			last_server TEXT
 		) STRICT;
 	`, `
-		`, "\n")); err != nil {
+	`, "\n")); err != nil {
 		return fmt.Errorf("create accounts table: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx, `CREATE INDEX accounts_username_idx ON accounts(username, uid)`); err != nil {

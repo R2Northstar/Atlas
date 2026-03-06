@@ -5,6 +5,10 @@ import (
 	"net/http"
 	"net/netip"
 	"strconv"
+	"strings"
+	"time"
+	"unicode/utf8"
+	"regexp"
 
 	"github.com/r2northstar/atlas/pkg/pdata"
 	"github.com/rs/zerolog/hlog"
@@ -300,4 +304,111 @@ func (h *Handler) handleAccountsGetUsername(w http.ResponseWriter, r *http.Reque
 		"uid":     strconv.FormatUint(uid, 10),
 		"matches": []string{username}, // yes, this may be an empty string if we don't know what it is
 	})
+}
+
+func (h *Handler) handleAccountsSetClanTag(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodOptions && r.Method != http.MethodPost {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Allow", "OPTIONS, POST")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	uidQ := r.URL.Query().Get("id")
+	if uidQ == "" {
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("id param is required"))
+		return
+	}
+	uid, err := strconv.ParseUint(uidQ, 10, 64)
+	if err != nil {
+		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
+		return
+	}
+
+	playerToken := r.URL.Query().Get("playerToken")
+
+	acct, err := h.AccountStorage.GetAccount(uid)
+	if err != nil {
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
+		return
+	}
+	if acct == nil {
+		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
+		return
+	}
+
+	if !h.InsecureDevNoCheckPlayerAuth {
+		if playerToken != acct.AuthToken || !time.Now().Before(acct.AuthTokenExpiry) {
+			respFail(w, r, http.StatusUnauthorized, ErrorCode_INVALID_MASTERSERVER_TOKEN.MessageObj())
+			return
+		}
+	}
+
+	tag := r.URL.Query().Get("tag")
+	if tag == "" && r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
+		if err := r.ParseForm(); err == nil {
+			tag = r.Form.Get("tag")
+		}
+	}
+	tag = strings.TrimSpace(tag)
+	if h.CleanBadWords != nil {
+		tag = h.CleanBadWords(tag)
+	}
+
+	if tag != "" {
+		if utf8.RuneCountInString(tag) > 4 {
+			respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("tag must be at most 4 characters"))
+			return
+		}
+		// allow ASCII letters, digits and CJK (Han) characters only
+		ok, _ := regexp.MatchString(`^[A-Za-z0-9\p{Han}]+$`, tag)
+		if !ok {
+			respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("tag may only contain letters, numbers and Chinese characters"))
+			return
+		}
+	}
+
+	acct.ClanTag = tag
+	if err := h.AccountStorage.SaveAccount(acct); err != nil {
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
+		return
+	}
+	respJSON(w, r, http.StatusOK, map[string]any{"success": true})
+}
+
+func (h *Handler) handleAccountsGetClanTag(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodOptions && r.Method != http.MethodHead && r.Method != http.MethodGet {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Allow", "OPTIONS, HEAD, GET")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	uidQ := r.URL.Query().Get("uid")
+	if uidQ == "" {
+		respFail(w, r, http.StatusBadRequest, ErrorCode_BAD_REQUEST.MessageObjf("uid param is required"))
+		return
+	}
+	uid, err := strconv.ParseUint(uidQ, 10, 64)
+	if err != nil {
+		respFail(w, r, http.StatusNotFound, ErrorCode_PLAYER_NOT_FOUND.MessageObj())
+		return
+	}
+	acct, err := h.AccountStorage.GetAccount(uid)
+	if err != nil {
+		respFail(w, r, http.StatusInternalServerError, ErrorCode_INTERNAL_SERVER_ERROR.MessageObj())
+		return
+	}
+	var tag string
+	if acct != nil {
+		tag = acct.ClanTag
+	}
+	respJSON(w, r, http.StatusOK, map[string]any{"success": true, "uid": strconv.FormatUint(uid, 10), "clanTag": tag})
 }

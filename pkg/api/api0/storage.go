@@ -15,6 +15,9 @@ type Account struct {
 	// optional and case insensitive.
 	Username string
 
+	// ClanTag is the player's chosen clan tag.
+	ClanTag string
+
 	// AuthIP is the IP used for the current auth session.
 	AuthIP netip.Addr
 
