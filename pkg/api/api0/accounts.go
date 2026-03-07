@@ -349,11 +349,6 @@ func (h *Handler) handleAccountsSetClanTag(w http.ResponseWriter, r *http.Reques
 	}
 
 	tag := r.URL.Query().Get("tag")
-	if tag == "" && r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
-		if err := r.ParseForm(); err == nil {
-			tag = r.Form.Get("tag")
-		}
-	}
 	tag = strings.TrimSpace(tag)
 	if h.CleanBadWords != nil {
 		tag = h.CleanBadWords(tag)

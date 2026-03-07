@@ -17,7 +17,6 @@ func up001(ctx context.Context, tx *sqlx.Tx) error {
 		CREATE TABLE accounts (
 			uid         TEXT PRIMARY KEY NOT NULL,
 			username    TEXT NOT NULL DEFAULT '' COLLATE NOCASE,
-			clan_tag    TEXT NOT NULL DEFAULT '' COLLATE NOCASE,
 			auth_ip     TEXT,
 			auth_token  TEXT,
 			auth_expiry INTEGER,
