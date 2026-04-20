@@ -670,6 +670,7 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 	obj := map[string]any{
 		"success": true,
 		"id":      strconv.FormatUint(acct.UID, 10),
+		"clanTag": acct.ClanTag,
 	}
 
 	// the way we encode this is utterly absurd and inefficient, but we need to do it for backwards compatibility
