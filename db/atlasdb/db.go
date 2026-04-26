@@ -53,6 +53,7 @@ func (db *DB) GetAccount(uid uint64) (*api0.Account, error) {
 	var obj struct {
 		UID        uint64 `db:"uid"`
 		Username   string `db:"username"`
+		ClanTag    string `db:"clan_tag"`
 		AuthIP     string `db:"auth_ip"`
 		AuthToken  string `db:"auth_token"`
 		AuthExpiry int64  `db:"auth_expiry"`
@@ -82,6 +83,7 @@ func (db *DB) GetAccount(uid uint64) (*api0.Account, error) {
 	return &api0.Account{
 		UID:             obj.UID,
 		Username:        obj.Username,
+		ClanTag:         obj.ClanTag,
 		AuthIP:          authIP,
 		AuthToken:       obj.AuthToken,
 		AuthTokenExpiry: authExpiry,
@@ -102,11 +104,12 @@ func (db *DB) SaveAccount(a *api0.Account) error {
 
 	if _, err := db.x.NamedExec(`
 		INSERT OR REPLACE INTO
-		accounts ( uid,  username,  auth_ip,  auth_token,  auth_expiry,  last_server)
-		VALUES   (:uid, :username, :auth_ip, :auth_token, :auth_expiry, :last_server)
+		accounts ( uid,  username,  clan_tag, auth_ip,  auth_token,  auth_expiry,  last_server)
+		VALUES   (:uid, :username, :clan_tag, :auth_ip, :auth_token, :auth_expiry, :last_server)
 	`, map[string]any{
 		"uid":         a.UID,
 		"username":    a.Username,
+		"clan_tag":    a.ClanTag,
 		"auth_ip":     authIP,
 		"auth_token":  a.AuthToken,
 		"auth_expiry": authExpiry,

@@ -23,7 +23,7 @@ func up001(ctx context.Context, tx *sqlx.Tx) error {
 			last_server TEXT
 		) STRICT;
 	`, `
-		`, "\n")); err != nil {
+	`, "\n")); err != nil {
 		return fmt.Errorf("create accounts table: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx, `CREATE INDEX accounts_username_idx ON accounts(username, uid)`); err != nil {

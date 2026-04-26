@@ -152,6 +152,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleAccountsWritePersistence(w, r)
 	case "/accounts/get_username":
 		h.handleAccountsGetUsername(w, r)
+	case "/accounts/set_clan_tag":
+		h.handleAccountsSetClanTag(w, r)
+	case "/accounts/get_clan_tag":
+		h.handleAccountsGetClanTag(w, r)
 	case "/accounts/lookup_uid":
 		h.handleAccountsLookupUID(w, r)
 	case "/player/pdata", "/player/info", "/player/stats", "/player/loadout":

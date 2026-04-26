@@ -445,7 +445,7 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 		defer cancel()
 
 		if srv.AuthPort != 0 {
-			if err := api0gameserver.AuthenticateIncomingPlayer(ctx, srv.AuthAddr(), acct.UID, acct.Username, authToken, srv.ServerAuthToken, pbuf); err != nil {
+			if err := api0gameserver.AuthenticateIncomingPlayer(ctx, srv.AuthAddr(), acct.UID, acct.Username, authToken, srv.ServerAuthToken, acct.ClanTag, pbuf); err != nil {
 				h.m().client_authwithserver_gameserverauth_duration_seconds.UpdateDuration(authStart)
 				if errors.Is(err, context.DeadlineExceeded) {
 					err = fmt.Errorf("request timed out")
@@ -485,6 +485,7 @@ func (h *Handler) handleClientAuthWithServer(w http.ResponseWriter, r *http.Requ
 					"token":    authToken,
 					"uid":      acct.UID,
 					"username": acct.Username,
+					"clanTag":   acct.ClanTag,
 					"ip":       raddr.Addr().String(),
 					"time":     time.Now().Unix(),
 				}
@@ -669,6 +670,7 @@ func (h *Handler) handleClientAuthWithSelf(w http.ResponseWriter, r *http.Reques
 	obj := map[string]any{
 		"success": true,
 		"id":      strconv.FormatUint(acct.UID, 10),
+		"clanTag": acct.ClanTag,
 	}
 
 	// the way we encode this is utterly absurd and inefficient, but we need to do it for backwards compatibility

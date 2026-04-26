@@ -68,12 +68,13 @@ func Verify(ctx context.Context, auth netip.AddrPort) error {
 // registers a one-time connection token, and sends the player's pdata. If the
 // authentication request returns invalid JSON, err is ErrInvalidResponse. If
 // the authentication response .success is false, err is ErrAuthFailed.
-func AuthenticateIncomingPlayer(ctx context.Context, auth netip.AddrPort, uid uint64, username, connToken, serverToken string, pdata []byte) error {
+func AuthenticateIncomingPlayer(ctx context.Context, auth netip.AddrPort, uid uint64, username, connToken, serverToken, clanTag string, pdata []byte) error {
 	u := "http://" + auth.String() + "/authenticate_incoming_player" +
 		"?id=" + strconv.FormatUint(uid, 10) +
 		"&authToken=" + url.QueryEscape(connToken) +
 		"&serverAuthToken=" + url.QueryEscape(serverToken) +
-		"&username=" + url.QueryEscape(username)
+		"&username=" + url.QueryEscape(username) +
+		"&clanTag=" + url.QueryEscape(clanTag)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(pdata))
 	if err != nil {
