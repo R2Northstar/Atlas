@@ -13,7 +13,7 @@ func init() {
 }
 
 func up002(ctx context.Context, tx *sqlx.Tx) error {
-    if _, err := tx.ExecContext(ctx, `ALTER TABLE accounts ADD COLUMN clan_tag TEXT NOT NULL DEFAULT '' COLLATE NOCASE`); err != nil {
+    if _, err := tx.ExecContext(ctx, `ALTER TABLE accounts ADD COLUMN clan_tag TEXT NOT NULL DEFAULT ''`); err != nil {
         return fmt.Errorf("add clan_tag column: %w", err)
     }
     return nil
